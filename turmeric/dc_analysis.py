@@ -14,7 +14,7 @@ import copy
 
 # FORTRAN SUBRS
 # from LINALG import ludcmp, lubksb
-from LINALG import ludcmp, lubksb
+# from LINALG import ludcmp, lubksb
 
 import numpy as np
 import numpy.linalg
