@@ -1,0 +1,55 @@
+2020-05-15 15:13:57
+Operating Point (OP) analysis
+
+Netlist: netlists/FifthOrderLowpass.net
+Title: th-order low_pass filter
+At 300.00 K
+Options:
+	vea = 1.000000e-06
+	ver = 0.001000
+	iea = 1.000000e-09
+	ier = 0.001000
+	gmin = 0.000000e+00
+
+Convergence reached in 2 iterations.
+
+========
+RESULTS:
+========
+
+Variable    Units      Value         Error    %
+----------  -------  -------  ------------  ---
+V1          V            0.5  -5.00044e-13    0
+V2          V            0.5  -4.99989e-13    0
+V3          V            0.5  -5.00044e-13    0
+I(L1)       A            0.5   0              0
+I(L2)       A            0.5  -5.55112e-17    0
+
+========================
+ELEMENTS OP INFORMATION:
+========================
+
+Part ID      V(n1-n2) [V]    Q [C]    E [J]
+---------  --------------  -------  -------
+C3                    0.5    0.76   0.19
+C4                    0.5    0.75   0.1875
+C5                    0.5    0.415  0.10375
+C1                    0      0      0
+C2                    0      0      0
+
+Part ID      V(n1-n2) [V]    I [A]    P [W]
+---------  --------------  -------  -------
+IN                   -0.5        1     -0.5
+
+Part ID      ϕ(n1,n2) [Wb]    I(n1->n2) [A]    E [J]
+---------  ---------------  ---------------  -------
+L1                   0.325              0.5  0.08125
+L2                   0.5                0.5  0.125
+
+Part ID      R [Ω]    V(n1,n2) [V]    I(n1->n2) [A]    P [W]
+---------  -------  --------------  ---------------  -------
+R1               1             0.5              0.5     0.25
+R2               1             0.5              0.5     0.25
+
+Total power dissipation: 0.5 W
+
