@@ -7,7 +7,7 @@ import scipy as sp
 import tabulate
 
 # analyses
-from . import dc_analysis
+from . import dc
 from . import transient
 from . import ac
 
@@ -44,7 +44,7 @@ def run(circ, an_list=None):
         an_item = an_list.pop(0)
         an_type = an_item.pop('type')
         if 'x0' in an_item and isinstance(an_item['x0'], str):
-            printing.print_warning("%s has x0 set to %s, unavailable. Using 'None'." %
+            logging.warning("%s has x0 set to %s, unavailable. Using 'None'." %
                                    (an_type.upper(), an_item['x0']))
             an_item['x0'] = None
         r = analysis[an_type](circ, **an_item)
@@ -58,12 +58,12 @@ def run(circ, an_list=None):
 
 def new_x0(circ, icdict):
     
-    return dc_analysis.build_x0_from_user_supplied_ic(circ, icdict)
+    return dc.build_x0_from_user_supplied_ic(circ, icdict)
 
 
 def icmodified_x0(circ, x0):
     
-    return dc_analysis.modify_x0_for_ic(circ, x0)
+    return dc.modify_x0_for_ic(circ, x0)
 
 
 def set_temperature(T):
@@ -73,7 +73,7 @@ def set_temperature(T):
         printing.print_warning("The temperature will be set to %f \xB0 C.")
     constants.T = utilities.Celsius2Kelvin(T)
 
-analysis = {'op': dc_analysis.op_analysis, 'dc': dc_analysis.dc_analysis,
+analysis = {'op': dc.op_analysis, 'dc': dc.dc_analysis,
             'tran': transient.transient_analysis, 'ac': ac.ac_analysis,
             'temp': set_temperature}
 

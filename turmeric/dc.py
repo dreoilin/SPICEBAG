@@ -27,7 +27,7 @@ from . import diode
 from . import constants
 from . import options
 from . import circuit
-from . import printing
+#from . import printing
 from . import utilities
 from . import results
 
@@ -160,12 +160,12 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
             n_iter = 0
             converged = False
             print("failed.")
-            printing.print_general_error("J Matrix is singular")
+            logging.error("J Matrix is singular")
         except OverflowError:
             n_iter = 0
             converged = False
             print("failed.")
-            printing.print_general_error("Overflow")
+            logging.error("Overflow")
 
         if not converged:
             if convergence_by_node is not None:
@@ -176,8 +176,7 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
                         e = circ.find_vde(ivalue)
                         print("Convergence problem current in %s" % e.part_id)
             if n_iter == MAXIT - 1:
-                printing.print_general_error(
-                    "Error: MAXIT exceeded (" + str(MAXIT) + ")")
+                logging.error("Error: MAXIT exceeded (" + str(MAXIT) + ")")
             if more_solve_methods_available(standard_solving, gmin_stepping, source_stepping):
                 standard_solving, gmin_stepping, source_stepping = set_next_solve_method(
                     standard_solving, gmin_stepping, source_stepping)
@@ -247,17 +246,16 @@ def get_solve_methods():
     return standard_solving, gmin_stepping, source_stepping
 
 
-def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True, x0=None, outfile="stdout", verbose=3):
+def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True, x0=None, outfile="stdout"):
     
     if outfile == 'stdout':
         verbose = 0
-    printing.print_info_line(("Starting DC analysis:", 2), verbose)
+    logging.info("Starting DC analysis:")
     elem_type, elem_descr = source[0].lower(), source.lower() # eg. 'v', 'v34'
     sweep_label = elem_type[0].upper() + elem_descr[1:]
 
     if sweep_type == options.dc_log_step and stop - start < 0:
-        printing.print_general_error(
-            "DC analysis has log sweeping and negative stepping.")
+        logging.error("DC analysis has log sweeping and negative stepping.")
         sys.exit(1)
     if (stop - start) * step < 0:
         raise ValueError("Unbonded stepping in DC analysis.")
@@ -270,12 +268,11 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
     elif sweep_type == options.dc_lin_step:
         dc_iter = utilities.lin_axis_iterator(start, stop, points=points)
     else:
-        printing.print_general_error("Unknown sweep type: %s" % (sweep_type,))
+        logging.error("Unknown sweep type: %s" % (sweep_type,))
         sys.exit(1)
 
     if elem_type != 'v' and elem_type != 'i':
-        printing.print_general_error(
-            "Sweeping is possible only with voltage and current sources. (" + str(elem_type) + ")")
+        logging.error("Sweeping is possible only with voltage and current sources. (" + str(elem_type) + ")")
         sys.exit(1)
 
     source_elem = None
@@ -305,11 +302,10 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
     sol = results.dc_solution(
         circ, start, stop, sweepvar=sweep_label, stype=sweep_type, outfile=outfile)
 
-    printing.print_info_line(("Solving... ", 3), verbose, print_nl=False)
+    logging.info("Solving... ")
 
     # sweep setup
-
-    # tarocca il generatore di tensione, avvia DC silenziosa, ritarocca etc
+    
     index = 0
     for sweep_value in dc_iter:
         index = index + 1
@@ -321,18 +317,18 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
         x = op_analysis(circ, x0=x, guess=guess, verbose=0)
         if x is None:
             if not options.dc_sweep_skip_allowed:
-                print("Could't solve the circuit for sweep value:", start + index * step)
+                logging.info("Could't solve the circuit for sweep value:", start + index * step)
                 solved = False
                 break
             else:
-                print("Skipping sweep value:", start + index * step)
+                logging.info("Skipping sweep value:", start + index * step)
                 continue
         solved = True
         sol.add_op(sweep_value, x)
 
         
     if solved:
-        printing.print_info_line(("done", 3), verbose)
+        logging.info("done")
 
     # clean up
     if isinstance(source_elem, components.sources.VSource):
@@ -370,16 +366,16 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     if solved1:
         op1 = results.op_solution(
             x1, error1, circ, outfile=outfile, iterations=n_iter1)
-        printing.print_info_line(("Solving without Gmin:", 4), verbose)
+        logging.info("Solving without Gmin:")
         (x2, error2, solved2, n_iter2) = dc_solve(
             M, ZDC, circ, Gmin=None, x0=x1)
     else:
         solved2 = False
 
     if solved1 and not solved2:
-        printing.print_general_error("Can't solve without Gmin.")
+        logging.error("Can't solve without Gmin.")
         if verbose:
-            print("Displaying latest valid results.")
+            logging.info("Displaying latest valid results.")
             op1.write_to_file(filename='stdout')
         opsolution = op1
     elif solved1 and solved2:
@@ -387,7 +383,7 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
             x2, error2, circ, outfile=outfile, iterations=n_iter1 + n_iter2)
         op2.gmin = 0
         badvars = results.op_solution.gmin_check(op2, op1)
-        printing.print_result_check(badvars, verbose=verbose)
+        # printing.print_result_check(badvars, verbose=verbose)
         check_ok = not (len(badvars) > 0)
         if not check_ok and verbose:
             print("Solution with Gmin:")
@@ -396,7 +392,7 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
             op2.write_to_file(filename='stdout')
         opsolution = op2
     else:  # not solved1
-        printing.print_general_error("Couldn't solve the circuit. Giving up.")
+        logging.error("Couldn't solve the circuit. Giving up.")
         opsolution = None
 
     if opsolution and outfile != 'stdout' and outfile is not None:
@@ -421,7 +417,7 @@ def mdn_solver(x, mna, circ, T, MAXIT, nv, locked_nodes, time=None, vector_norm=
                              "%d-elements x0 with an MNA of size %d" %
                              (x.shape[0], mna_size))
     if T is None:
-        printing.print_warning(
+        logging.warning(
             "dc_analysis.mdn_solver called with T==None, setting T=0. BUG or no sources in circuit?")
         T = np.zeros((mna_size, 1))
 
