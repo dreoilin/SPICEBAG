@@ -1,11 +1,5 @@
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
-import atexit
 import copy
-import os
 import sys
-import tempfile
 
 
 import numpy as np
@@ -111,34 +105,35 @@ def main(filename, outfile="stdout", verbose=3):
     res : dict
         A dictionary containing the computed results.
     """
-    #import logging
+    import logging
+    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     #import logging.config
     #logging.config.fileConfig("logging.conf")
     
-    print("This is turmeric %s running with:" % __version__)
-    print("\tPython %s" % (sys.version.split('\n')[0],))
-    print("\tNumpy %s" % (np.__version__))
-    print("\tScipy %s" % (sp.__version__))
-    print("\tTabulate %s" % (tabulate.__version__))
+    logging.info("This is turmeric %s running with:" % __version__)
+    logging.info("\tPython %s" % (sys.version.split('\n')[0],))
+    logging.info("\tNumpy %s" % (np.__version__))
+    logging.info("\tScipy %s" % (sp.__version__))
+    logging.info("\tTabulate %s" % (tabulate.__version__))
     
     (circ, directives, postproc_direct) = netlist_parser.parse_network(
         filename)
 
-    print("%s: Checking circuit for common mistakes..." % __name__)
+    logging.info("Checking circuit for common mistakes...")
     
+    # utility check should be member method for circuit class
     (check, reason) = utilities.check_circuit(circ)
     if not check:
-        printing.print_general_error(reason)
+        logging.error(reason)
         sys.exit(3)
-    printing.print_info_line(("done.", 6), verbose)
+    logging.info("Finished")
 
-    if verbose > 3 or _print:
-        print("Parsed circuit:")
-        print(circ)
-        print("Models:")
-        for m in circ.models:
-            circ.models[m].print_model()
-        print("")
+    
+    logging.info("Parsed circuit:")
+    print(circ)
+    logging.info("Models:")
+    for m in circ.models:
+        circ.models[m].print_model()
 
     ic_list = netlist_parser.parse_ics(directives)
     _handle_netlist_ics(circ, an_list=[], ic_list=ic_list)
@@ -151,9 +146,11 @@ def main(filename, outfile="stdout", verbose=3):
            or not 'verbose' in list(an.keys()):
             an.update({'verbose': verbose})
         _handle_netlist_ics(circ, [an], ic_list=[])
-        if verbose >= 4:
-            printing.print_info_line(("Requested an.:", 4), verbose)
-            printing.print_analysis(an)
+        
+        logging.info("Requested an.:")
+        # print to logger
+        printing.print_analysis(an)
+        
         results.update(run(circ, [an]))
 
     return results

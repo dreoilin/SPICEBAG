@@ -5,8 +5,6 @@ Created on Fri May  1 11:23:45 2020
 @author: cian
 
 """
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
 
 import sys
 import re
@@ -14,10 +12,13 @@ import copy
 
 # FORTRAN SUBRS
 # from LINALG import ludcmp, lubksb
-# from LINALG import ludcmp, lubksb
 
 import numpy as np
-import numpy.linalg
+
+try:
+    import LINALG as linalg
+except ImportError:
+    import numpy.linalg as linalg
 
 from . import components
 from . import diode
@@ -29,6 +30,8 @@ from . import utilities
 from . import results
 
 from .utilities import convergence_check
+
+import logging
 
 specs = {'op': {
     'tokens': ({
@@ -268,7 +271,7 @@ def more_solve_methods_available(standard_solving, gmin_stepping, source_steppin
 def get_solve_methods():
     
     standard_solving = {"enabled": False, "failed": False}
-    g_indices = list(range(int(numpy.log(options.gmin)), 0))
+    g_indices = list(range(int(np.log(options.gmin)), 0))
     g_indices.reverse()
     gmin_stepping = {"enabled": False, "failed":
                      False, "factors": g_indices, "index": 0}
@@ -375,42 +378,35 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
 
 def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     
-    if outfile == 'stdout':
-        verbose = 0  # silent mode, print out results only.
     if not options.dc_use_guess:
         guess = False
-        
-    ####################################################
-    # (mna, N) = generate_mna_and_N(circ, verbose=verbose)
-    ####################################################
     
-    mna = circ.M0
-    N = circ.ZDC0
+    logging.info("Getting M0 and ZDC0 from circuit")
+    # unreduced MNA matrices computed by the circuit object
+    M0 = circ.M0
+    ZDC0 = circ.ZDC0
+    # print MNA matrices for user
+    logging.debug("Printing M0:")
+    logging.debug(M0)
+    logging.debug("Printing ZDC0:")
+    logging.debug(ZDC0)
+    # now create reduced matrices (used for calculation purposes)
+    logging.info("Reducing MNA matrices")
     
-    printing.print_info_line(
-        ("MNA matrix and constant term (complete):", 4), verbose)
-    printing.print_info_line((mna, 4), verbose)
-    printing.print_info_line((N, 4), verbose)
+    mna = utilities.remove_row_and_col(M0)
+    N = utilities.remove_row(ZDC0, rrow=0)
 
-    # lets trash the unneeded col & row
-    printing.print_info_line(
-        ("Removing unneeded row and column...", 4), verbose)
-    mna = utilities.remove_row_and_col(mna)
-    N = utilities.remove_row(N, rrow=0)
-
-    printing.print_info_line(("Starting op analysis:", 2), verbose)
+    logging.info("Starting operating point analysis")
     
     # Assign DC estimate here
 
-    printing.print_info_line(("Solving with Gmin:", 4), verbose)
+    logging.info("Constructing Gmin matrix")
     Gmin_matrix = build_gmin_matrix(
         circ, options.gmin, mna.shape[0], verbose - 2)
     (x1, error1, solved1, n_iter1) = dc_solve(mna, N,
                                               circ, Gmin=Gmin_matrix, x0=x0, verbose=verbose)
 
-    # We'll check the results now. Recalculate them without Gmin (using previsious solution as initial guess)
-    # and check that differences on nodes and current do not exceed the
-    # tolerances.
+    
     if solved1:
         op1 = results.op_solution(
             x1, error1, circ, outfile=outfile, iterations=n_iter1)
