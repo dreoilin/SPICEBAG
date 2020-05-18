@@ -19,6 +19,8 @@ try:
     import LINALG as linalg
 except ImportError:
     import numpy.linalg as linalg
+    
+from .FORTRAN.DC_SUBRS import gmin_mat
 
 from . import components
 from . import diode
@@ -97,16 +99,14 @@ specs = {'op': {
 }
 
 
-def dc_solve(mna, Ndc, circ, Ntran=None, Gmin=None, x0=None, time=None,
-             MAXIT=None, locked_nodes=None, skip_Tt=False, verbose=3):
+def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
+             MAXIT=options.dc_max_nr_iter, locked_nodes=None, skip_Tt=False):
     
-    if MAXIT == None:
-        MAXIT = options.dc_max_nr_iter
     if locked_nodes is None:
         locked_nodes = circ.get_locked_nodes()
-    mna_size = mna.shape[0]
-    nv = circ.get_nodes_number()
-    tot_iterations = 0
+        
+    M_size = M.shape[0]
+    NNODES = circ.get_nodes_number()
 
     if Gmin is None:
         Gmin = 0
@@ -114,24 +114,12 @@ def dc_solve(mna, Ndc, circ, Ntran=None, Gmin=None, x0=None, time=None,
     if Ntran is None:
         Ntran = 0
 
-    # time variable component: Tt this is always the same in each iter. So we
-    # build it once for all.
-    Tt = np.zeros((mna_size, 1))
-    v_eq = 0
+    # call circuit method to generate AC component of input signal
     if not skip_Tt:
-        for elem in circ:
-            if (isinstance(elem, components.sources.VSource) or isinstance(elem, components.sources.ISource)) and elem.is_timedependent:
-                if isinstance(elem, components.sources.VSource):
-                    Tt[nv - 1 + v_eq, 0] = -1 * elem.V(time)
-                elif isinstance(elem, components.sources.ISource):
-                    if elem.n1:
-                        Tt[elem.n1 - 1, 0] = Tt[elem.n1 - 1, 0] + elem.I(time)
-                    if elem.n2:
-                        Tt[elem.n2 - 1, 0] = Tt[elem.n2 - 1, 0] - elem.I(time)
-            if circuit.is_elem_voltage_defined(elem):
-                v_eq = v_eq + 1
-    # update N to include the time variable sources
-    Ndc = Ndc + Tt
+        circ.generate_ZAC(time)
+        # retrieve ZAC and add to DC component
+        ZAC = circ.ZAC
+        ZDC += ZAC
 
     # initial guess, if specified, otherwise it's zero
     if x0 is not None:
@@ -140,39 +128,34 @@ def dc_solve(mna, Ndc, circ, Ntran=None, Gmin=None, x0=None, time=None,
         else:
             x = x0
     else:
-        x = np.zeros((mna_size, 1))
-                      # has n-1 rows because of discard of ^^^
+        x = np.zeros((M_size, 1))
 
     converged = False
     standard_solving, gmin_stepping, source_stepping = get_solve_methods()
     standard_solving, gmin_stepping, source_stepping = set_next_solve_method(
         standard_solving, gmin_stepping,
-        source_stepping, verbose)
+        source_stepping)
 
     convergence_by_node = None
-    printing.print_info_line(("Solving... ", 3), verbose, print_nl=False)
-
+    logging.info("Solving...")
+    iterations = 0
+    
     while(not converged):
         if standard_solving["enabled"]:
-            mna_to_pass = mna + Gmin
-            N_to_pass = Ndc + Ntran * (Ntran is not None)
+            mna_to_pass = M + Gmin
+            N_to_pass = ZDC + Ntran * (Ntran is not None)
         elif gmin_stepping["enabled"]:
-            # print "gmin index:", str(gmin_stepping["index"])+", gmin:", str(
-            # 10**(gmin_stepping["factors"][gmin_stepping["index"]]))
-            printing.print_info_line(
-                ("Setting Gmin to: " + str(10 ** gmin_stepping["factors"][gmin_stepping["index"]]), 6), verbose)
-            mna_to_pass = build_gmin_matrix(
-                circ, 10 ** (gmin_stepping["factors"][gmin_stepping["index"]]), mna_size, verbose) + mna
-            N_to_pass = Ndc + Ntran * (Ntran is not None)
+            logging.info("Setting Gmin to: " + str(10 ** gmin_stepping["factors"][gmin_stepping["index"]]))
+            mna_to_pass = gmin_mat(10**(gmin_stepping["factors"][gmin_stepping["index"]]), M_size, NNODES-1) + M
+            N_to_pass = ZDC + Ntran * (Ntran is not None)
         elif source_stepping["enabled"]:
-            printing.print_info_line(
-                ("Setting sources to " + str(source_stepping["factors"][source_stepping["index"]] * 100) + "% of their actual value", 6), verbose)
-            mna_to_pass = mna + Gmin
-            N_to_pass = source_stepping["factors"][source_stepping["index"]]*Ndc + Ntran*(Ntran is not None)
+            logging.info("Setting sources to " + str(source_stepping["factors"][source_stepping["index"]] * 100) + "% of their actual value")
+            mna_to_pass = M + Gmin
+            N_to_pass = source_stepping["factors"][source_stepping["index"]]*ZDC + Ntran*(Ntran is not None)
         try:
             (x, error, converged, n_iter, convergence_by_node) = mdn_solver(x, mna_to_pass, circ, T=N_to_pass,
-                                                                            nv=nv, print_steps=(verbose > 0), locked_nodes=locked_nodes, time=time, MAXIT=MAXIT, debug=(verbose == 6))
-            tot_iterations += n_iter
+                                                                            nv=NNODES, locked_nodes=locked_nodes, time=time, MAXIT=MAXIT)
+            iterations += n_iter
         except np.linalg.linalg.LinAlgError:
             n_iter = 0
             converged = False
@@ -185,11 +168,11 @@ def dc_solve(mna, Ndc, circ, Ntran=None, Gmin=None, x0=None, time=None,
             printing.print_general_error("Overflow")
 
         if not converged:
-            if verbose == 6 and convergence_by_node is not None:
+            if convergence_by_node is not None:
                 for ivalue in range(len(convergence_by_node)):
-                    if not convergence_by_node[ivalue] and ivalue < nv - 1:
-                        print("Convergence problem node %s" % (circ.int_node_to_ext(ivalue),))
-                    elif not convergence_by_node[ivalue] and ivalue >= nv - 1:
+                    if not convergence_by_node[ivalue] and ivalue < NNODES - 1:
+                        logging.debug("Convergence problem node %s" % (circ.int_node_to_ext(ivalue),))
+                    elif not convergence_by_node[ivalue] and ivalue >= NNODES - 1:
                         e = circ.find_vde(ivalue)
                         print("Convergence problem current in %s" % e.part_id)
             if n_iter == MAXIT - 1:
@@ -197,15 +180,14 @@ def dc_solve(mna, Ndc, circ, Ntran=None, Gmin=None, x0=None, time=None,
                     "Error: MAXIT exceeded (" + str(MAXIT) + ")")
             if more_solve_methods_available(standard_solving, gmin_stepping, source_stepping):
                 standard_solving, gmin_stepping, source_stepping = set_next_solve_method(
-                    standard_solving, gmin_stepping, source_stepping, verbose)
+                    standard_solving, gmin_stepping, source_stepping)
             else:
                 # print "Giving up."
                 x = None
                 error = None
                 break
         else:
-            printing.print_info_line(
-                ("[%d iterations]" % (n_iter,), 6), verbose)
+            logging.info("[%d iterations]" % (n_iter,))
             if (source_stepping["enabled"] and source_stepping["index"] != 9):
                 converged = False
                 source_stepping["index"] = source_stepping["index"] + 1
@@ -213,47 +195,32 @@ def dc_solve(mna, Ndc, circ, Ntran=None, Gmin=None, x0=None, time=None,
                 gmin_stepping["index"] = gmin_stepping["index"] + 1
                 converged = False
             else:
-                printing.print_info_line((" done.", 3), verbose)
-    return (x, error, converged, tot_iterations)
+                logging.info(" done.")
+    return (x, error, converged, iterations)
 
 
-def build_gmin_matrix(circ, gmin, mna_size, verbose):
-    
-    printing.print_info_line(("Building Gmin matrix...", 5), verbose)
-    Gmin_matrix = np.zeros((mna_size, mna_size))
-    for index in range(circ.get_nodes_number() - 1):
-        Gmin_matrix[index, index] = gmin
-        # the three missing terms of the stample matrix go on [index,0] [0,0] [0, index] but since
-        # we discarded the 0 row and 0 column, we simply don't need to add them
-        # the last lines are the KVL lines, introduced by voltage sources.
-        # Don't add gmin there.
-    return Gmin_matrix
-
-
-def set_next_solve_method(standard_solving, gmin_stepping, source_stepping, verbose=3):
+def set_next_solve_method(standard_solving, gmin_stepping, source_stepping):
 
     if standard_solving["enabled"]:
-        printing.print_info_line(("failed.", 1), verbose)
+        logging.info("failed.")
         standard_solving["enabled"] = False
         standard_solving["failed"] = True
     elif gmin_stepping["enabled"]:
-        printing.print_info_line(("failed.", 1), verbose)
+        logging.info("failed.")
         gmin_stepping["enabled"] = False
         gmin_stepping["failed"] = True
     elif source_stepping["enabled"]:
-        printing.print_info_line(("failed.", 1), verbose)
+        logging.info("failed.")
         source_stepping["enabled"] = False
         source_stepping["failed"] = True
     if not standard_solving["failed"] and options.use_standard_solve_method:
         standard_solving["enabled"] = True
     elif not gmin_stepping["failed"] and options.use_gmin_stepping:
         gmin_stepping["enabled"] = True
-        printing.print_info_line(
-            ("Enabling gmin stepping convergence aid.", 3), verbose)
+        logging.info("Enabling gmin stepping convergence aid.")
     elif not source_stepping["failed"] and options.use_source_stepping:
         source_stepping["enabled"] = True
-        printing.print_info_line(
-            ("Enabling source stepping convergence aid.", 3), verbose)
+        logging.info("Enabling source stepping convergence aid.")
 
     return standard_solving, gmin_stepping, source_stepping
 
@@ -385,34 +352,27 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     # unreduced MNA matrices computed by the circuit object
     M0 = circ.M0
     ZDC0 = circ.ZDC0
-    # print MNA matrices for user
-    logging.debug("Printing M0:")
-    logging.debug(M0)
-    logging.debug("Printing ZDC0:")
-    logging.debug(ZDC0)
     # now create reduced matrices (used for calculation purposes)
     logging.info("Reducing MNA matrices")
+    M = M0[1:, 1:]
+    ZDC = ZDC0[1:]
     
-    mna = utilities.remove_row_and_col(M0)
-    N = utilities.remove_row(ZDC0, rrow=0)
-
     logging.info("Starting operating point analysis")
     
     # Assign DC estimate here
 
     logging.info("Constructing Gmin matrix")
-    Gmin_matrix = build_gmin_matrix(
-        circ, options.gmin, mna.shape[0], verbose - 2)
-    (x1, error1, solved1, n_iter1) = dc_solve(mna, N,
-                                              circ, Gmin=Gmin_matrix, x0=x0, verbose=verbose)
+    # take away a single node because we have reduced M
+    Gmin_matrix = gmin_mat(options.gmin, M.shape[0], circ.get_nodes_number()-1)
+    (x1, error1, solved1, n_iter1) = dc_solve(M, ZDC,
+                                              circ, Gmin=Gmin_matrix, x0=x0)
 
-    
     if solved1:
         op1 = results.op_solution(
             x1, error1, circ, outfile=outfile, iterations=n_iter1)
         printing.print_info_line(("Solving without Gmin:", 4), verbose)
         (x2, error2, solved2, n_iter2) = dc_solve(
-            mna, N, circ, Gmin=None, x0=x1, verbose=verbose)
+            M, ZDC, circ, Gmin=None, x0=x1)
     else:
         solved2 = False
 
@@ -447,9 +407,7 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     return opsolution
 
 
-def mdn_solver(x, mna, circ, T, MAXIT, nv, locked_nodes, time=None,
-               print_steps=False, vector_norm=lambda v: max(abs(v)),
-               debug=True):
+def mdn_solver(x, mna, circ, T, MAXIT, nv, locked_nodes, time=None, vector_norm=lambda v: max(abs(v))):
 
     mna_size = mna.shape[0]
     nonlinear_circuit = circ.is_nonlinear()
@@ -497,14 +455,15 @@ def mdn_solver(x, mna, circ, T, MAXIT, nv, locked_nodes, time=None,
             break
         # if vector_norm(dx) == np.nan: #Overflow
         #   raise OverflowError
-    
-    if debug and not converged:
+    # True value is debug
+    if True and not converged:
         # re-run the convergence check, only this time get the results
         # by node, so we can show to the users which nodes are misbehaving.
         converged, convergence_by_node = convergence_check(
             x, dx, residual, nv - 1, debug=True)
     else:
         convergence_by_node = []
+
     return (x, residual, converged, iteration, convergence_by_node)
 
 

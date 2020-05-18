@@ -78,7 +78,7 @@ analysis = {'op': dc_analysis.op_analysis, 'dc': dc_analysis.dc_analysis,
             'temp': set_temperature}
 
 
-def main(filename, outfile="stdout", verbose=3):
+def main(filename, outfile="stdout"):
     """
     filename : string
         The netlist filename.
@@ -142,9 +142,6 @@ def main(filename, outfile="stdout", verbose=3):
         if 'outfile' not in list(an.keys()) or not an['outfile']:
             an.update(
                 {'outfile': outfile + ("." + an['type']) * (outfile != 'stdout')})
-        if 'verbose' in list(an.keys()) and (an['verbose'] is None or an['verbose'] < verbose) \
-           or not 'verbose' in list(an.keys()):
-            an.update({'verbose': verbose})
         _handle_netlist_ics(circ, [an], ic_list=[])
         
         logging.info("Requested an.:")
