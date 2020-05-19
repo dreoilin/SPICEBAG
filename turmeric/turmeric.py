@@ -105,6 +105,7 @@ def main(filename, outfile="stdout"):
     res : dict
         A dictionary containing the computed results.
     """
+    # logger config here
     import logging
     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     #import logging.config
