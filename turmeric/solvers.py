@@ -18,6 +18,7 @@ class Solver():
         self._steps = steps
         self._enabled = False
         self._failed = False
+        self._finished = False
     
     def __str__(self):
         pass
@@ -41,26 +42,31 @@ class Solver():
             self._enabled = False
         self._failed = True
     
+    @property
+    def finished(self):
+        return self._finished
+    
     def _next_step(self):
         pass
     
     def more_steps(self):
         return len(self._steps)
     
-    def augment_M_and_Z(self):
+    def augment_M_and_ZDC(self):
         pass
     
 class Standard(Solver):
     def __init__(self, name='standard'):
         self.name = name
         self._steps = None
-        self._enabled = True
         self._enabled = False
+        self._failed = False
         
     def __str__(self):
         return f"Name: {self.name}"
     
     def augment_M_and_ZDC(self, M, ZDC, G):
+        self._finished = True
         return (M+G, ZDC)
     
 class GminStepper(Solver):
@@ -69,6 +75,7 @@ class GminStepper(Solver):
         self._steps = steps
         self._enabled = False
         self._failed = False
+        self._finished = False
         
     def _next_step(self):
         if self.more_steps():
@@ -79,7 +86,9 @@ class GminStepper(Solver):
     
     def augment_M_and_ZDC(self, M, ZDC, G):
         step = self._next_step()
-        
+        if not self.more_steps:
+            self._finished = True
+            
         if step is not None:
             G *= 10 ** step
             return (M + G, ZDC)
@@ -101,6 +110,9 @@ class SourceStepper(Solver):
         
     def augment_M_and_ZDC(self, M, ZDC, G):
         step = self._next_step()
+        
+        if not self.more_steps():
+            self.finished = True
         
         if step is not None:
             ZDC *= step
