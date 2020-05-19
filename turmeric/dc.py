@@ -30,11 +30,12 @@ from . import circuit
 #from . import printing
 from . import utilities
 from . import results
+from .solvers import Standard, GminStepper, SourceStepper
 
 from .utilities import convergence_check
 
-import logging
-
+import logging 
+    
 specs = {'op': {
     'tokens': ({
                'label': 'guess',
@@ -98,9 +99,22 @@ specs = {'op': {
            }
 }
 
+def setup_solvers():
+    
+    g_steps = list(range(int(np.log(options.gmin)), 0)).reverse()
+    source_steps = (0.001, .005, .01, .03, .1, .3, .5, .7, .8, .9)
+    
+    standard = Standard()
+    gmin_stepping = GminStepper(steps=g_steps)
+    source_stepping = SourceStepper(steps=source_steps)
+    # enable the first solver
+    standard.enable()
+    
+    return [standard, gmin_stepping, source_stepping]
+    
 
 def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
-             MAXIT=options.dc_max_nr_iter, locked_nodes=None, skip_Tt=False):
+             MAXIT=options.dc_max_nr_iter, locked_nodes=None):
     
     if locked_nodes is None:
         locked_nodes = circ.get_locked_nodes()
@@ -115,11 +129,13 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
         Ntran = 0
 
     # call circuit method to generate AC component of input signal
-    if not skip_Tt:
+    if time is not None:
+        # get method would be nicer
         circ.generate_ZAC(time)
         # retrieve ZAC and add to DC component
         ZAC = circ.ZAC
-        ZDC += ZAC
+    else:
+        ZAC = False
 
     # initial guess, if specified, otherwise it's zero
     if x0 is not None:
@@ -130,42 +146,28 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
     else:
         x = np.zeros((M_size, 1))
 
-    converged = False
-    standard_solving, gmin_stepping, source_stepping = get_solve_methods()
-    standard_solving, gmin_stepping, source_stepping = set_next_solve_method(
-        standard_solving, gmin_stepping,
-        source_stepping)
+    solvers = setup_solvers()
 
     convergence_by_node = None
     logging.info("Solving...")
     iterations = 0
     
-    while(not converged):
-        if standard_solving["enabled"]:
-            mna_to_pass = M + Gmin
-            N_to_pass = ZDC + Ntran * (Ntran is not None)
-        elif gmin_stepping["enabled"]:
-            logging.info("Setting Gmin to: " + str(10 ** gmin_stepping["factors"][gmin_stepping["index"]]))
-            mna_to_pass = gmin_mat(10**(gmin_stepping["factors"][gmin_stepping["index"]]), M_size, NNODES-1) + M
-            N_to_pass = ZDC + Ntran * (Ntran is not None)
-        elif source_stepping["enabled"]:
-            logging.info("Setting sources to " + str(source_stepping["factors"][source_stepping["index"]] * 100) + "% of their actual value")
-            mna_to_pass = M + Gmin
-            N_to_pass = source_stepping["factors"][source_stepping["index"]]*ZDC + Ntran*(Ntran is not None)
-        try:
-            (x, error, converged, n_iter, convergence_by_node) = mdn_solver(x, mna_to_pass, circ, T=N_to_pass,
-                                                                            nv=NNODES, locked_nodes=locked_nodes, time=time, MAXIT=MAXIT)
-            iterations += n_iter
-        except np.linalg.linalg.LinAlgError:
-            n_iter = 0
-            converged = False
-            print("failed.")
-            logging.error("J Matrix is singular")
-        except OverflowError:
-            n_iter = 0
-            converged = False
-            print("failed.")
-            logging.error("Overflow")
+    converged = False
+    
+    while converged is not True:
+        for solver in solvers:
+            if solver.enabled:
+                M, ZDC = solver.augment_M_and_ZDC(M, ZDC, Gmin)
+                Z = ZDC + ZAC * (bool(time))
+            else:
+                continue
+        
+        # now solve
+        (x, error, converged, n_iter, convergence_by_node) = mdn_solver(x, M, circ, T=Z,
+                                                                        nv=NNODES, locked_nodes=locked_nodes, time=time, MAXIT=MAXIT)
+        # increment iteration
+        iterations += n_iter
+
 
         if not converged:
             if convergence_by_node is not None:
@@ -177,9 +179,12 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
                         print("Convergence problem current in %s" % e.part_id)
             if n_iter == MAXIT - 1:
                 logging.error("Error: MAXIT exceeded (" + str(MAXIT) + ")")
-            if more_solve_methods_available(standard_solving, gmin_stepping, source_stepping):
-                standard_solving, gmin_stepping, source_stepping = set_next_solve_method(
-                    standard_solving, gmin_stepping, source_stepping)
+            if not all([solver.finished for solver in solvers]):
+                for i, solver in enumerate(solvers):
+                    if solver.finished:
+                        solver.fail()
+                        solvers[i+1].enable()
+                        
             else:
                 # print "Giving up."
                 x = None
@@ -187,63 +192,9 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
                 break
         else:
             logging.info("[%d iterations]" % (n_iter,))
-            if (source_stepping["enabled"] and source_stepping["index"] != 9):
-                converged = False
-                source_stepping["index"] = source_stepping["index"] + 1
-            elif (gmin_stepping["enabled"] and gmin_stepping["index"] != 9):
-                gmin_stepping["index"] = gmin_stepping["index"] + 1
-                converged = False
-            else:
-                logging.info(" done.")
+            logging.info("Done...")
+            
     return (x, error, converged, iterations)
-
-
-def set_next_solve_method(standard_solving, gmin_stepping, source_stepping):
-
-    if standard_solving["enabled"]:
-        logging.info("failed.")
-        standard_solving["enabled"] = False
-        standard_solving["failed"] = True
-    elif gmin_stepping["enabled"]:
-        logging.info("failed.")
-        gmin_stepping["enabled"] = False
-        gmin_stepping["failed"] = True
-    elif source_stepping["enabled"]:
-        logging.info("failed.")
-        source_stepping["enabled"] = False
-        source_stepping["failed"] = True
-    if not standard_solving["failed"] and options.use_standard_solve_method:
-        standard_solving["enabled"] = True
-    elif not gmin_stepping["failed"] and options.use_gmin_stepping:
-        gmin_stepping["enabled"] = True
-        logging.info("Enabling gmin stepping convergence aid.")
-    elif not source_stepping["failed"] and options.use_source_stepping:
-        source_stepping["enabled"] = True
-        logging.info("Enabling source stepping convergence aid.")
-
-    return standard_solving, gmin_stepping, source_stepping
-
-
-def more_solve_methods_available(standard_solving, gmin_stepping, source_stepping):
-
-    if (standard_solving["failed"] or not options.use_standard_solve_method) and \
-       (gmin_stepping["failed"] or not options.use_gmin_stepping) and \
-       (source_stepping["failed"] or not options.use_source_stepping):
-        return False
-    else:
-        return True
-
-
-def get_solve_methods():
-    
-    standard_solving = {"enabled": False, "failed": False}
-    g_indices = list(range(int(np.log(options.gmin)), 0))
-    g_indices.reverse()
-    gmin_stepping = {"enabled": False, "failed":
-                     False, "factors": g_indices, "index": 0}
-    source_stepping = {"enabled": False, "failed": False, "factors": (
-        0.001, .005, .01, .03, .1, .3, .5, .7, .8, .9), "index": 0}
-    return standard_solving, gmin_stepping, source_stepping
 
 
 def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True, x0=None, outfile="stdout"):
@@ -294,9 +245,6 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
     else:
         initial_value = source_elem.dc_value
 
-    # If the initial value is set to None, op_analysis will attempt a smart guess (if guess),
-    # Then for each iteration, the last result is used as x0, since op_analysis will not
-    # attempt to guess the op if x0 is not None.
     x = x0
 
     sol = results.dc_solution(

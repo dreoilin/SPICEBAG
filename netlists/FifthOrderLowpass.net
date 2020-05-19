@@ -1,4 +1,4 @@
-5TH-ORDER LOW_PASS FILTER
+*5TH-ORDER LOW_PASS FILTER
 ****
 * T = I(R2) / IIN
 *   = 0.113*(S**2 + 1.6543)*(S**2 + 0.2632) /
