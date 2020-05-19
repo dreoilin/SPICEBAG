@@ -34,12 +34,7 @@ from .solvers import Standard, GminStepper, SourceStepper
 
 from .utilities import convergence_check
 
-import logging
-
-# set up stepping
-g_steps = list(range(int(np.log(options.gmin)), 0)).reverse()
-source_steps = (0.001, .005, .01, .03, .1, .3, .5, .7, .8, .9)
-    
+import logging 
     
 specs = {'op': {
     'tokens': ({
@@ -103,29 +98,18 @@ specs = {'op': {
                      )
            }
 }
-"""
-class Solver():
-    def __init__(self, method, factors=None):
-        self.method = method
-        self.enabled = False
-        self.failed = False
-        if factors is not None:
-            self.factors = factors
-        else:
-            self.stepper = False
-            
-    def factors():
-        return 
-"""            
 
-# m_names = ('standard', 'gmin_stepping', 'source_stepping')
-
-
-        
-        
-        
-        
-#solver_spec = 
+def setup_solvers():
+    
+    g_steps = list(range(int(np.log(options.gmin)), 0)).reverse()
+    source_steps = (0.001, .005, .01, .03, .1, .3, .5, .7, .8, .9)
+    
+    standard = Standard()
+    gmin_stepping = GminStepper(steps=g_steps)
+    source_stepping = SourceStepper(steps=source_steps)
+    
+    return [standard, gmin_stepping, source_stepping]
+    
 
 def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
              MAXIT=options.dc_max_nr_iter, locked_nodes=None):
@@ -161,11 +145,7 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
 
     converged = False
     
-    standard = Standard()
-    gmin_stepping = GminStepper(steps=g_steps)
-    source_stepping = SourceStepper(steps=source_steps)
-    
-    solvers = [standard, gmin_stepping, source_stepping]
+    solvers = setup_solvers()
     
     standard_solving, gmin_stepping, source_stepping = get_solve_methods()
     standard_solving, gmin_stepping, source_stepping = set_next_solve_method(
