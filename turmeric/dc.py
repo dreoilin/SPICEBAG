@@ -16,7 +16,7 @@ import copy
 import numpy as np
 
 try:
-    import LINALG as linalg
+    import LINALG
 except ImportError:
     import numpy.linalg as linalg
     
@@ -380,11 +380,16 @@ def mdn_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm=la
                     _update_J_and_Tx(J, N, x, elem, time)
         residual = M.dot(x) + T + nl*N
         
-        # lu = ludcmp(mna + nonlinear_circuit*J, mna_size)
-        # print(lu)
         ##########################################################
         # Solve linear system of equations
         ##########################################################
+        LU, INDX, _, C = LINALG.ludcmp(M + nl*J, M_size)
+        if C == 1:
+            logging.critical("Singular matrix")
+            #raise
+        
+        x = LINALG.lubksb(LU, INDX,  -residual)
+        
         
         dx = np.linalg.solve(M + nl*J, - residual)
         x = x + get_td(dx, locked_nodes, n=iteration) * dx
