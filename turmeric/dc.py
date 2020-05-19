@@ -199,10 +199,8 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
 
 def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True, x0=None, outfile="stdout"):
     
-    if outfile == 'stdout':
-        verbose = 0
     logging.info("Starting DC analysis:")
-    elem_type, elem_descr = source[0].lower(), source.lower() # eg. 'v', 'v34'
+    elem_type, elem_descr = source[0].lower(), source.lower()
     sweep_label = elem_type[0].upper() + elem_descr[1:]
 
     if sweep_type == options.dc_log_step and stop - start < 0:
@@ -292,12 +290,12 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     if not options.dc_use_guess:
         guess = False
     
-    logging.info("Getting M0 and ZDC0 from circuit")
+    logging.debug("Getting M0 and ZDC0 from circuit")
     # unreduced MNA matrices computed by the circuit object
     M0 = circ.M0
     ZDC0 = circ.ZDC0
     # now create reduced matrices (used for calculation purposes)
-    logging.info("Reducing MNA matrices")
+    logging.debug("Reducing MNA matrices")
     M = M0[1:, 1:]
     ZDC = ZDC0[1:]
     
@@ -351,47 +349,47 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     return opsolution
 
 
-def mdn_solver(x, mna, circ, T, MAXIT, nv, locked_nodes, time=None, vector_norm=lambda v: max(abs(v))):
+def mdn_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm=lambda v: max(abs(v))):
 
-    mna_size = mna.shape[0]
-    nonlinear_circuit = circ.is_nonlinear()
+    M_size = M.shape[0]
+    nl = circ.is_nonlinear()
     
     if x is None:
-        # if no guess was specified, its all zeros
-        x = np.zeros((mna_size, 1))
+        x = np.zeros((M_size, 1))
     else:
-        if x.shape[0] != mna_size:
+        if x.shape[0] != M_size:
             raise ValueError("x0s size is different from expected: got "
                              "%d-elements x0 with an MNA of size %d" %
-                             (x.shape[0], mna_size))
-    if T is None:
+                             (x.shape[0], M_size))
+    if Z is None:
         logging.warning(
-            "dc_analysis.mdn_solver called with T==None, setting T=0. BUG or no sources in circuit?")
-        T = np.zeros((mna_size, 1))
+            "No sources in circuit? Z is None")
+        T = np.zeros((M_size, 1))
 
-    # sparse matrix implementation here
-    J = np.zeros((mna_size, mna_size))
-    Tx = np.zeros((mna_size, 1))
+    J = np.zeros((M_size, M_size))
+    N = np.zeros((M_size, 1))
     converged = False
     iteration = 0
     while iteration < MAXIT:  # newton iteration counter
         iteration += 1
         
-        if nonlinear_circuit:
-            # build dT(x)/dx (stored in J) and Tx(x)
-            J[:, :] = 0.0
-            Tx[:, 0] = 0.0
+        if nl:
+            N[:, 0] = 0.0
             for elem in circ:
                 if elem.is_nonlinear:
-                    _update_J_and_Tx(J, Tx, x, elem, time)
-        residual = mna.dot(x) + T + nonlinear_circuit*Tx
+                    _update_J_and_Tx(J, N, x, elem, time)
+        residual = M.dot(x) + T + nl*N
         
         # lu = ludcmp(mna + nonlinear_circuit*J, mna_size)
         # print(lu)
+        ##########################################################
+        # Solve linear system of equations
+        ##########################################################
         
-        dx = np.linalg.solve(mna + nonlinear_circuit*J, - residual)
+        dx = np.linalg.solve(M + nl*J, - residual)
         x = x + get_td(dx, locked_nodes, n=iteration) * dx
-        if not nonlinear_circuit:
+        
+        if not nl:
             converged = True
             break
         elif convergence_check(x, dx, residual, nv - 1)[0]:

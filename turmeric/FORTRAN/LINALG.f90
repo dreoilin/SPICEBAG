@@ -1,4 +1,9 @@
  Subroutine LUDCMP(A,N,INDX,D,CODE)
+! given N x N matrix A, routine replaces it with
+! LU dcmp of rowwise permutation of itself
+
+! INDX [INT: N x 1] : vector which stores row permutations
+! D [INT] : records whether num row changes odd (-1) or even (1)
   IMPLICIT NONE
   INTEGER, PARAMETER :: NMAX=100
   Real(4), PARAMETER :: TINY=1.5E-16
@@ -9,9 +14,9 @@
 !f2py intent(in, out) :: A
 
   INTEGER I, J, K, IMAX
-  REAL(8)  AMAX, DUM, SUM, VV(NMAX)
+  REAL(8)  AMAX, DUM, SUM, VV(NMAX) ! VV store scaling of row
 
-  D=1; CODE=0
+  D=1; CODE=0 ! no row changes: init D to 1
 
   DO I=1,N
     AMAX=0.d0
@@ -22,7 +27,7 @@
       CODE = 1
       RETURN
     END IF
-    VV(I) = 1.d0 / AMAX
+    VV(I) = 1.d0 / AMAX ! save scaling
   END DO ! i loop
 
   DO J=1,N
@@ -72,10 +77,16 @@
   END subroutine LUDCMP
 
  Subroutine LUBKSB(A,N,INDX,B)
- REAL*8  SUM, A(N,N),B(N)
- INTEGER INDX(N)
+ implicit none
 
- II = 0
+ INTEGER, intent(in) :: N
+ REAL(8) ::  SUM
+ REAL(8), intent(in) :: A(N,N)
+ INTEGER, intent(in) :: INDX(N)
+ REAL(8), intent(inout) :: B(N)
+
+!f2py intent(in, out) :: B
+ INTEGER :: I, J, LL, II = 0
 
  DO I=1,N
    LL = INDX(I)
