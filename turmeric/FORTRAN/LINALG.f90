@@ -1,3 +1,6 @@
+MODULE LINALG
+ CONTAINS
+ 
  Subroutine LUDCMP(A,N,INDX,D,CODE)
 ! given N x N matrix A, routine replaces it with
 ! LU dcmp of rowwise permutation of itself
@@ -114,3 +117,5 @@
 
  RETURN
  END subroutine LUBKSB
+ 
+END MODULE LINALG
