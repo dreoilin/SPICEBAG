@@ -30,11 +30,17 @@ from . import circuit
 #from . import printing
 from . import utilities
 from . import results
+from .solvers import Standard, GminStepper, SourceStepper
 
 from .utilities import convergence_check
 
 import logging
 
+# set up stepping
+g_steps = list(range(int(np.log(options.gmin)), 0)).reverse()
+source_steps = (0.001, .005, .01, .03, .1, .3, .5, .7, .8, .9)
+    
+    
 specs = {'op': {
     'tokens': ({
                'label': 'guess',
@@ -97,10 +103,32 @@ specs = {'op': {
                      )
            }
 }
+"""
+class Solver():
+    def __init__(self, method, factors=None):
+        self.method = method
+        self.enabled = False
+        self.failed = False
+        if factors is not None:
+            self.factors = factors
+        else:
+            self.stepper = False
+            
+    def factors():
+        return 
+"""            
 
+# m_names = ('standard', 'gmin_stepping', 'source_stepping')
+
+
+        
+        
+        
+        
+#solver_spec = 
 
 def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
-             MAXIT=options.dc_max_nr_iter, locked_nodes=None, skip_Tt=False):
+             MAXIT=options.dc_max_nr_iter, locked_nodes=None):
     
     if locked_nodes is None:
         locked_nodes = circ.get_locked_nodes()
@@ -115,7 +143,8 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
         Ntran = 0
 
     # call circuit method to generate AC component of input signal
-    if not skip_Tt:
+    if time is not None:
+        # get method would be nicer
         circ.generate_ZAC(time)
         # retrieve ZAC and add to DC component
         ZAC = circ.ZAC
@@ -131,6 +160,13 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
         x = np.zeros((M_size, 1))
 
     converged = False
+    
+    standard = Standard()
+    gmin_stepping = GminStepper(steps=g_steps)
+    source_stepping = SourceStepper(steps=source_steps)
+    
+    solvers = [standard, gmin_stepping, source_stepping]
+    
     standard_solving, gmin_stepping, source_stepping = get_solve_methods()
     standard_solving, gmin_stepping, source_stepping = set_next_solve_method(
         standard_solving, gmin_stepping,
@@ -294,9 +330,6 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
     else:
         initial_value = source_elem.dc_value
 
-    # If the initial value is set to None, op_analysis will attempt a smart guess (if guess),
-    # Then for each iteration, the last result is used as x0, since op_analysis will not
-    # attempt to guess the op if x0 is not None.
     x = x0
 
     sol = results.dc_solution(

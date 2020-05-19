@@ -68,7 +68,7 @@ def parse_network(filename):
                     # trim leading/trailing whitespace 
                     line = line.strip().lower()
                     
-                    print(i+1,'\t', line)
+                    #print(i+1,'\t', line)
                     # TITLE
                     if i == 0:
                         circ.title = line[1:]

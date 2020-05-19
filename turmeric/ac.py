@@ -136,56 +136,7 @@ specs = {'ac': {'tokens': ({
 
 def ac_analysis(circ, start, points, stop, sweep_type=None,
                 x0=None, mna=None, AC=None, Nac=None, J=None,
-                outfile="stdout", verbose=3):
-    """Performs an AC analysis.
-
-    **Parameters:**
-
-    circ : Circuit instance
-        The circuit to be simulated.
-
-    start : float
-        The start frequency for the AC analysis, in Hz.
-
-    points : float,
-        The number of points to be used to discretize the
-        ``[start, stop]`` interval.
-
-    stop : float
-        The stop frequency, in Hz.
-
-    sweep_type : string, optional
-        Either ``options.ac_log_step`` (ie ``'LOG'``) or ``options.ac_lin_step``
-        (ie ``'LIN'``), defaults to ``options.ac_log_step``, resulting in a
-        logarithmic sweep.
-
-    x0 : OP results instance, optional
-        The linearization point. If not set, it will be computed
-        running an OP analysis.
-
-    mna, AC, Nax, J : ndarrays, optional
-        The matrices to perform the analysis. They will be computed
-        if not supplied.
-
-    outfile : string, optional
-        The name of the file where the results will be written.
-        The suffix ``'.ac'`` is automatically added at the end of the string to
-        prevent different analyses from overwriting each-other's results. Set to
-        ``'stdout'`` to write to the standard output.  If unset, or set to
-        ``None``, defaults to the standard output.
-
-    verbose : int, optional
-        The verbosity level, from 0 (silent) to 6 (debug).
-
-    **Returns:**
-
-    ACresult : AC solution
-        The AC analysis results.
-
-    :raises ValueError: if the parameters are out of their valid range.
-
-    :raises RuntimeError: if the circuit is non-linear and can't be linearized.
-    """
+                outfile="stdout"):
 
     if outfile == 'stdout':
         verbose = 0
