@@ -33,8 +33,7 @@ import imp
 
 import numpy as np
 
-from . import dc_analysis
-from . import implicit_euler
+from . import dc
 from . import options
 from . import circuit
 from . import printing
@@ -160,7 +159,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
     #It's a good idea to call transient with prebuilt MNA and N matrix
     #the analysis will be slightly faster (long netlists).
     if mna is None or N is None:
-        (mna, N) = dc_analysis.generate_mna_and_N(circ, verbose=verbose)
+        (mna, N) = dc.generate_mna_and_N(circ, verbose=verbose)
         mna = utilities.remove_row_and_col(mna)
         N = utilities.remove_row(N, rrow=0)
     elif not mna.shape[0] == N.shape[0]:
@@ -274,7 +273,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
     time = tstart
     nv = circ.get_nodes_number()
 
-    Gmin_matrix = dc_analysis.build_gmin_matrix(circ, options.gmin, mna.shape[0], verbose)
+    Gmin_matrix = dc.build_gmin_matrix(circ, options.gmin, mna.shape[0], verbose)
 
     # lo step viene generato automaticamente, ma non superare mai quello fornito.
     if use_step_control:
@@ -323,7 +322,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
         elif x is not None:
             x0 = x
 
-        x1, error, solved, n_iter = dc_analysis.dc_solve(
+        x1, error, solved, n_iter = dc.dc_solve(
                                                      mna=(mna + np.multiply(x_coeff, D)),
                                                      Ndc=N,  Ntran=np.dot(D, const), circ=circ,
                                                      Gmin=Gmin_matrix, x0=x0,

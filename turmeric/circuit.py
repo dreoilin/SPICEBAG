@@ -569,8 +569,36 @@ class Circuit(list):
         # all done
         self.M0 = M0
         self.ZDC0 = ZDC0
+        
+        # if you are clever you should be able to alter this function
+        # to generate ZAC0 using existing stamps and then slice matrix at end
+        # talk to me about this
+        # this method is called thousands of times in transient. We might need a quicker solution
+    def generate_ZAC(self, time=None):
+        
+        # index to count voltage defined elements
+        v_index = 0
+        ZAC_size = self.M0.shape[0]-1
+        NNODES = self.get_nodes_number()
+        # create empty array to store ZAC0
+        ZAC = np.zeros((ZAC_size, 1))
+        for elem in self:
+            if (isinstance(elem, components.sources.VSource) or isinstance(elem, components.sources.ISource)) and elem.is_timedependent:
+                if isinstance(elem, components.sources.VSource):
+                    ZAC[NNODES - 1 + v_index, 0] = -1 * elem.V(time)
+                elif isinstance(elem, components.sources.ISource):
+                    if elem.n1:
+                        ZAC[elem.n1 - 1, 0] += elem.I(time)
+                    if elem.n2:
+                        ZAC[elem.n2 - 1, 0] += - elem.I(time)
+            if is_elem_voltage_defined(elem):
+                v_index += 1
+        # all done
+        self.ZAC = ZAC
 
 # STATIC METHODS
+# this should definitely be a member variable
+# a sytematic way of sorting member variables would be nice
 def is_elem_voltage_defined(elem):
     
     if isinstance(elem, components.sources.VSource) or isinstance(elem, components.sources.EVSource) or \

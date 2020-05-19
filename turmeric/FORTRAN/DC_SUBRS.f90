@@ -9,6 +9,6 @@ subroutine gmin_mat(G, GMIN, N, NNODES)
   INTEGER :: i
   ! init matrix to [0]
   G = 0
-  ! at each diagonal up until NNODES, assign gmin
+  ! at each diagonal up until NNODES - 1 (starting at 1), assign gmin
   forall(i = 1:NNODES) G(i, i) = GMIN
 end subroutine

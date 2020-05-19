@@ -88,13 +88,15 @@ Module reference
 
 """
 
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
 import numpy as np
 
-from . import (circuit, dc_analysis, components, options, printing, results,
-               utilities)
+from . import circuit
+from . import dc
+from . import components
+from . import options
+from . import printing
+from . import results
+from . import utilities
 
 specs = {'ac': {'tokens': ({
                            'label': 'type',
@@ -215,7 +217,7 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
     # It's a good idea to call AC with prebuilt MNA matrix if the circuit is
     # big
     if mna is None:
-        mna, N = dc_analysis.generate_mna_and_N(circ, verbose=verbose)
+        mna, N = dc.generate_mna_and_N(circ, verbose=verbose)
         del N
         mna = utilities.remove_row_and_col(mna)
     if Nac is None:
@@ -235,7 +237,7 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
                                           "linearization point...", 3), verbose,
                                          print_nl=False)
                 # silent OP
-                x0 = dc_analysis.op_analysis(circ, verbose=0)
+                x0 = dc.op_analysis(circ, verbose=0)
                 if x0 is None:  # still! Then op_analysis has failed!
                     printing.print_info_line(("failed.", 3), verbose)
                     raise RuntimeError("OP analysis failed, no " +
@@ -271,7 +273,7 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
     # setup the initial values to start the iteration:
     j = np.complex('j')
 
-    Gmin_matrix = dc_analysis.build_gmin_matrix(
+    Gmin_matrix = dc.build_gmin_matrix(
         circ, options.gmin, mna.shape[0], verbose)
 
     iter_n = 0  # contatore d'iterazione
@@ -279,7 +281,7 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
 
     x = x0
     for omega in omega_iter:
-        x, _, solved, _ = dc_analysis.dc_solve(
+        x, _, solved, _ = dc.dc_solve(
             mna=(mna + np.multiply(j * omega, AC) + J),
             Ndc = Nac,
             Ntran = 0,
@@ -427,6 +429,6 @@ def _generate_J(xop, circ, reduced_mna_size):
     Tlin = np.zeros((reduced_mna_size, 1))
     for elem in circ:
         if elem.is_nonlinear:
-            dc_analysis._update_J_and_Tx(J, Tlin, xop, elem, time=None)
+            dc._update_J_and_Tx(J, Tlin, xop, elem, time=None)
     # del Tlin # not needed! **DC**!
     return J

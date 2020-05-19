@@ -7,9 +7,6 @@ Created on Fri May  1 11:23:45 2020
 
 """
 
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
 import sys
 import math
 import copy
@@ -22,7 +19,7 @@ from . import mosq
 from . import printing
 
 # analyses syntax
-from .dc_analysis import specs as dc_spec
+from .dc import specs as dc_spec
 from .ac import specs as ac_spec
 from .transient import specs as tran_spec
 from .time_functions import time_fun_specs

@@ -1,26 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Fri May  1 11:23:45 2020
 
-@author: cian
 
-This module contains a diode element and its model class.
-
-.. image:: images/elem/diode.svg
-
-"""
-
-#
-#         |\|
-#  n1 o---| ]---o n2
-#         |/|
-#
-
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
-from math import e as E, isinf, sqrt
+from math import isinf, sqrt
 import numpy as np
 
 from scipy.optimize import newton

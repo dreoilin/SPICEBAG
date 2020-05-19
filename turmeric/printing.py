@@ -175,7 +175,7 @@ def print_result_check(badvars, verbose=2):
 
     """
     if len(badvars):
-        print("Warning: solution is heavvily dependent on gmin.")
+        print("Warning: solution is heavily dependent on gmin.")
         print("Affected variables:")
         for bv in badvars:
             print(bv)
