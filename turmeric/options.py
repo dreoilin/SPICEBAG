@@ -54,11 +54,9 @@ nl_voltages_lock = True     # Apply damping - slows down solution.
 #: :math:`\cdot V_{th}` at most and damp all variables accordingly.
 nl_voltages_lock_factor = 4
 
-#: Whether the standard solving method can be used.
+# solving methods
 use_standard_solve_method = True
-#: Whether the gmin-settping homothopy can be used.
 use_gmin_stepping = True
-#: Whether the source-stepping homothopy can be used.
 use_source_stepping = True
 
 #: When printing out to the user, whether we can suppress trailing zeros.

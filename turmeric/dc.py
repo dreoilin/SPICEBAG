@@ -10,23 +10,23 @@ import sys
 import re
 import copy
 
-# FORTRAN SUBRS
+# LU algorithms from /FORTRAN/
 from .FORTRAN.LINALG import ludcmp, lubksb
 from .FORTRAN.DC_SUBRS import gmin_mat
+# vector norm
+from numpy.linalg import norm
 
-import numpy as np
-
-import numpy.linalg as linalg
-    
+import numpy as np    
 
 from . import components
 from . import diode
 from . import constants
 from . import options
 from . import circuit
-#from . import printing
 from . import utilities
 from . import results
+
+# suuported homopothies
 from .solvers import Standard, GminStepper, SourceStepper
 
 from .utilities import convergence_check
@@ -98,12 +98,21 @@ specs = {'op': {
 
 def setup_solvers():
     
-    g_steps = list(range(int(np.log(options.gmin)), 0)).reverse()
-    source_steps = (0.001, .005, .01, .03, .1, .3, .5, .7, .8, .9)
+    solvers = []
+    if options.use_standard_solve_method:
+        standard = Standard()
+        solvers.append(standard)
+    if options.use_gmin_stepping:
+        g_steps = list(reversed(list(range(int(np.log(1e-12)), 0))))
+        print("Printing g_steps")
+        print(g_steps)
+        gmin_stepping = GminStepper(steps=g_steps)
+        solvers.append(gmin_stepping)
+    if options.use_source_stepping:    
+        source_steps = (0.001, .005, .01, .03, .1, .3, .5, .7, .8, .9)
+        source_stepping = SourceStepper(steps=source_steps)
+        solvers.append(source_stepping)
     
-    standard = Standard()
-    gmin_stepping = GminStepper(steps=g_steps)
-    source_stepping = SourceStepper(steps=source_steps)
     # enable the first solver
     standard.enable()
     
@@ -112,18 +121,18 @@ def setup_solvers():
 
 def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
              MAXIT=options.dc_max_nr_iter, locked_nodes=None):
-    
-    if locked_nodes is None:
-        locked_nodes = circ.get_locked_nodes()
         
     M_size = M.shape[0]
     NNODES = circ.get_nodes_number()
-
+    
+    if locked_nodes is None:
+        locked_nodes = circ.get_locked_nodes()
+    
     if Gmin is None:
         Gmin = 0
-
-    if Ntran is None:
-        Ntran = 0
+    
+    # setup the homopothies
+    solvers = setup_solvers()
 
     # call circuit method to generate AC component of input signal
     if time is not None:
@@ -134,7 +143,7 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
     else:
         ZAC = False
 
-    # initial guess, if specified, otherwise it's zero
+    # if there is no initial guess, we start with 0
     if x0 is not None:
         if isinstance(x0, results.op_solution):
             x = x0.asarray()
@@ -143,27 +152,34 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
     else:
         x = np.zeros((M_size, 1))
 
-    solvers = setup_solvers()
-
     convergence_by_node = None
     logging.info("Solving...")
-    iterations = 0
+    iters = 0
     
     converged = False
     
     while converged is not True:
+        # check to see what solver is available, augment and break
         for solver in solvers:
             if solver.enabled:
+                logging.debug(solver.name)
                 M, ZDC = solver.augment_M_and_ZDC(M, ZDC, Gmin)
                 Z = ZDC + ZAC * (bool(time))
+                break
             else:
                 continue
         
-        # now solve
-        (x, error, converged, n_iter, convergence_by_node) = newton_solver(x, M, circ, Z=Z,
+        try:
+            (x, error, converged, n_iter, convergence_by_node) = newton_solver(x, M, circ, Z=Z,
                                                                         nv=NNODES, locked_nodes=locked_nodes, time=time, MAXIT=MAXIT)
+        except ValueError:
+            logging.warning("Singular matrix")
+            converged = False
+        except OverflowError:
+            logging.warning("Overflow error detected...")
+            converged = False
         # increment iteration
-        iterations += n_iter
+        iters += n_iter
 
 
         if not converged:
@@ -176,6 +192,7 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
                         print("Convergence problem current in %s" % e.part_id)
             if n_iter == MAXIT - 1:
                 logging.error("Error: MAXIT exceeded (" + str(MAXIT) + ")")
+            # if iterations haven't been exceeded we can keep trying to solve
             if not all([solver.finished for solver in solvers]):
                 for i, solver in enumerate(solvers):
                     if solver.finished:
@@ -183,7 +200,6 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
                         solvers[i+1].enable()
                         
             else:
-                # print "Giving up."
                 x = None
                 error = None
                 break
@@ -191,7 +207,7 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
             logging.info("[%d iterations]" % (n_iter,))
             logging.info("Done...")
             
-    return (x, error, converged, iterations)
+    return (x, error, converged, iters)
 
 
 def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True, x0=None, outfile="stdout"):
@@ -204,7 +220,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
         logging.error("DC analysis has log sweeping and negative stepping.")
         sys.exit(1)
     if (stop - start) * step < 0:
-        raise ValueError("Unbonded stepping in DC analysis.")
+        raise ValueError("Unbounded stepping in DC analysis.")
 
     points = (stop - start) / step + 1
     sweep_type = sweep_type.upper()[:3]
@@ -300,55 +316,57 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     
     # Assign DC estimate here
 
+    ##########################################################################
+    # Attempt to solve with Gmin
+    ##########################################################################
     logging.info("Constructing Gmin matrix")
     # take away a single node because we have reduced M
     Gmin_matrix = gmin_mat(options.gmin, M.shape[0], circ.get_nodes_number()-1)
-    (x1, error1, solved1, n_iter1) = dc_solve(M, ZDC,
+    (x_min, e_min, converged, iters_min) = dc_solve(M, ZDC,
                                               circ, Gmin=Gmin_matrix, x0=x0)
-
-    if solved1:
-        op1 = results.op_solution(
-            x1, error1, circ, outfile=outfile, iterations=n_iter1)
-        logging.info("Solving without Gmin:")
-        (x2, error2, solved2, n_iter2) = dc_solve(
-            M, ZDC, circ, Gmin=None, x0=x1)
+    ##########################################################################
+    
+    if converged:
+        # Create an op solution object
+        op_min = results.op_solution(
+            x_min, e_min, circ, outfile=outfile, iterations=iters_min)
+        # now try without Gmin
+        logging.info("Now attempting without Gmin:")
+        (x, e, solved, iters) = dc_solve(
+            M, ZDC, circ, Gmin=None, x0=x_min)
     else:
-        solved2 = False
+        solved = False
 
-    if solved1 and not solved2:
+    if converged and not solved:
         logging.error("Can't solve without Gmin.")
-        if verbose:
-            logging.info("Displaying latest valid results.")
-            op1.write_to_file(filename='stdout')
-        opsolution = op1
-    elif solved1 and solved2:
-        op2 = results.op_solution(
-            x2, error2, circ, outfile=outfile, iterations=n_iter1 + n_iter2)
-        op2.gmin = 0
-        badvars = results.op_solution.gmin_check(op2, op1)
-        # printing.print_result_check(badvars, verbose=verbose)
-        check_ok = not (len(badvars) > 0)
-        if not check_ok and verbose:
-            print("Solution with Gmin:")
-            op1.write_to_file(filename='stdout')
-            print("Solution without Gmin:")
-            op2.write_to_file(filename='stdout')
-        opsolution = op2
-    else:  # not solved1
+        
+        logging.info("Displaying latest valid results.")
+        op_min.write_to_file(filename='stdout')
+        opsolution = op_min
+    elif converged and solved:
+        op = results.op_solution(
+            x, e, circ, outfile=outfile, iterations=iters_min + iters)
+        op.gmin = 0
+        opsolution = op
+    else:
         logging.error("Couldn't solve the circuit. Giving up.")
         opsolution = None
 
     if opsolution and outfile != 'stdout' and outfile is not None:
         opsolution.write_to_file()
-    if opsolution and (verbose > 2 or outfile == 'stdout') and options.cli:
-        opsolution.write_to_file(filename='stdout')
 
     return opsolution
 
 
 def newton_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm=lambda v: max(abs(v))):
 
+    """
+    
+    """    
+
     M_size = M.shape[0]
+    N = np.zeros((M_size, 1))
+    J = np.zeros((M_size, M_size))
     nl = circ.is_nonlinear()
     
     if x is None:
@@ -363,8 +381,6 @@ def newton_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm
             "No sources in circuit? Z is None")
         Z = np.zeros((M_size, 1))
 
-    J = np.zeros((M_size, M_size))
-    N = np.zeros((M_size, 1))
     converged = False
     iters = 0
     
@@ -383,12 +399,11 @@ def newton_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm
         ##########################################################
         LU, INDX, _, C = ludcmp(M + nl*J, M_size)
         if C == 1:
-            logging.critical("Singular matrix")
-            raise ValueError("Singularity detected.. Exiting...")
+            raise ValueError
         
         dx = lubksb(LU, INDX,  -residual)
         # check for overflow error
-        if vector_norm(dx) == np.nan:
+        if norm(dx) == np.nan:
             raise OverflowError
         ##########################################################
         # we've done the hard work, now iterate

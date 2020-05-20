@@ -10,9 +10,6 @@ This module holds miscellaneous utility functions.
 
 """
 
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
 import collections
 import os
 import os.path
@@ -78,63 +75,6 @@ def set_submatrix(row, col, dest_matrix, source_matrix):
     cs = source_matrix.shape[1]
     dest_matrix[row:row+ls, col:col+cs] = source_matrix[:, :]
     return dest_matrix
-
-def remove_row_and_col(matrix, rrow=0, rcol=0):
-    """Removes a row and/or a column from a matrix
-
-    **Parameters:**
-
-    matrix : ndarray
-        The matrix to be modified.
-    rrow : int or None, optional
-        The index of the row to be removed. If set to ``None``, no row
-        will be removed. By default the first row is removed.
-    rcol : int or None, optional
-        The index of the row to be removed. If set to ``None``, no row
-        will be removed. By default the first column is removed.
-
-    .. note::
-
-        No size checking is done.
-
-    **Returns:**
-
-    matrix : ndarray
-        A reference to the modified matrix.
-    """
-    if rrow is not None and rcol is not None:
-        return np.vstack((np.hstack((matrix[0:rrow, 0:rcol],
-                                     matrix[0:rrow, rcol+1:])),
-                          np.hstack((matrix[rrow+1:, 0:rcol],
-                                     matrix[rrow+1:, rcol+1:]))
-                          ))
-    elif rrow is not None:
-        return np.vstack((matrix[:rrow, :], matrix[rrow+1:, :]))
-    elif rcol is not None:
-        return np.hstack((matrix[:, :rcol], matrix[:, rcol+1:]))
-
-
-def remove_row(matrix, rrow=0):
-    """Removes a row from a matrix
-
-    **Parameters:**
-
-    matrix : ndarray
-        The matrix to be modified.
-    rrow : int or None, optional
-        The index of the row to be removed. If set to ``None``, no row
-        will be removed. By default the first row is removed.
-
-    .. note::
-
-        No size checking is done.
-
-    **Returns:**
-
-    matrix : ndarray
-        A reference to the modified matrix.
-    """
-    return np.vstack((matrix[:rrow, :], matrix[rrow+1:, :]))
 
 
 def check_file(filename):

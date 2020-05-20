@@ -49,9 +49,6 @@ class Solver():
     def _next_step(self):
         pass
     
-    def more_steps(self):
-        return len(self._steps)
-    
     def augment_M_and_ZDC(self):
         pass
     
@@ -72,11 +69,18 @@ class Standard(Solver):
 class GminStepper(Solver):
     
     def __init__(self, name='gmin_stepping', steps=None):
+        self.name = name
         self._steps = steps
         self._enabled = False
         self._failed = False
         self._finished = False
-        
+    
+    def print_steps(self):
+        print(self._steps)
+    
+    def more_steps(self):
+        return len(self._steps)
+    
     def _next_step(self):
         if self.more_steps():
             return self._steps.pop(0)
@@ -85,10 +89,13 @@ class GminStepper(Solver):
             return None
     
     def augment_M_and_ZDC(self, M, ZDC, G):
-        step = self._next_step()
-        if not self.more_steps:
+        # check to see if we are on the last step
+        # mark as finished
+        if self.more_steps == 1:
             self._finished = True
-            
+        # get the step
+        step = self._next_step()
+        # None error is bad usage
         if step is not None:
             G *= 10 ** step
             return (M + G, ZDC)
@@ -97,9 +104,11 @@ class GminStepper(Solver):
         
 class SourceStepper(Solver):
     def __init__(self, name ='source_stepping', steps = None):
+        self.name = name
         self._steps = None
         self._enabled = False
         self._failed = False
+        self._finished = False
     
     def _next_step(self):
         if self.more_steps():
