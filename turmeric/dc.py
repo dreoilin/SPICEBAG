@@ -163,10 +163,10 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
             logging.debug(M)
             logging.debug(ZDC)
             # 1. Augment the matrices
-            M, ZDC = solver.augment_M_and_ZDC(M, ZDC, Gmin)
-            Z = ZDC + ZAC * (bool(time))
+            M_, ZDC_ = solver.augment_M_and_ZDC(M, ZDC, Gmin)
+            Z = ZDC_ + ZAC * (bool(time))
             logging.debug("After")
-            logging.debug(M)
+            logging.debug(M_)
             logging.debug(Z)
             logging.debug("Has solver finished?")
             logging.debug(solver.finished)
@@ -174,7 +174,7 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
             # 2. Try to solve with the current solver
             try:
                 (x, error, converged, n_iter, convergence_by_node)\
-                    = newton_solver(x, M, circ, Z=Z, nv=NNODES, 
+                    = newton_solver(x, M_, circ, Z=Z, nv=NNODES, 
                                     locked_nodes=locked_nodes,
                                     time=time, MAXIT=MAXIT)
             except ValueError:
