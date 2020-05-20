@@ -16,7 +16,6 @@ class Solver():
     def __init__(self, name=None, steps=None):
         self.name = name
         self._steps = steps
-        self._enabled = False
         self._failed = False
         self._finished = False
     
@@ -24,22 +23,10 @@ class Solver():
         pass
     
     @property
-    def enabled(self):
-        return self._enabled
-    
-    def enable(self):
-        if self._failed:
-            logging.error("Cannot re-enable a solver")
-            raise RuntimeError
-        self._enabled = True
-    
-    @property
     def failed(self):
         return self._failed
     
     def fail(self):
-        if self._enabled:
-            self._enabled = False
         self._failed = True
     
     @property
@@ -55,8 +42,7 @@ class Solver():
 class Standard(Solver):
     def __init__(self, name='standard'):
         self.name = name
-        self._steps = None
-        self._enabled = False
+        self._finished = False
         self._failed = False
         
     def __str__(self):
@@ -68,63 +54,49 @@ class Standard(Solver):
     
 class GminStepper(Solver):
     
-    def __init__(self, name='gmin_stepping', steps=None):
+    def __init__(self, name='gmin_stepping', start=1, stop=20, step=1):
         self.name = name
-        self._steps = steps
-        self._enabled = False
+        self._start = start
+        self._stop = stop
+        self._step = step
+        self._index = 0
         self._failed = False
         self._finished = False
     
-    def print_steps(self):
-        print(self._steps)
-    
-    def more_steps(self):
-        return len(self._steps)
-    
     def _next_step(self):
-        if self.more_steps():
-            return self._steps.pop(0)
-        else:
-            logging.debug("No more steps available")
-            return None
+        s = self._start + self._index * self._step
+        self._index += 1
+        return s
     
     def augment_M_and_ZDC(self, M, ZDC, G):
+        s = self._next_step()
         # check to see if we are on the last step
-        # mark as finished
-        if self.more_steps == 1:
+        if s >= self._stop:
             self._finished = True
-        # get the step
-        step = self._next_step()
-        # None error is bad usage
-        if step is not None:
-            G *= 10 ** step
-            return (M + G, ZDC)
-        else:
-            raise AttributeError
+        logging.debug(s)
+        
+        G *= 10 ** -s
+        return (M + G, ZDC)
         
 class SourceStepper(Solver):
-    def __init__(self, name ='source_stepping', steps = None):
+    def __init__(self, name ='source_stepping', start=3, stop=0.2, step=0.2):
         self.name = name
-        self._steps = None
-        self._enabled = False
+        self._start = start
+        self._stop = stop
+        self._step = step
+        self._index = 0
         self._failed = False
         self._finished = False
     
     def _next_step(self):
-        if self.more_steps():
-            return self._steps.pop(0)
-        else:
-            logging.debug("No more steps available")
-            return None
+        s = self._start - self._index * self._step
+        self._index += 1
+        return s
         
     def augment_M_and_ZDC(self, M, ZDC, G):
-        step = self._next_step()
+        s = self._next_step()
+        if s <= self._stop:
+            self._finished = True
         
-        if not self.more_steps():
-            self.finished = True
-        
-        if step is not None:
-            ZDC *= step
-            return (M + G, ZDC)
-        else:
-            raise AttributeError
+        ZDC *= 10 ** -s
+        return (M + G, ZDC)

@@ -96,27 +96,20 @@ specs = {'op': {
            }
 }
 
-def setup_solvers():
+def setup_solvers(Gmin=False):
     
     solvers = []
     if options.use_standard_solve_method:
         standard = Standard()
         solvers.append(standard)
-    if options.use_gmin_stepping:
-        g_steps = list(reversed(list(range(int(np.log(1e-12)), 0))))
-        print("Printing g_steps")
-        print(g_steps)
-        gmin_stepping = GminStepper(steps=g_steps)
+    if options.use_gmin_stepping and Gmin:
+        gmin_stepping = GminStepper()
         solvers.append(gmin_stepping)
-    if options.use_source_stepping:    
-        source_steps = (0.001, .005, .01, .03, .1, .3, .5, .7, .8, .9)
-        source_stepping = SourceStepper(steps=source_steps)
+    if options.use_source_stepping:
+        source_stepping = SourceStepper()
         solvers.append(source_stepping)
     
-    # enable the first solver
-    standard.enable()
-    
-    return [standard, gmin_stepping, source_stepping]
+    return solvers
     
 
 def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
@@ -130,9 +123,9 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
     
     if Gmin is None:
         Gmin = 0
-    
-    # setup the homopothies
-    solvers = setup_solvers()
+        solvers = setup_solvers(Gmin=False)
+    else:
+        solvers = setup_solvers(Gmin=True)
 
     # call circuit method to generate AC component of input signal
     if time is not None:
@@ -158,55 +151,73 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
     
     converged = False
     
-    while converged is not True:
-        # check to see what solver is available, augment and break
-        for solver in solvers:
-            if solver.enabled:
-                logging.debug(solver.name)
-                M, ZDC = solver.augment_M_and_ZDC(M, ZDC, Gmin)
-                Z = ZDC + ZAC * (bool(time))
-                break
-            else:
-                continue
-        
-        try:
-            (x, error, converged, n_iter, convergence_by_node) = newton_solver(x, M, circ, Z=Z,
-                                                                        nv=NNODES, locked_nodes=locked_nodes, time=time, MAXIT=MAXIT)
-        except ValueError:
-            logging.warning("Singular matrix")
-            converged = False
-        except OverflowError:
-            logging.warning("Overflow error detected...")
-            converged = False
-        # increment iteration
-        iters += n_iter
+    for solver in solvers:
+        logging.debug("Outer loop")
+        logging.debug(solver.name)
+        input()
+        while (solver.failed is not True) and (not converged):
+            logging.debug("Inside inner loop")
+            logging.debug(solver.name)
+            input()
+            logging.debug("M and Z before augmentation")
+            logging.debug(M)
+            logging.debug(ZDC)
+            # 1. Augment the matrices
+            M, ZDC = solver.augment_M_and_ZDC(M, ZDC, Gmin)
+            Z = ZDC + ZAC * (bool(time))
+            logging.debug("After")
+            logging.debug(M)
+            logging.debug(Z)
+            logging.debug("Has solver finished?")
+            logging.debug(solver.finished)
+            input()
+            # 2. Try to solve with the current solver
+            try:
+                (x, error, converged, n_iter, convergence_by_node)\
+                    = newton_solver(x, M, circ, Z=Z, nv=NNODES, 
+                                    locked_nodes=locked_nodes,
+                                    time=time, MAXIT=MAXIT)
+            except ValueError:
+                logging.warning("Singular matrix")
+                converged = False
+            except OverflowError:
+                logging.warning("Overflow error detected...")
+                converged = False
+            # increment iteration
+            iters += n_iter
+            logging.debug("Did LU converge?")
+            logging.debug(converged)
+            logging.debug("Solution")
+            logging.debug(x)
+            input()
+            if not converged:
+                # check to find problem nodes
+                if convergence_by_node is not None:
+                    for ivalue in range(len(convergence_by_node)):
+                        if not convergence_by_node[ivalue] and ivalue < NNODES - 1:
+                            logging.debug("Convergence problem node %s" % (circ.int_node_to_ext(ivalue),))
+                        elif not convergence_by_node[ivalue] and ivalue >= NNODES - 1:
+                            e = circ.find_vde(ivalue)
+                            print("Convergence problem current in %s" % e.part_id)
+                # make sure iterations haven't been exceeded
+                logging.debug("Number of iterations")
+                logging.debug(iters)
+                input()
+                if n_iter == MAXIT - 1:
+                    logging.error("Error: MAXIT exceeded (" + str(MAXIT) + ")")
 
-
-        if not converged:
-            if convergence_by_node is not None:
-                for ivalue in range(len(convergence_by_node)):
-                    if not convergence_by_node[ivalue] and ivalue < NNODES - 1:
-                        logging.debug("Convergence problem node %s" % (circ.int_node_to_ext(ivalue),))
-                    elif not convergence_by_node[ivalue] and ivalue >= NNODES - 1:
-                        e = circ.find_vde(ivalue)
-                        print("Convergence problem current in %s" % e.part_id)
-            if n_iter == MAXIT - 1:
-                logging.error("Error: MAXIT exceeded (" + str(MAXIT) + ")")
-            # if iterations haven't been exceeded we can keep trying to solve
-            if not all([solver.finished for solver in solvers]):
-                for i, solver in enumerate(solvers):
-                    if solver.finished:
-                        solver.fail()
-                        solvers[i+1].enable()
-                        
+                if solver.finished:
+                    solver.fail()
+                logging.debug("Has solver failed?")
+                logging.debug(solver.failed)
+                input()
             else:
-                x = None
-                error = None
-                break
-        else:
-            logging.info("[%d iterations]" % (n_iter,))
-            logging.info("Done...")
-            
+                # check to see if stepping was completed...
+                # if not, we go again using previous solution
+                if not solver.finished:
+                    converged = False
+            logging.debug("I'm at the end of the loop")
+            input()
     return (x, error, converged, iters)
 
 
