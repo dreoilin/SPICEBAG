@@ -1,15 +1,32 @@
-# req
 import numpy as np
+from scipy.linalg import lu
 #################
-import DC_SUBRS
+import LINALG
 
-# gmin test - rename to gmin cmin matrix?
+d = 3
+S = np.array(([3.0,6], [1, 2]))
+A = np.random.rand(d*d).reshape([d,d])
+print(A)
+b = np.arange(d)
+print("RHS\n")
+print(b)
+print("\n")
 
-gmin = 1e-12
-N = 12
-n_nodes = 4
+LU, INDX, D, C = LINALG.ludcmp(A, A.shape[0])
+SOL = LINALG.lubksb(LU, INDX,  b, n=d)
+print("Fortran solution\n")
+print(SOL)
+print("Is singular?\n")
+print(C)
 
-print(DC_SUBRS.gmin_mat( gmin, N, n_nodes ))
+print("Numpy solution\n")
+print(np.linalg.solve(A, b))
 
-# 
+print("Testing for singularity...")
+LU, INDX, D, C = LINALG.ludcmp(S, S.shape[0])
+print("Is singular?\n")
+print(C)
+
+print("Numpy solution\n")
+print(np.linalg.solve(S, np.zeros(S.shape[0])))
 
