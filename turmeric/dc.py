@@ -11,16 +11,13 @@ import re
 import copy
 
 # FORTRAN SUBRS
-# from LINALG import ludcmp, lubksb
+from .FORTRAN.LINALG import ludcmp, lubksb
+from .FORTRAN.DC_SUBRS import gmin_mat
 
 import numpy as np
 
-try:
-    import LINALG
-except ImportError:
-    import numpy.linalg as linalg
+import numpy.linalg as linalg
     
-from .FORTRAN.DC_SUBRS import gmin_mat
 
 from . import components
 from . import diode
@@ -163,7 +160,7 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
                 continue
         
         # now solve
-        (x, error, converged, n_iter, convergence_by_node) = mdn_solver(x, M, circ, T=Z,
+        (x, error, converged, n_iter, convergence_by_node) = newton_solver(x, M, circ, Z=Z,
                                                                         nv=NNODES, locked_nodes=locked_nodes, time=time, MAXIT=MAXIT)
         # increment iteration
         iterations += n_iter
@@ -349,7 +346,7 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     return opsolution
 
 
-def mdn_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm=lambda v: max(abs(v))):
+def newton_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm=lambda v: max(abs(v))):
 
     M_size = M.shape[0]
     nl = circ.is_nonlinear()
@@ -364,54 +361,56 @@ def mdn_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm=la
     if Z is None:
         logging.warning(
             "No sources in circuit? Z is None")
-        T = np.zeros((M_size, 1))
+        Z = np.zeros((M_size, 1))
 
     J = np.zeros((M_size, M_size))
     N = np.zeros((M_size, 1))
     converged = False
-    iteration = 0
-    while iteration < MAXIT:  # newton iteration counter
-        iteration += 1
-        
+    iters = 0
+    
+    while iters < MAXIT:
+        # build the Nonlinear and Jacobian matrices
         if nl:
             N[:, 0] = 0.0
             for elem in circ:
                 if elem.is_nonlinear:
                     _update_J_and_Tx(J, N, x, elem, time)
-        residual = M.dot(x) + T + nl*N
+        # dot product is an intrinsic fortran routine
+        residual = M.dot(x) + Z + nl*N
         
         ##########################################################
         # Solve linear system of equations
         ##########################################################
-        LU, INDX, _, C = LINALG.ludcmp(M + nl*J, M_size)
+        LU, INDX, _, C = ludcmp(M + nl*J, M_size)
         if C == 1:
             logging.critical("Singular matrix")
-            #raise
+            raise ValueError("Singularity detected.. Exiting...")
         
-        x = LINALG.lubksb(LU, INDX,  -residual)
+        dx = lubksb(LU, INDX,  -residual)
+        # check for overflow error
+        if vector_norm(dx) == np.nan:
+            raise OverflowError
+        ##########################################################
+        # we've done the hard work, now iterate
+        iters += 1
+        # perform newton update
+        x = x + get_td(dx, locked_nodes, n=iters) * dx
         
-        
-        dx = np.linalg.solve(M + nl*J, - residual)
-        x = x + get_td(dx, locked_nodes, n=iteration) * dx
-        
+        # if the circuit is linear, we know it has converged upon solution after one iteration
         if not nl:
             converged = True
+            convergence_by_node = []
             break
-        elif convergence_check(x, dx, residual, nv - 1)[0]:
-            converged = True
-            break
-        # if vector_norm(dx) == np.nan: #Overflow
-        #   raise OverflowError
-    # True value is debug
-    if True and not converged:
-        # re-run the convergence check, only this time get the results
-        # by node, so we can show to the users which nodes are misbehaving.
-        converged, convergence_by_node = convergence_check(
+        # otherwise we need to check it
+        else:
+            # run the convergence check
+            converged, convergence_by_node = convergence_check(
             x, dx, residual, nv - 1, debug=True)
-    else:
-        convergence_by_node = []
+            if converged:
+                convergence_by_node = []
+            break
 
-    return (x, residual, converged, iteration, convergence_by_node)
+    return (x, residual, converged, iters, convergence_by_node)
 
 
 def _update_J_and_Tx(J, Tx, x, elem, time):

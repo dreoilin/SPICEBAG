@@ -1,6 +1,3 @@
-MODULE LINALG
- CONTAINS
- 
  Subroutine LUDCMP(A,N,INDX,D,CODE)
 ! given N x N matrix A, routine replaces it with
 ! LU dcmp of rowwise permutation of itself
@@ -87,8 +84,8 @@ MODULE LINALG
  REAL(8), intent(in) :: A(N,N)
  INTEGER, intent(in) :: INDX(N)
  REAL(8), intent(inout) :: B(N)
-
 !f2py intent(in, out) :: B
+ 
  INTEGER :: I, J, LL, II = 0
 
  DO I=1,N
@@ -117,5 +114,3 @@ MODULE LINALG
 
  RETURN
  END subroutine LUBKSB
- 
-END MODULE LINALG

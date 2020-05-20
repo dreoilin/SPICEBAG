@@ -14,6 +14,8 @@ print("\n")
 
 LU, INDX, D, C = LINALG.ludcmp(A, A.shape[0])
 SOL = LINALG.lubksb(LU, INDX,  b, n=d)
+print("Printing RHS")
+print(b)
 print("Fortran solution\n")
 print(SOL)
 print("Is singular?\n")
