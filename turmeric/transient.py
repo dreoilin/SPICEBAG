@@ -14,19 +14,15 @@ import numpy as np
 from . import dc
 from . import options
 from . import circuit
-from . import printing
+#from . import printing
+import logging
 from . import utilities
 from . import components
 from . import results
 
 # differentiation methods, add them here
 TRAP = "TRAP"
-GEAR1 = "GEAR1"
-GEAR2 = "GEAR2"
-GEAR3 = "GEAR3"
-GEAR4 = "GEAR4"
-GEAR5 = "GEAR5"
-GEAR6 = "GEAR6"
+GEAR = "GEAR"
 
 specs = {'tran':{'tokens':({
                           'label':'tstep',
@@ -82,11 +78,10 @@ specs = {'tran':{'tokens':({
 
 
 def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_method, use_step_control=True, x0=None,
-                       mna=None, N=None, D=None, outfile="stdout", return_req_dict=None, verbose=3):
+                       outfile="stdout", return_req_dict=None):
     
     if options.transient_no_step_control:
         use_step_control = False
-
     else:
         print_step_and_lte = False
 
@@ -95,97 +90,61 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
 
     #check parameters
     if tstart > tstop:
-        printing.print_general_error("tstart > tstop")
+        logging.critical("tstart > tstop")
         sys.exit(1)
     if tstep < 0:
-        printing.print_general_error("tstep < 0")
+        logging.critical("tstep < 0")
         sys.exit(1)
 
-    if verbose > 4:
-        tmpstr = "Vea = %g Ver = %g Iea = %g Ier = %g max_time_iter = %g HMIN = %g" % \
-        (options.vea, options.ver, options.iea, options.ier, options.transient_max_time_iter, options.hmin)
-        printing.print_info_line((tmpstr, 5), verbose)
+    logging.info(f"Transient analysis requested with... \
+    Vea = {options.vea} Ver = {options.iea} Iea = {options.ier}\
+    Ier = {options.ier} max_time_iter = {options.transient_max_time_iter} HMIN = {options.hmin}")
 
     locked_nodes = circ.get_locked_nodes()
 
-    if print_step_and_lte:
-        flte = open("step_and_lte.graph", "w")
-        flte.write("#T\tStep\tLTE\n")
+    logging.info(f"Using {method}")
+    
+    # MNA GEN: if an OP has already been completed, these matrices are already available
+    M0, ZDC0 = circ.generate_M0_and_ZDC0(circ)
+    M = M0[1:, 1:]
+    ZDC = ZDC0[1:]
+    
+    M_size = M.shape[0]
+    # Once again, if Dynamic matrix has been generated for previous transient, we reuse
+    # D0 = generate_D(circ, (mna.shape[0], mna.shape[0]))
+    # D = D[1:, 1:]
 
-    printing.print_info_line(("Starting transient analysis: ", 3), verbose)
-    printing.print_info_line(("Selected method: %s" % (method,), 3), verbose)
-    #It's a good idea to call transient with prebuilt MNA and N matrix
-    #the analysis will be slightly faster (long netlists).
-    if mna is None or N is None:
-        (mna, N) = dc.generate_mna_and_N(circ, verbose=verbose)
-        mna = utilities.remove_row_and_col(mna)
-        N = utilities.remove_row(N, rrow=0)
-    elif not mna.shape[0] == N.shape[0]:
-        printing.print_general_error("mna matrix and N vector have different number of columns.")
-        sys.exit(0)
-    if D is None:
-        # if you do more than one tran analysis, output streams should be changed...
-        # this needs to be fixed
-        D = generate_D(circ, (mna.shape[0], mna.shape[0]))
-        D = utilities.remove_row_and_col(D)
-
-    # setup x0
+    # We need an operating point to begin the transient
     if x0 is None:
-        printing.print_info_line(("Generating x(t=%g) = 0" % (tstart,), 5), verbose)
-        x0 = np.zeros((mna.shape[0], 1))
-        opsol =  results.op_solution(x=x0, error=x0, circ=circ, outfile=None)
+        logging.info("No initial solution provided...")
+        logging.info("Requesting an operating point")
+        x0 = np.zeros((M_size, 1))
+        op =  results.op_solution(x=x0, error=x0, circ=circ, outfile=None)
     else:
         if isinstance(x0, results.op_solution):
-            opsol = x0
+            op = x0
             x0 = x0.asarray()
         else:
-            opsol =  results.op_solution(x=x0, error=np.zeros((mna.shape[0], 1)), circ=circ, outfile=None)
-        printing.print_info_line(("Using the supplied op as x(t=%g)." % (tstart,), 5), verbose)
+            op =  results.op_solution(x=x0, error=np.zeros((M_size, 1)), circ=circ, outfile=None)
+        logging.info("Using provided OP")
+    
+    op.print_short()
 
-    if verbose > 4:
-        print("x0:")
-        opsol.print_short()
-
-    # setup the df method
-    printing.print_info_line(("Selecting the appropriate DF ("+method+")... ", 5), verbose, print_nl=False)
     if method == TRAP:
         from . import trap as df
-    elif method == GEAR1:
+    elif method[:-1] == GEAR:
         from . import gear as df
-        df.order = 1
-    elif method == GEAR2:
-        from . import gear as df
-        df.order = 2
-    elif method == GEAR3:
-        from . import gear as df
-        df.order = 3
-    elif method == GEAR4:
-        from . import gear as df
-        df.order = 4
-    elif method == GEAR5:
-        from . import gear as df
-        df.order = 5
-    elif method == GEAR6:
-        from . import gear as df
-        df.order = 6
+        order = int(method[-1])
+        df.order = order if order in list(range(1,7)) else None
+        if df.order is None:
+            raise ValueError("Gear order not possible")
     else:
-        df = import_custom_df_module(method, print_out=(outfile != "stdout"))
-        # df is none if module is not found
+        logging.critical("No integration method specified")
+        raise ValueError
 
-    if df is None:
-        sys.exit(23)
-
-    if not df.has_ff() and use_step_control:
-        printing.print_warning("The chosen DF does not support step control. Turning off the feature.")
-        use_step_control = False
-        #use_aposteriori_step_control = False
-
-    printing.print_info_line(("done.", 5), verbose)
-
-    # setup the data buffer
-    # if you use the step control, the buffer has to be one point longer.
-    # That's because the excess point is used by a FF in the df module to predict the next value.
-    printing.print_info_line(("Setting up the buffer... ", 5), verbose, print_nl=False)
+    logging.info("Integration method successfully set up")
+    
+    # data buffer
     ((max_x, max_dx), (pmax_x, pmax_dx)) = df.get_required_values()
     if max_x is None and max_dx is None:
         printing.print_general_error("df doesn't need any value?")
@@ -218,11 +177,6 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
                                   if max_dx is not None else first_iterations_number
     else:
         first_iterations_number = 0
-
-    printing.print_info_line(("MNA (reduced):", 5), verbose)
-    printing.print_info_line((mna, 5), verbose)
-    printing.print_info_line(("D (reduced):", 5), verbose)
-    printing.print_info_line((D, 5), verbose)
 
     # setup the initial values to start the iteration:
     x = None

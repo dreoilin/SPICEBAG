@@ -65,9 +65,6 @@ This module uses a faster way to compute the values that doesn't require to inve
 Anyway, from a theorical point of view, the above applies.
   """
 
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
 import numpy as np
 import sys
 
@@ -76,14 +73,9 @@ from scipy.misc import factorial
 from . import printing
 
 order = None
-# FAST = True
 
 
 def is_implicit():
-    return True
-
-
-def has_ff():
     return True
 
 
