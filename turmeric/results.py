@@ -162,7 +162,7 @@ class op_solution(solution, _mutable_data):
         solution.__init__(self, circ, outfile)
         self.sol_type = "OP"
         self.iterations = iterations
-
+        # reduced num nodes
         nv_1 = circ.get_nodes_number() - 1
         self.results = case_insensitive_dict()
         self.errors = case_insensitive_dict()

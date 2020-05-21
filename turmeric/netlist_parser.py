@@ -14,8 +14,7 @@ import os
 
 from . import circuit
 from . import components
-from . import diode
-from . import mosq
+from . import diode, mosq
 from . import printing
 
 # analyses syntax

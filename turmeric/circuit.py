@@ -8,16 +8,13 @@ Created on Fri May  1 11:23:45 2020
 
 """
 
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
 import math
 import numpy as np
 import sys
 
 from . import components
-from . import diode
-from . import mosq
+from . import diode, mosq
+
 from . import printing
 from . import utilities
 

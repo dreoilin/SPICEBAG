@@ -49,10 +49,7 @@ def run(circ, an_list=None):
             an_item['x0'] = None
         r = analysis[an_type](circ, **an_item)
         results.update({an_type: r})
-        if an_type == 'op':
-            _x0s.update({'op': r})
-            _x0s.update({'op+ic': icmodified_x0(circ, r)})
-            _handle_netlist_ics(circ, an_list, ic_list=[])
+        
     return results
 
 

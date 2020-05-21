@@ -4,29 +4,7 @@
 Created on Fri May  1 11:23:45 2020
 
 @author: cian
-
-This module provides the methods required to perform a transient analysis.
-
-Our problem can be written as:
-
-.. math::
-
-    D \\cdot dx/dt + MNA \\cdot x + T_v(x) + T_t(t) + N = 0
-
-We need:
-
-    1. :math:`MNA`, the static Modified Nodal Analysis matrix,
-    2. :math:`N`, constant DC term,
-    3. :math:`T_v(x)`, the non-linear DC term
-    4. :math:`T_t(t)`, the time variant term, time dependent-sources,
-       to be evaluated at each time step,
-    5. The dynamic :math:`D` matrix,
-    6. a differentiation method to approximate :math:`dx/dt`.
-
 """
-
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
 
 import sys
 import imp
@@ -42,7 +20,6 @@ from . import components
 from . import results
 
 # differentiation methods, add them here
-IMPLICIT_EULER = "IMPLICIT_EULER"
 TRAP = "TRAP"
 GEAR1 = "GEAR1"
 GEAR2 = "GEAR2"
@@ -106,29 +83,10 @@ specs = {'tran':{'tokens':({
 
 def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_method, use_step_control=True, x0=None,
                        mna=None, N=None, D=None, outfile="stdout", return_req_dict=None, verbose=3):
-    """Performs a transient analysis of the circuit described by circ.
-
-    Parameters:
-    circ: circuit instance to be simulated.
-    tstart: start value. Better leave this to zero.
-    tstep: the maximum step to be allowed during simulation or
-    tstop: stop value for simulation
-    method: differentiation method: 'TRAP' (default) or 'IMPLICIT_EULER' or 'GEARx' with x=1..6
-    use_step_control: the LTE will be calculated and the step adjusted. default: True
-    x0: the starting point, the solution at t=tstart (defaults to None, will be set to the OP)
-    mna, N, D: MNA matrices, defaulting to None, for big circuits, reusing matrices saves time
-    outfile: filename, the results will be written to this file. "stdout" means print out.
-    return_req_dict:  to be documented
-    verbose: verbosity level from 0 (silent) to 6 (very verbose).
-
-    """
-    if outfile == "stdout":
-        verbose = 0
-    _debug = False
+    
     if options.transient_no_step_control:
         use_step_control = False
-    if _debug:
-        print_step_and_lte = True
+
     else:
         print_step_and_lte = False
 
@@ -190,9 +148,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
 
     # setup the df method
     printing.print_info_line(("Selecting the appropriate DF ("+method+")... ", 5), verbose, print_nl=False)
-    if method == IMPLICIT_EULER:
-        from . import implicit_euler as df
-    elif method == TRAP:
+    if method == TRAP:
         from . import trap as df
     elif method == GEAR1:
         from . import gear as df

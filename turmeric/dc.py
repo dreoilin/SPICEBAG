@@ -7,8 +7,6 @@ Created on Fri May  1 11:23:45 2020
 """
 
 import sys
-import re
-import copy
 import logging
 
 # LU algorithms from /FORTRAN/
@@ -19,11 +17,12 @@ from numpy.linalg import norm
 
 import numpy as np    
 
+# linear components
 from . import components
-from . import diode
+# nl models
 from . import constants
 from . import options
-from . import circuit
+# from . import circuit
 from . import utilities
 from . import results
 from . import solvers as slv
@@ -477,65 +476,5 @@ def get_td(dx, locked_nodes, n=-1):
             if td_new < td:
                 td = td_new
     return td
-
-
-def build_x0_from_user_supplied_ic(circ, icdict):
-    
-    Vregex = re.compile("V\s*\(\s*([a-z0-9]+)\s*\)", re.IGNORECASE | re.DOTALL)
-    Iregex = re.compile("I\s*\(\s*([a-z0-9]+)\s*\)", re.IGNORECASE | re.DOTALL)
-    nv = circ.get_nodes_number()  # number of voltage variables
-    voltage_defined_elem_names = \
-        [elem.part_id.lower() for elem in circ
-         if circuit.is_elem_voltage_defined(elem)]
-    ni = len(voltage_defined_elem_names)  # number of current variables
-    x0 = np.zeros((nv + ni, 1))
-    for label in icdict.keys():
-        value = icdict[label]
-        if Vregex.search(label):
-            ext_node = Vregex.findall(label)[0]
-            int_node = circ.ext_node_to_int(ext_node)
-            x0[int_node, 0] = value
-        elif Iregex.search(label):
-            element_name = Iregex.findall(label)[0]
-            index = voltage_defined_elem_names.index(element_name.lower())
-            x0[nv + index, 0] = value
-        else:
-            raise ValueError("Unrecognized label " + label)
-    return x0[1:, :]
-
-
-def modify_x0_for_ic(circ, x0):
-    
-
-    if isinstance(x0, results.op_solution):
-        x0 = copy.copy(x0.asarray())
-        return_obj = True
-    else:
-        return_obj = False
-
-    nv = circ.get_nodes_number()  # number of voltage variables
-    voltage_defined_elements = [
-        x for x in circ if circuit.is_elem_voltage_defined(x)]
-
-    # setup voltages this may _not_ work properly
-    for elem in circ:
-        if isinstance(elem, components.Capacitor) and elem.ic or \
-                isinstance(elem, diode.diode) and elem.ic:
-            x0[elem.n1 - 1, 0] = x0[elem.n2 - 1, 0] + elem.ic
-
-    # setup the currents
-    for elem in voltage_defined_elements:
-        if isinstance(elem, components.Inductor) and elem.ic:
-            x0[nv - 1 + voltage_defined_elements.index(elem), 0] = elem.ic
-
-    if return_obj:
-        xnew = results.op_solution(x=x0, \
-            error=np.zeros(x0.shape), circ=circ, outfile=None)
-        xnew.netlist_file = None
-        xnew.netlist_title = "Self-generated OP to be used as tran IC"
-    else:
-        xnew = x0
-
-    return xnew
 
 
