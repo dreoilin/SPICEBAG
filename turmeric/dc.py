@@ -9,6 +9,7 @@ Created on Fri May  1 11:23:45 2020
 import sys
 import re
 import copy
+import logging
 
 # LU algorithms from /FORTRAN/
 from .FORTRAN.LINALG import ludcmp, lubksb
@@ -25,13 +26,13 @@ from . import options
 from . import circuit
 from . import utilities
 from . import results
+from . import solvers as slv
 
-# suuported homopothies
-from .solvers import Standard, GminStepper, SourceStepper
+from . import dc_guess
 
 from .utilities import convergence_check
 
-import logging 
+
     
 specs = {'op': {
     'tokens': ({
@@ -95,21 +96,6 @@ specs = {'op': {
                      )
            }
 }
-
-def setup_solvers(Gmin=False):
-    
-    solvers = []
-    if options.use_standard_solve_method:
-        standard = Standard()
-        solvers.append(standard)
-    if options.use_gmin_stepping and Gmin:
-        gmin_stepping = GminStepper()
-        solvers.append(gmin_stepping)
-    if options.use_source_stepping:
-        source_stepping = SourceStepper()
-        solvers.append(source_stepping)
-    
-    return solvers
     
 
 def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
@@ -123,9 +109,9 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
     
     if Gmin is None:
         Gmin = 0
-        solvers = setup_solvers(Gmin=False)
+        solvers = slv.setup_solvers(Gmin=False)
     else:
-        solvers = setup_solvers(Gmin=True)
+        solvers = slv.setup_solvers(Gmin=True)
 
     # call circuit method to generate AC component of input signal
     if time is not None:
@@ -145,79 +131,53 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
     else:
         x = np.zeros((M_size, 1))
 
-    convergence_by_node = None
     logging.info("Solving...")
     iters = 0
     
     converged = False
     
     for solver in solvers:
-        logging.debug("Outer loop")
-        logging.debug(solver.name)
-        input()
         while (solver.failed is not True) and (not converged):
-            logging.debug("Inside inner loop")
-            logging.debug(solver.name)
-            input()
-            logging.debug("M and Z before augmentation")
-            logging.debug(M)
-            logging.debug(ZDC)
+            logging.info("Now solving with: %s" % solver.name)
             # 1. Augment the matrices
-            M_, ZDC_ = solver.augment_M_and_ZDC(M, ZDC, Gmin)
+            M_, ZDC_ = solver.operate_on_M_and_ZDC(M, ZDC, np.array(Gmin))
             Z = ZDC_ + ZAC * (bool(time))
-            logging.debug("After")
-            logging.debug(M_)
-            logging.debug(Z)
-            logging.debug("Has solver finished?")
-            logging.debug(solver.finished)
-            input()
             # 2. Try to solve with the current solver
             try:
-                (x, error, converged, n_iter, convergence_by_node)\
+                (x, error, converged, n_iter)\
                     = newton_solver(x, M_, circ, Z=Z, nv=NNODES, 
                                     locked_nodes=locked_nodes,
                                     time=time, MAXIT=MAXIT)
+                # increment iteration
+                iters += n_iter
             except ValueError:
-                logging.warning("Singular matrix")
+                logging.critical("Singular matrix")
                 converged = False
+                error = None
+                x = None
+                solver.fail()
+            
             except OverflowError:
-                logging.warning("Overflow error detected...")
+                logging.critical("Overflow error detected...")
                 converged = False
-            # increment iteration
-            iters += n_iter
-            logging.debug("Did LU converge?")
-            logging.debug(converged)
-            logging.debug("Solution")
-            logging.debug(x)
-            input()
+                error = None
+                x = None
+                solver.fail()
+            
             if not converged:
-                # check to find problem nodes
-                if convergence_by_node is not None:
-                    for ivalue in range(len(convergence_by_node)):
-                        if not convergence_by_node[ivalue] and ivalue < NNODES - 1:
-                            logging.debug("Convergence problem node %s" % (circ.int_node_to_ext(ivalue),))
-                        elif not convergence_by_node[ivalue] and ivalue >= NNODES - 1:
-                            e = circ.find_vde(ivalue)
-                            print("Convergence problem current in %s" % e.part_id)
+                
                 # make sure iterations haven't been exceeded
-                logging.debug("Number of iterations")
-                logging.debug(iters)
-                input()
-                if n_iter == MAXIT - 1:
+                if iters == MAXIT - 1:
                     logging.error("Error: MAXIT exceeded (" + str(MAXIT) + ")")
 
                 if solver.finished:
                     solver.fail()
-                logging.debug("Has solver failed?")
-                logging.debug(solver.failed)
-                input()
             else:
                 # check to see if stepping was completed...
                 # if not, we go again using previous solution
                 if not solver.finished:
                     converged = False
-            logging.debug("I'm at the end of the loop")
-            input()
+                    
     return (x, error, converged, iters)
 
 
@@ -318,14 +278,19 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     # unreduced MNA matrices computed by the circuit object
     M0 = circ.M0
     ZDC0 = circ.ZDC0
-    # now create reduced matrices (used for calculation purposes)
+    # now create reduce matrices (used for calculation purposes)
     logging.debug("Reducing MNA matrices")
     M = M0[1:, 1:]
     ZDC = ZDC0[1:]
     
     logging.info("Starting operating point analysis")
     
-    # Assign DC estimate here
+    # A guess is only needed if
+    # 1. We don't already have one
+    # 2. Circuit contains non-linear elements
+    # 3. User has specified to use DC guess
+    if x0 is None and guess and circ.is_nonlinear():
+        x0 = dc_guess.get_dc_guess(circ, verbose=5)
 
     ##########################################################################
     # Attempt to solve with Gmin
@@ -350,7 +315,7 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
 
     if converged and not solved:
         logging.error("Can't solve without Gmin.")
-        
+        logging.warning("Solution is highly dependent on Gmin")
         logging.info("Displaying latest valid results.")
         op_min.write_to_file(filename='stdout')
         opsolution = op_min
@@ -398,10 +363,11 @@ def newton_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm
     while iters < MAXIT:
         # build the Nonlinear and Jacobian matrices
         if nl:
+            J[:, :] = 0.0
             N[:, 0] = 0.0
             for elem in circ:
                 if elem.is_nonlinear:
-                    _update_J_and_Tx(J, N, x, elem, time)
+                    _update_J_and_N(J, N, x, elem, time)
         # dot product is an intrinsic fortran routine
         residual = M.dot(x) + Z + nl*N
         
@@ -425,21 +391,21 @@ def newton_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None, vector_norm
         # if the circuit is linear, we know it has converged upon solution after one iteration
         if not nl:
             converged = True
-            convergence_by_node = []
+            # convergence_by_node = []
             break
         # otherwise we need to check it
         else:
             # run the convergence check
-            converged, convergence_by_node = convergence_check(
+            converged, _= convergence_check(
             x, dx, residual, nv - 1, debug=True)
             if converged:
-                convergence_by_node = []
-            break
+                # convergence_by_node = []
+                break
 
-    return (x, residual, converged, iters, convergence_by_node)
+    return (x, residual, converged, iters)
 
 
-def _update_J_and_Tx(J, Tx, x, elem, time):
+def _update_J_and_N(J, Tx, x, elem, time):
     out_ports = elem.get_output_ports()
     for index in range(len(out_ports)):
         n1, n2 = out_ports[index]

@@ -66,7 +66,7 @@ print_precision = np.get_printoptions()['precision']
 
 # dc
 #: Maximum allowed NR iterations during a DC analysis.
-dc_max_nr_iter = 10000
+dc_max_nr_iter = 1000
 #: Enable guessing to init the NR solver during a DC analysis.
 dc_use_guess = True
 #: Do not perform an init DC guess if its effort is higher than
