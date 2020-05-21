@@ -25,6 +25,39 @@ from . import options
 #: floating point arithmetic.
 EPS = np.finfo(float).eps
 
+def remove_row_and_col(matrix, rrow=0, rcol=0):
+    """Removes a row and/or a column from a matrix
+
+    **Parameters:**
+
+    matrix : ndarray
+        The matrix to be modified.
+    rrow : int or None, optional
+        The index of the row to be removed. If set to ``None``, no row
+        will be removed. By default the first row is removed.
+    rcol : int or None, optional
+        The index of the row to be removed. If set to ``None``, no row
+        will be removed. By default the first column is removed.
+
+    .. note::
+
+        No size checking is done.
+
+    **Returns:**
+
+    matrix : ndarray
+        A reference to the modified matrix.
+    """
+    if rrow is not None and rcol is not None:
+        return np.vstack((np.hstack((matrix[0:rrow, 0:rcol],
+                                     matrix[0:rrow, rcol+1:])),
+                          np.hstack((matrix[rrow+1:, 0:rcol],
+                                     matrix[rrow+1:, rcol+1:]))
+                          ))
+    elif rrow is not None:
+        return np.vstack((matrix[:rrow, :], matrix[rrow+1:, :]))
+    elif rcol is not None:
+        return np.hstack((matrix[:, :rcol], matrix[:, rcol+1:]))
 
 def expand_matrix(matrix, add_a_row=False, add_a_col=False):
     """Append a row and/or a column to the given matrix

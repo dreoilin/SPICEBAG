@@ -7,9 +7,6 @@ Created on Fri May  1 11:23:45 2020
 
 """
 
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
 import sys
 import time
 import re

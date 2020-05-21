@@ -7,6 +7,7 @@ Created on Tue May 19 12:49:45 2020
 """
 
 import logging
+from . import options
 
 class Solver():
     """
@@ -36,7 +37,7 @@ class Solver():
     def _next_step(self):
         pass
     
-    def augment_M_and_ZDC(self):
+    def operate_on_M_and_ZDC(self):
         pass
     
 class Standard(Solver):
@@ -48,7 +49,7 @@ class Standard(Solver):
     def __str__(self):
         return f"Name: {self.name}"
     
-    def augment_M_and_ZDC(self, M, ZDC, G):
+    def operate_on_M_and_ZDC(self, M, ZDC, G):
         self._finished = True
         return (M+G, ZDC)
     
@@ -68,13 +69,14 @@ class GminStepper(Solver):
         self._index += 1
         return s
     
-    def augment_M_and_ZDC(self, M, ZDC, G):
+    def operate_on_M_and_ZDC(self, M, ZDC, G):
         s = self._next_step()
         # check to see if we are on the last step
         if s >= self._stop:
             self._finished = True
-        logging.debug(s)
-        
+        # scale matrix by Gmin
+        G *= 1.0/options.gmin
+        # apply new gmin
         G *= 10 ** -s
         return (M + G, ZDC)
         
@@ -93,10 +95,25 @@ class SourceStepper(Solver):
         self._index += 1
         return s
         
-    def augment_M_and_ZDC(self, M, ZDC, G):
+    def operate_on_M_and_ZDC(self, M, ZDC, G):
         s = self._next_step()
         if s <= self._stop:
             self._finished = True
         
         ZDC *= 10 ** -s
         return (M + G, ZDC)
+    
+def setup_solvers(Gmin=False):
+    
+    solvers = []
+    if options.use_standard_solve_method:
+        standard = Standard()
+        solvers.append(standard)
+    if options.use_gmin_stepping and Gmin:
+        gmin_stepping = GminStepper()
+        solvers.append(gmin_stepping)
+    if options.use_source_stepping and Gmin:
+        source_stepping = SourceStepper()
+        solvers.append(source_stepping)
+    
+    return solvers
