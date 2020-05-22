@@ -80,7 +80,7 @@ def main(filename, outfile="stdout"):
         The netlist filename.
 
     outfile : string, optional
-        The output file's base name, the suffixes shown below will be added.
+        The output file's base name to which suffixes corresponding to the analysis performed will be added.
     - Alternate Current (AC): ``.ac``
     - Direct Current (DC): ``.dc``
     - Operating Point (OP): ``.opinfo``
@@ -98,16 +98,24 @@ def main(filename, outfile="stdout"):
     logging.info("==Tabulate %s" % (tabulate.__version__))
     
     logging.info(f"Parsing netlist file `{filename}'")
-    (circ, directives, postproc_direct) = netlist_parser.parse_network(filename)
+    try:
+        (circ, directives) = netlist_parser.parse_network(filename)
+    except FileNotFoundError as e:
+        logging.exception(f"{e}: netlist file {filename} was not found")
+        sys.exit()
+    except IOError as e:
+        # TODO: verify that parse_network can throw IOError
+        logging.exception(f"{e}: ioerror on netlist file {filename}")
+        sys.exit()
 
-    logging.info("Checking circuit for common mistakes...")
-    
+    # TODO: Verify check_circuit is used
+    #logging.info("Checking circuit for common mistakes...")
     # utility check should be member method for circuit class
-    (check, reason) = utilities.check_circuit(circ)
-    if not check:
-        logging.error(reason)
-        sys.exit(3)
-    logging.info("Finished")
+    #(check, reason) = utilities.check_circuit(circ)
+    #if not check:
+    #    logging.error(reason)
+    #    sys.exit(3)
+    #logging.info("Finished")
 
     
     logging.info("Parsed circuit:")

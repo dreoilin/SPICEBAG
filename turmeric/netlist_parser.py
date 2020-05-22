@@ -11,6 +11,7 @@ import sys
 import math
 import copy
 import os
+import logging
 
 from . import circuit
 from . import components
@@ -37,82 +38,69 @@ class NetlistParseError(Exception):
     """Netlist parsing exception."""
     pass
 
+def digest_raw_netlist(filename):
+    logging.info(f"Processing netlist `{filename}'")
+    directives = []
+    model_directives = []
+    net_lines = []
+    title = ""
+
+    with open(filename, 'r') as f:
+        for i, line in enumerate(f.readlines()):
+            line = line.strip().lower()
+            
+            if i == 0:
+                title = line[1:]
+                continue
+            if line.isspace() or line == '' or line[0] == "*":
+                continue
+
+            # Directives, models statements, etc.
+            if line[0] == ".":
+                tokens = line.split()
+                if tokens[0] == '.include':
+                    logging.info(f"Including `{filename}'")
+                    (t, d, md, nl) = digest_raw_netlist(parse_include_directive(line, os.path.split(filename)[0]))
+                    directives.extend(d)
+                    model_directives.extend(md)
+                    net_lines.extend(nl)
+                    if t:
+                        logging.info(f"Found title `{t}' in included file. Ignoring...")
+                elif tokens[0] == ".end":
+                    break
+                elif tokens[0] == ".model":
+                    model_directives.append((line, i+1))
+                else:
+                    directives.append((line, i+1))
+                continue
+            
+            net_lines.append((line, i + 1))
+    logging.info(f"Finished processing `{filename}'")
+    
+    return (title, directives, model_directives, net_lines)
+
 
 def parse_network(filename):
     """Parse a SPICE-like netlist
 
     **Returns:**
 
-    (circuit_instance, analyses, plotting directives)
+    (circuit_instance, plotting directives)
     """
+    (title, directives, model_directives, net_lines) = digest_raw_netlist(filename)
+    circ = circuit.Circuit(title=title, filename=filename)
 
-    circ = circuit.Circuit(title="", filename=filename)
-    # queue file to be processed    
-    filenames = [(filename)]
-    # extract working directory
-    wd = os.path.split(filename)[0]
-    file_index = 0
-    directives = []
-    model_directives = []
-    postproc = []
-    netlist_lines = []
-    
-    while filenames[file_index] is not None:
-        try:
-            with open(filename, 'r') as ffile:
-                for i, line in enumerate(ffile.readlines()):
-                    # trim leading/trailing whitespace 
-                    line = line.strip().lower()
-                    
-                    #print(i+1,'\t', line)
-                    # TITLE
-                    if i == 0:
-                        circ.title = line[1:]
-                        continue
-                    # EMPTY LINE
-                    if line.isspace() or line == '':
-                        continue
-                    # COMMENTS
-                    if line[0] == "*":
-                        continue
-    
-                    # DIRECTIVES
-                    if line[0] == ".":
-                        tokens = line.split()
-                        if tokens[0] == '.include':
-                            filenames.append(
-                                parse_include_directive(line, wd))
-                        elif tokens[0] == ".end":
-                            # ignore anymore directives
-                            break
-                        elif tokens[0] == ".model":
-                            model_directives.append((line, i+1))
-                        else:
-                            directives.append((line, i+1))
-                        continue
-                    
-                    netlist_lines = netlist_lines + [(line, i + 1)]
-                    # now move onto included file
-                # we've checked this file, now move on
-                file_index += 1
-                # add terminating null file
-                if file_index == len(filenames):
-                    filenames.append(None)
-                
-        except (FileNotFoundError, IOError):
-            print("%s: netlist or include file could not be found" % __name__)
-            sys.exit()
     # MODELS
     models = parse_models(model_directives)
-    subckts_dict = {}
     # PARSE CIRCUIT
-    circ += main_netlist_parser(circ, netlist_lines, subckts_dict, models)
+    circ += main_netlist_parser(circ, net_lines, models)
+    # FIXME: surely models is assigned when passed through the constructor
     circ.models = models
     circ.generate_M0_and_ZDC0()
-    return (circ, directives, postproc)
+    return (circ, directives)
 
 
-def main_netlist_parser(circ, netlist_lines, subckts_dict, models):
+def main_netlist_parser(circ, netlist_lines, models):
     elements = []
     parse_function = {
         'c': lambda line: parse_elem_capacitor(line, circ),
@@ -150,8 +138,7 @@ def parse_models(lines):
     for line, line_n in lines:
         tokens = line.replace("(", "").replace(")", "").split()
         if len(tokens) < 3:
-            raise NetlistParseError("parse_models(): syntax error in model" +
-                                    " declaration on line " + str(line_n) +
+            raise NetlistParseError("parse_models(): syntax error in model declaration on line " + str(line_n) +
                                     ".\n\t" + line)
         model_label = tokens[2]
         model_type = tokens[1]
