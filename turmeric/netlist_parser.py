@@ -41,9 +41,6 @@ class NetlistParseError(Exception):
 def parse_network(filename):
     """Parse a SPICE-like netlist
 
-    Directives are collected in lists and returned too, except for
-    subcircuits, those are added to circuit.subckts_dict.
-
     **Returns:**
 
     (circuit_instance, analyses, plotting directives)

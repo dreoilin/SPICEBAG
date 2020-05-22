@@ -29,7 +29,6 @@ _print = False
 _x0s = {None: None}
 
 import logging
-logger = logging.getLogger(__name__)
 
 def run(circ, an_list=None):
     results = {}
@@ -81,17 +80,7 @@ def main(filename, outfile="stdout"):
         The netlist filename.
 
     outfile : string, optional
-        The outfiles base name, the suffixes shown below will be added.
-        With the exception of the magic value ``stdout`` which causes
-        ahkab to print out instead of to disk.
-
-    verbose : int, optional
-        the verbosity level, from 0 (silent) to 6 (debug).
-        It defaults to 3, the same as running ahkab through its command
-        line interface.
-
-    Filename suffixes, for each analysis:
-
+        The output file's base name, the suffixes shown below will be added.
     - Alternate Current (AC): ``.ac``
     - Direct Current (DC): ``.dc``
     - Operating Point (OP): ``.opinfo``
@@ -102,20 +91,14 @@ def main(filename, outfile="stdout"):
     res : dict
         A dictionary containing the computed results.
     """
-    # logger config here
-    import logging
-    logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-    #import logging.config
-    #logging.config.fileConfig("logging.conf")
-    
     logging.info("This is turmeric %s running with:" % __version__)
-    logging.info("\tPython %s" % (sys.version.split('\n')[0],))
-    logging.info("\tNumpy %s" % (np.__version__))
-    logging.info("\tScipy %s" % (sp.__version__))
-    logging.info("\tTabulate %s" % (tabulate.__version__))
+    logging.info("==Python %s" % (sys.version.split('\n')[0],))
+    logging.info("==Numpy %s" % (np.__version__))
+    logging.info("==Scipy %s" % (sp.__version__))
+    logging.info("==Tabulate %s" % (tabulate.__version__))
     
-    (circ, directives, postproc_direct) = netlist_parser.parse_network(
-        filename)
+    logging.info(f"Parsing netlist file `{filename}'")
+    (circ, directives, postproc_direct) = netlist_parser.parse_network(filename)
 
     logging.info("Checking circuit for common mistakes...")
     
