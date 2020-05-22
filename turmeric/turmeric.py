@@ -80,7 +80,7 @@ def main(filename, outfile="stdout"):
         The netlist filename.
 
     outfile : string, optional
-        The output file's base name to which suffixes corresponding to the analysis performed will be added.
+        The output file's base name to which a suffix corresponding to the analysis performed will be added.
     - Alternate Current (AC): ``.ac``
     - Direct Current (DC): ``.dc``
     - Operating Point (OP): ``.opinfo``
