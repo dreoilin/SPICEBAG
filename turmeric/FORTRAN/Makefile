@@ -15,3 +15,6 @@ all: $(PROGS)
 %: %.f90
 	@echo "Compiling $<"
 	@$(FC) $(FCFLAGS) -m $@ $<
+
+clean: 
+	rm -f $(wildcard $(PROGS:=.cpython*))
