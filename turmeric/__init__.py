@@ -6,8 +6,6 @@ Created on Fri May  1 11:23:45 2020
 @author: cian
 """
 
-from __future__ import print_function
-
 import os
 
 from .turmeric import run, new_x0, icmodified_x0
