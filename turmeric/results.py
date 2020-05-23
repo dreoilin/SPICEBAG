@@ -53,7 +53,6 @@ class solution(object):
         self.iea = options.iea
         self.ier = options.ier
         self.gmin = options.gmin
-        self.cmin = options.cmin
         self.temp = constants.T
         self.filename = outfile
         self._init_file_done = False

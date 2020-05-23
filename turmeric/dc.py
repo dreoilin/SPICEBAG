@@ -97,7 +97,7 @@ specs = {'op': {
 }
     
 
-def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
+def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
              MAXIT=options.dc_max_nr_iter, locked_nodes=None):
         
     M_size = M.shape[0]
@@ -139,7 +139,8 @@ def dc_solve(M, ZDC, circ, Ntran=None, Gmin=None, x0=None, time=None,
         while (solver.failed is not True) and (not converged):
             logging.info("Now solving with: %s" % solver.name)
             # 1. Augment the matrices
-            M_, ZDC_ = solver.operate_on_M_and_ZDC(M, ZDC, np.array(Gmin))
+            M_, ZDC_ = solver.operate_on_M_and_ZDC(np.array(M),\
+                                    np.array(ZDC), np.array(Gmin))
             Z = ZDC_ + ZAC * (bool(time))
             # 2. Try to solve with the current solver
             try:

@@ -517,13 +517,39 @@ class Circuit(list):
         # all done
         self.M0 = M0
         self.ZDC0 = ZDC0
-
         #import codecs, json
         #for mat, matname in zip([M0, ZDC0],['M0','ZDC0']):
         #    with open(f'tests/data/matrices/VRD.{matname}.json','w+') as f:
         #        json.dump(mat.tolist(), f, sort_keys=True)
-        
-    # TODO: move stamping of ZAC0 into components' constructors; creation could be difficult 
+
+
+    # generate unreduced dynamic matrix. Might be good to bundle 
+    # this in with MNA gen and have a separate get function
+    def generate_D0(self, shape):
+    
+        D0 = np.zeros(self.M0.shape[0])
+        nv = self.get_nodes_number()
+        i_eq = 0 #each time we find a vsource or vcvs or ccvs, we'll add one to this.
+        for elem in self:
+            if is_elem_voltage_defined(elem) and not isinstance(elem, components.Inductor):
+                i_eq = i_eq + 1
+            elif isinstance(elem, components.Capacitor):
+                n1 = elem.n1
+                n2 = elem.n2
+                D0[n1, n1] = D0[n1, n1] + elem.value
+                D0[n1, n2] = D0[n1, n2] - elem.value
+                D0[n2, n2] = D0[n2, n2] + elem.value
+                D0[n2, n1] = D0[n2, n1] - elem.value
+            elif isinstance(elem, components.Inductor):
+                D0[ nv + i_eq, nv + i_eq ] = -1 * elem.value
+                
+                # carry on as usual
+                i_eq = i_eq + 1
+    
+
+        return D0    
+    
+    # TODO: move stamping of ZAC0 into components' constructors
         # if you are clever you should be able to alter this function
         # to generate ZAC0 using existing stamps and then slice matrix at end
         # talk to me about this
