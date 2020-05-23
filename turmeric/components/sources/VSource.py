@@ -1,19 +1,3 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright 2006 Giuseppe Venturini
-
-# This file is part of the ahkab simulator.
-#
-# Ahkab is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 2 of the License.
-#
-# Ahkab is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License v2
-# along with ahkab.  If not, see <http://www.gnu.org/licenses/>.
 from ..Component import Component
 import numpy as np
 
@@ -60,6 +44,9 @@ class VSource(Component):
         self._time_function = None
         if dc_value is not None:
             self.dc_guess = [self.dc_value]
+
+    def stamp(self, M, ZDC, ZAC, D):
+        ZDC[index, 0] = -1.0 * self.V()
 
     def __str__(self):
         rep = ""

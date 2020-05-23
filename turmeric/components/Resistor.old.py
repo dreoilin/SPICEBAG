@@ -1,12 +1,30 @@
-from .Component import Component
+# -*- coding: iso-8859-1 -*-
+# Copyright 2006 Giuseppe Venturini
 
-class Resistor(Component,list):
+# This file is part of the ahkab simulator.
+#
+# Ahkab is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 2 of the License.
+#
+# Ahkab is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License v2
+# along with ahkab.  If not, see <http://www.gnu.org/licenses/>.
+from .Component import Component
+class Resistor(Component):
     """A resistor.
+
+    .. image:: images/elem/resistor.svg
 
     **Parameters:**
 
     part_id : string
-        The unique identifier of this element. The first letter should be ``'R'``.
+        The unique identifier of this element. The first letter should be
+        ``'R'``.
     n1 : int
         *Internal* node to be connected to the anode.
     n2 : int
@@ -25,32 +43,9 @@ class Resistor(Component,list):
         self._value = value
         self._g = 1./value
         self.is_nonlinear = False
+        self.is_symbolic = True
         self.n1 = n1
         self.n2 = n2
-
-    @classmethod
-    def from_line(cls, line, circ):
-        tok = line.split()
-        if len(tok) < 4 or (len(tok) > 4 and not tok[4][0] == "*"):
-            raise ValueError("Malformed line: `{line}'")
-
-        n1 = circ.add_node(tok[1])
-        n2 = circ.add_node(tok[2])
-
-        # TODO: use value types from old project
-        value = float(tok[3])
-
-        if value == 0:
-            raise ValueError(f"A resistor must have a value: `{line}'")
-
-        return cls(part_id=tok[0], n1=n1, n2=n2, value=value)
-
-
-    def stamp(self, M, ZDC, ZAC, D):
-        M[self.n1, self.n1] = M[self.n1, self.n1] + self.g
-        M[self.n1, self.n2] = M[self.n1, self.n2] - self.g
-        M[self.n2, self.n1] = M[self.n2, self.n1] - self.g
-        M[self.n2, self.n2] = M[self.n2, self.n2] + self.g
 
     @property
     def g(self, v=0, time=0):

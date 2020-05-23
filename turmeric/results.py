@@ -174,8 +174,6 @@ class op_solution(solution, _mutable_data):
             self.results.update({varname: x[index, 0]})
             self.errors.update({varname: error[index, 0]})
             self.units.update({varname: "V"})
-            if circ.is_int_node_internal_only(index+1):
-                self.skip_nodes_list.append(index)
 
         index = nv_1 - 1
         for elem in circ:
@@ -480,8 +478,6 @@ class ac_solution(solution, _mutable_data):
             varname = "V%s" % str(circ.nodes_dict[index + 1])
             self.variables += [varname]
             self.units.update({varname: "V"})
-            if circ.is_int_node_internal_only(index+1):
-                self.skip_nodes_list.append(index)
 
         for elem in circ:
             if circuit.is_elem_voltage_defined(elem):
@@ -640,8 +636,6 @@ class dc_solution(solution, _mutable_data):
             varname = "V%s" % (str(circ.nodes_dict[index + 1]),)
             self.variables += [varname]
             self.units.update({varname:"V"})
-            if circ.is_int_node_internal_only(index+1):
-                self.skip_nodes_list.append(index)
 
         for elem in circ:
             if circuit.is_elem_voltage_defined(elem):
@@ -709,8 +703,6 @@ class tran_solution(solution, _mutable_data):
             varname = ("V%s" % (str(circ.nodes_dict[index + 1]),)).upper()
             self.variables += [varname]
             self.units.update({varname:"V"})
-            if circ.is_int_node_internal_only(index+1):
-                self.skip_nodes_list.append(index)
 
         for elem in circ:
             if circuit.is_elem_voltage_defined(elem):

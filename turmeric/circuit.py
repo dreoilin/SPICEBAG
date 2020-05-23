@@ -70,13 +70,10 @@ class Circuit(list):
           circuit. The only exception is the ground node, which has the
           reserved id ``'0'``, and for which this method won't raise any
           exception.
-        :raises TypeError: if the parameter ``name`` is not of "text" type (what
-          that means exactly depends on which version of Python you are using.)
-
+        :raises TypeError: if the parameter ``name`` is not of "text" type
         """
         if not isinstance(name,str):
-            raise TypeError("The node %s should have been of text type" %
-                            name)
+            raise TypeError("The node %s should have been of text type" % name)
         got_ref = 0 in self.nodes_dict
         if name not in self.nodes_dict:
             if name == '0':
@@ -86,16 +83,14 @@ class Circuit(list):
             self.nodes_dict.update({int_node:name})
             self.nodes_dict.update({name:int_node})
         else:
-            raise ValueError('Impossible to create new node %s: node exists!'
-                             % name)
+            raise ValueError('Impossible to create new node %s: node exists!' % name)
         return name
 
     def add_node(self, ext_name):
         
         # must be text (str unicode...)
         if not isinstance(ext_name, str):
-            raise TypeError("The node %s should have been of text type" %
-                            ext_name)
+            raise TypeError("The node %s should have been of text type" % ext_name)
         # test: do we already have it in the dictionary?
         if ext_name not in self.nodes_dict:
             if ext_name == '0':
@@ -109,52 +104,10 @@ class Circuit(list):
             int_node = self.nodes_dict[ext_name]
         return int_node
 
-    def new_internal_node(self):
-        """Generate implicit internal nodes.
-
-        Some devices are made of a group of other devices, connected by
-        "internal only" nodes, which have the prefix ``'INT'`` and the
-        simulator treats specially, hiding them from the user if not
-        explicitly asked about them.
-
-        This method generates the external names for such nodes and inserts them
-        in the circuit.
-
-        **Returns:**
-
-        ext_node : string
-            The corresponding external node id.
-        """
-
-        ext_node = "INT" + str(self.internal_nodes)
-        self.internal_nodes = self.internal_nodes + 1
-        self.create_node(ext_node)
-        return ext_node
-
     def get_nodes_number(self):
         """Returns the number of nodes in the circuit"""
         return int(len(self.nodes_dict)/2)
 
-    def is_int_node_internal_only(self, int_node):
-        """Check whether an internal node is an "internal only node" or not.
-
-        **Parameters:**
-
-        int_node : int
-            The internal only node to be checked.
-
-        **Returns:**
-
-        chk : boolean
-            The result of the check.
-
-        :raises TypeError: if the supplied node is not an ``int``. Typically
-          this happens when the method is called with an *external* name.
-        """
-        if type(int_node) is not int:
-            raise TypeError('Expecting an INTERNAL node of type int, got %s.' %
-                            type(int_node))
-        return self.nodes_dict[int_node].find("INT") > -1
 
     def is_nonlinear(self):
         
@@ -228,6 +181,8 @@ class Circuit(list):
             del self.models[model_label]
         # should print a warning here
 
+    # TODO: refactor component addition into component classes
+    # ADDING COMPONENTS
     def add_resistor(self, part_id, n1, n2, value):
         
         n1 = self.add_node(n1)
@@ -257,29 +212,6 @@ class Circuit(list):
         n2 = self.add_node(n2)
 
         elem = components.Inductor(part_id=part_id, n1=n1, n2=n2, value=value, ic=ic)
-
-        self.append(elem)
-
-    def add_inductor_coupling(self, part_id, L1, L2, value):
-        
-        L1elem, L2elem = None, None
-
-        for e in self:
-            if isinstance(e, components.Inductor) and (L1 == e.part_id):
-                L1elem = e
-            elif isinstance(e, components.Inductor) and (L2 == e.part_id):
-                L2elem = e
-
-        if L1elem is None or L2elem is None:
-            error_msg = "One or more coupled inductors for %s were not found: %s (found: %s), %s (found: %s)." % \
-                (part_id, L1, L1elem is not None, L2, L2elem is not None)
-            raise ValueError(error_msg)
-
-        M = math.sqrt(L1elem.value * L2elem.value) * value
-
-        elem = components.InductorCoupling(part_id=part_id, L1=L1, L2=L2, K=value, M=M)
-        L1elem.coupling_devices.append(elem)
-        L2elem.coupling_devices.append(elem)
 
         self.append(elem)
 
@@ -441,6 +373,7 @@ class Circuit(list):
                                 value=value)
 
         self.append(elem)
+    # END OF ADDING COMPONENTS
 
 
     def find_vde_index(self, elem_or_id, verbose=3):
@@ -479,11 +412,29 @@ class Circuit(list):
                              (index + len(self.nodes_dict)/2 - 1))
         return e
     
+    # TODO: refactor generation of M0 and ZDC0 into components' classes
     def generate_M0_and_ZDC0(self):
-    
         n_of_nodes = self.get_nodes_number()
         M0 = np.zeros((n_of_nodes, n_of_nodes))
         ZDC0 = np.zeros((n_of_nodes, 1))
+
+        # First, current defined, linear elements
+        # == CD = {R , C , GISource, ISource (time independant)}
+        
+        # Next, voltage defined elements
+        # == VD = { V (time independant ) , EVSource , HVSource , Inductor }
+        # Operations common to all VD elements:
+        #index = M0.shape[0]  # get_matrix_size(M0)[0]
+        #M0 = utilities.expand_matrix(M0, add_a_row=True, add_a_col=True)
+        #ZDC0 = utilities.expand_matrix(ZDC0, add_a_row=True, add_a_col=False)
+        ## KCL
+        #M0[elem.n1, index] = 1.0
+        #M0[elem.n2, index] = -1.0
+        ## KVL
+        #M0[index, elem.n1] = +1.0
+        #M0[index, elem.n2] = -1.0
+        # Finally FISource
+
         for elem in self:
             if elem.is_nonlinear:
                 continue
@@ -505,9 +456,6 @@ class Circuit(list):
                     ZDC0[elem.n2, 0] = ZDC0[elem.n2, 0] - elem.I()
                 else:
                     pass  # vengono aggiunti volta per volta
-            elif isinstance(elem, components.InductorCoupling):
-                pass
-                # this is taken care of within the inductors
             elif is_elem_voltage_defined(elem):
                 pass
                 # we'll add its lines afterwards
@@ -516,11 +464,13 @@ class Circuit(list):
                 # to sense the current
                 pass
             else:
-                print("dc_analysis.py: BUG - Unknown linear element. Ref. #28934")
+                logging.WARNING(f"Unknown linear element found: `{elem}'")
+        # Next, voltage defined elements
         # process vsources
         # i generatori di tensione non sono pilotabili in tensione: g e' infinita
         # for each vsource, introduce a new variable: the current flowing through it.
         # then we introduce a KVL equation to be able to solve the circuit
+
         for elem in self:
             if is_elem_voltage_defined(elem):
                 index = M0.shape[0]  # get_matrix_size(M0)[0]
@@ -553,6 +503,7 @@ class Circuit(list):
                     sys.exit(33)
     
         # iterate again for devices that depend on voltage-defined ones.
+        # TODO: matrix stamping for FISource
         for elem in self:
             if isinstance(elem, components.sources.FISource):
                 local_i_index = self.find_vde_index(elem.source_id, verbose=0)
@@ -566,7 +517,13 @@ class Circuit(list):
         # all done
         self.M0 = M0
         self.ZDC0 = ZDC0
+
+        #import codecs, json
+        #for mat, matname in zip([M0, ZDC0],['M0','ZDC0']):
+        #    with open(f'tests/data/matrices/VRD.{matname}.json','w+') as f:
+        #        json.dump(mat.tolist(), f, sort_keys=True)
         
+    # TODO: move stamping of ZAC0 into components' constructors; creation could be difficult 
         # if you are clever you should be able to alter this function
         # to generate ZAC0 using existing stamps and then slice matrix at end
         # talk to me about this
@@ -596,6 +553,7 @@ class Circuit(list):
 # STATIC METHODS
 # this should definitely be a member variable
 # a sytematic way of sorting member variables would be nice
+# TODO: make member function of Circuit
 def is_elem_voltage_defined(elem):
     
     if isinstance(elem, components.sources.VSource) or isinstance(elem, components.sources.EVSource) or \

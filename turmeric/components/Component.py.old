@@ -99,6 +99,12 @@ the voltages in the ``voltages_vector``.
 
 A non linear element must have a ``elem.is_nonlinear`` field set to True.
 
+6. ``elem.is_symbolic``
+
+This boolean flag is used to know whether the element should be treated
+symbolically by the ymbolic solver or not. It is meant to be toggled
+by the user at will.
+
 7. Every element should have a ``get_netlist_elem_line(self, nodes_dict)``
 allowing the element to print a netlist entry that parses to itself.
 
@@ -118,11 +124,12 @@ Module reference
 
 """
 
-import numpy as np
-from abc import ABC, abstractmethod
+from __future__ import (unicode_literals, absolute_import,
+                        division, print_function)
 
-# TODO: convert Component to ABC
-class Component(ABC):
+import numpy as np
+
+class Component(object):
 
     """Base Component class.
 
@@ -137,6 +144,7 @@ class Component(ABC):
         self.n2 = n2
         self.value = value
         self.is_nonlinear = is_nonlinear
+        self.is_symbolic = is_symbolic
 
     #   Used by `get_netlist_elem_line` for value
     def __str__(self):
@@ -148,10 +156,6 @@ class Component(ABC):
             self.i = i_function
         if g_function:
             self.g = g_function
-
-    @abstractmethod
-    def stamp(self, M, ZDC, ZAC, D):
-        pass
 
     def g(self, v):
         return 1./self.value
@@ -174,6 +178,5 @@ class Component(ABC):
         ntlst_line : string
             The netlist line.
         """
-        # TODO: verify that the internal nodeIDs are equivalent to the external ones
         return "%s %s %s %g" % (self.part_id, nodes_dict[self.n1],
                                 nodes_dict[self.n2], self.value)
