@@ -141,7 +141,7 @@ def main_netlist_parser(circ, netlist_lines, models):
         'i': lambda line: parse_elem_isource(line, circ),
         'l': lambda line: parse_elem_inductor(line, circ),
         'm': lambda line: parse_elem_mos(line, circ, models),
-        'r': lambda line: components.Resistor.from_line(line, circ),
+        'r': lambda line: parse_elem_resistor(line, circ),
         'v': lambda line: parse_elem_vsource(line, circ)
     }
     try:
