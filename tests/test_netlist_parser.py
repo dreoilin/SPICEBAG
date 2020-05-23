@@ -1,4 +1,7 @@
 import unittest
+from pathlib import Path
+import numpy, codecs, json
+
 from .context import turmeric
 
 from turmeric import netlist_parser as np
@@ -26,8 +29,32 @@ class ModelTestCase(unittest.TestCase):
                 ]
 
     def test_diode_model_parsing(self):
-        for teststr, verification_str in zip(self.diode_model_strs, self.diode_model_verification_strs):
+        for teststr, verification_str in zip(self.diode_model_strs_pass, self.diode_model_verification_strs_pass):
             #print(str(list(np.parse_models([(ms,0)]).values())[0]))
             self.assertEqual(str(list(np.parse_models([(teststr,0)]).values())[0]),verification_str)
 
     # TODO: test verification errors in diode model parsing
+
+class MatrixStampingTestCase(unittest.TestCase):
+
+    def setUp(self):
+        datapath = Path('tests/data/')
+        data_prefixes = ['VRD','FifthOrderLowpass']
+        mattypes = ['M0', 'ZDC0']
+
+        matfiledict = {mattype : [codecs.open(str(datapath / 'matrices' / (prefix + '.' + mattype + '.json')), 'r') for prefix in data_prefixes] for mattype in mattypes}
+        self.mats = {m : [numpy.array(json.loads(f.read())) for f in matfiledict[m]] for m in matfiledict}
+        [f.close() for f in [i for sublist in matfiledict.values() for i in sublist]]
+
+        self.netlists = [str(datapath / 'netlists' / (prefix + '.net')) for prefix in data_prefixes ]
+        self.genMats = {t : [getattr(np.parse_network(fn)[0],t) for fn in self.netlists] for t in mattypes}
+
+    def test_M0_generation(self):
+        for m, gm, n in zip(self.mats['M0'], self.genMats['M0'], self.netlists):
+            with self.subTest(netlist=n):
+                self.assertEqual(gm.tolist(), m.tolist())
+
+    def test_ZDC0_generation(self):
+        for m, gm, n in zip(self.mats['ZDC0'], self.genMats['ZDC0'], self.netlists):
+            self.assertEqual(gm.tolist(), m.tolist())
+
