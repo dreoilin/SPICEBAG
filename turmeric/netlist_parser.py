@@ -38,100 +38,6 @@ class NetlistParseError(Exception):
     """Netlist parsing exception."""
     pass
 
-def digest_raw_netlist(filename):
-    logging.info(f"Processing netlist `{filename}'")
-    directives = []
-    model_directives = []
-    net_lines = []
-    title = ""
-
-    with open(filename, 'r') as f:
-        for i, line in enumerate(f.readlines()):
-            line = line.strip().lower()
-            
-            if i == 0:
-                title = line[1:]
-                continue
-            if line.isspace() or line == '' or line[0] == "*":
-                continue
-
-            # Directives, models statements, etc.
-            if line[0] == ".":
-                tokens = line.split()
-                if tokens[0] == '.include':
-                    logging.info(f"Including `{filename}'")
-                    (t, d, md, nl) = digest_raw_netlist(parse_include_directive(line, os.path.split(filename)[0]))
-                    directives.extend(d)
-                    model_directives.extend(md)
-                    net_lines.extend(nl)
-                    if t:
-                        logging.info(f"Found title `{t}' in included file. Ignoring...")
-                elif tokens[0] == ".end":
-                    break
-                elif tokens[0] == ".model":
-                    model_directives.append((line, i+1))
-                else:
-                    directives.append((line, i+1))
-                continue
-            
-            net_lines.append((line, i + 1))
-    logging.info(f"Finished processing `{filename}'")
-    
-    return (title, directives, model_directives, net_lines)
-
-
-def parse_network(filename):
-    """Parse a SPICE-like netlist
-
-    **Returns:**
-
-    (circuit_instance, plotting directives)
-    """
-    (title, directives, model_directives, net_lines) = digest_raw_netlist(filename)
-    circ = circuit.Circuit(title=title, filename=filename)
-
-    # MODELS
-    models = parse_models(model_directives)
-    # PARSE CIRCUIT
-    circ += main_netlist_parser(circ, net_lines, models)
-    # FIXME: surely models is assigned when passed through the constructor
-    circ.models = models
-    circ.generate_M0_and_ZDC0()
-    return (circ, directives)
-
-
-def main_netlist_parser(circ, netlist_lines, models):
-    elements = []
-    parse_function = {
-        'c': lambda line: parse_elem_capacitor(line, circ),
-        'd': lambda line: parse_elem_diode(line, circ, models),
-        'e': lambda line: parse_elem_vcvs(line, circ),
-        'f': lambda line: parse_elem_cccs(line, circ),
-        'g': lambda line: parse_elem_vccs(line, circ),
-        'h': lambda line: parse_elem_ccvs(line, circ),
-        'i': lambda line: parse_elem_isource(line, circ),
-        'k': lambda line: parse_elem_inductor_coupling(line, circ, elements),
-        'l': lambda line: parse_elem_inductor(line, circ),
-        'm': lambda line: parse_elem_mos(line, circ, models),
-        'r': lambda line: parse_elem_resistor(line, circ),
-        'v': lambda line: parse_elem_vsource(line, circ)
-    }
-    try:
-        for line, line_n in netlist_lines:
-            try:
-                elements += parse_function[line[0]](line)
-            except KeyError:
-                raise NetlistParseError("Parser: do not know how to parse" +
-                                        " '%s' elements." % line[0])
-    except NetlistParseError as npe:
-        (msg,) = npe.args
-        if len(msg):
-            printing.print_general_error(msg)
-        printing.print_parse_error(line_n, line)
-        raise NetlistParseError(msg)
-
-    return elements
-
 
 def parse_models(lines):
     models = {}
@@ -160,6 +66,99 @@ def parse_models(lines):
                                     ".\n\t" + line,)
         models.update({model_label: model_iter})
     return models
+
+
+def digest_raw_netlist(filename):
+    logging.info(f"Processing netlist `{filename}'")
+    directives = []
+    model_directives = []
+    net_lines = []
+    title = ""
+
+    with open(filename, 'r') as f:
+        for i, line in enumerate(f.readlines()):
+            line = line.strip().lower()
+            
+            if i == 0:
+                title = line[1:]
+                continue
+            if line.isspace() or line == '' or line[0] == "*":
+                continue
+
+            # Directives, models statements, etc.
+            if line[0] == ".":
+                tokens = line.split()
+                if tokens[0] == '.include':
+                    logging.info(f"Including `{filename}'")
+                    (t, d, md, nl) = digest_raw_netlist(parse_include_directive(line, os.path.split(filename)[0]))
+                    directives.extend(d)
+                    models.extend(md)
+                    net_lines.extend(nl)
+                    if t:
+                        logging.info(f"Found title `{t}' in included file. Ignoring...")
+                elif tokens[0] == ".end":
+                    break
+                elif tokens[0] == ".model":
+                    model_directives.append((line, i+1))
+                else:
+                    directives.append((line, i+1))
+                continue
+            
+            net_lines.append((line, i + 1))
+    models = parse_models(model_directives)
+    logging.info(f"Finished processing `{filename}'")
+    
+    return (title, directives, models, net_lines)
+
+
+def parse_network(filename):
+    """Parse a SPICE-like netlist
+
+    **Returns:**
+
+    (circuit_instance, plotting directives)
+    """
+    (title, directives, models, net_lines) = digest_raw_netlist(filename)
+    circ = circuit.Circuit(title=title, filename=filename)
+
+    # PARSE CIRCUIT
+    circ += main_netlist_parser(circ, net_lines, models)
+    # FIXME: surely models should be assigned when passed through the constructor
+    circ.models = models
+    circ.generate_M0_and_ZDC0()
+    return (circ, directives)
+
+
+def main_netlist_parser(circ, netlist_lines, models):
+    elements = []
+    parse_function = {
+        'c': lambda line: parse_elem_capacitor(line, circ),
+        'd': lambda line: parse_elem_diode(line, circ, models),
+        'e': lambda line: parse_elem_vcvs(line, circ),
+        'f': lambda line: parse_elem_cccs(line, circ),
+        'g': lambda line: parse_elem_vccs(line, circ),
+        'h': lambda line: parse_elem_ccvs(line, circ),
+        'i': lambda line: parse_elem_isource(line, circ),
+        'l': lambda line: parse_elem_inductor(line, circ),
+        'm': lambda line: parse_elem_mos(line, circ, models),
+        'r': lambda line: components.Resistor.from_line(line, circ),
+        'v': lambda line: parse_elem_vsource(line, circ)
+    }
+    try:
+        for line, line_n in netlist_lines:
+            try:
+                elements += parse_function[line[0]](line)
+            except KeyError:
+                raise NetlistParseError(f"Cannot parse {line[0]} element")
+    except NetlistParseError as npe:
+        (msg,) = npe.args
+        if len(msg):
+            printing.print_general_error(msg)
+        printing.print_parse_error(line_n, line)
+        raise NetlistParseError(msg)
+
+    return elements
+
 
 
 def parse_elem_resistor(line, circ):
@@ -231,48 +230,6 @@ def parse_elem_inductor(line, circ):
 
     elem = components.Inductor(part_id=line_elements[0], n1=n1, n2=n2,
                             value=convert_units(line_elements[3]), ic=ic)
-
-    return [elem]
-
-
-def parse_elem_inductor_coupling(line, circ, elements=[]):
-
-    line_elements = line.split()
-    if len(line_elements) < 4 or (len(line_elements) > 4 and not line_elements[5][0] == "*"):
-        raise NetlistParseError("parse_elem_inductor_coupling(): malformed line")
-
-    part_id = line_elements[0]
-    L1 = line_elements[1]
-    L2 = line_elements[2]
-
-    try:
-        Kvalue = convert_units(line_elements[3])
-    except ValueError:
-        (label, value) = parse_param_value_from_string(line_elements[3])
-        if not label == "k":
-            raise NetlistParseError("parse_elem_inductor_coupling(): unknown parameter " + label)
-        Kvalue = convert_units(value)
-
-    L1elem, L2elem = None, None
-
-    for e in elements:
-        if isinstance(e, components.Inductor) and L1 == e.part_id:
-            L1elem = e
-        elif isinstance(e, components.Inductor) and L2 == e.part_id:
-            L2elem = e
-
-    if L1elem is None or L2elem is None:
-        error_msg = "%s: One or more coupled" % __name__ + \
-                    " inductors for %s were not found: %s (found: %s), %s (found: %s)." % \
-                    (part_id, L1, L1elem is not None, L2, L2elem is not None)
-        raise NetlistParseError(error_msg)
-
-    M = math.sqrt(L1elem.value * L2elem.value) * Kvalue
-
-    elem = components.InductorCoupling(part_id=part_id, L1=L1, L2=L2, K=Kvalue,
-                                    M=M)
-    L1elem.coupling_devices.append(elem)
-    L2elem.coupling_devices.append(elem)
 
     return [elem]
 
