@@ -351,7 +351,7 @@ def _generate_Nac(circ):
         if circuit.is_elem_voltage_defined(elem):
             index = Nac.shape[0]
             Nac = utilities.expand_matrix(Nac, add_a_row=True, add_a_col=False)
-            if isinstance(elem, components.sources.VSource) and elem.abs_ac is not None:
+            if isinstance(elem, components.sources.V) and elem.abs_ac is not None:
                 Nac[index, 0] = -1.0 * elem.abs_ac * np.exp(j * elem.arg_ac)
     return Nac
 

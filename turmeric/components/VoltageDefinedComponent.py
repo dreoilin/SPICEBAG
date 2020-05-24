@@ -9,7 +9,7 @@ class VoltageDefinedComponent(Component):
     - Inductor
     """
     
-    #def __init__(self, part_id, n1, n2, dc_value, ac_value=0): # VSource
+    #def __init__(self, part_id, n1, n2, dc_value, ac_value=0): # V
     #def __init__(self, part_id, n1, n2, value, sn1, sn2): # EVSource
     #def __init__(self, part_id, n1, n2, value, source_id): # HVSource
     #def __init__(self, part_id, n1, n2, value, ic=None): # Inductor

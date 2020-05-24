@@ -289,7 +289,7 @@ class op_solution(solution, _mutable_data):
                 v = v + x[elem.n1-1] if elem.n1 != 0 else v
                 v = v - x[elem.n2-1] if elem.n2 != 0 else v
                 tot_power = tot_power - v*elem.I()
-            elif isinstance(elem, components.sources.VSource) or \
+            elif isinstance(elem, components.sources.V) or \
                  isinstance(elem, components.sources.EVSource):
                 v = 0
                 v = v + x[elem.n1-1] if elem.n1 != 0 else v
@@ -301,7 +301,7 @@ class op_solution(solution, _mutable_data):
                 found_source = False
                 for e in circ:
                     if circuit.is_elem_voltage_defined(e):
-                        if isinstance(e, components.sources.VSource) and e.part_id.lower() == elem.source_id.lower():
+                        if isinstance(e, components.sources.V) and e.part_id.lower() == elem.source_id.lower():
                             found_source = True
                             break
                         else:

@@ -50,14 +50,18 @@ class V(VoltageDefinedComponent):
         Format: v<label> n1 n2 [type=vdc vdc=float] [type=vac vac=float] [type=....]
         Example: v1 1 0 type=vdc vdc=5
         """
-        #import re
-        print(f"from_line in {__file__} called")
-        self.net_objs = [Label,Node,Node,ParamDict]
-        super().from_line(line)
-
-        # TODO: have/find one list of accepted methods
+        import re
         types = {'vdc':0,'vac':0,'pulse':7,'exp':6,'sin':5,'sffm':5,'am':5}
-        params = cls.tokens[3].value
+        net_objs = [Label,Node,Node,ParamDict]
+        r = "^" + "v" + '(?: +)'.join([rex(o) for o in net_objs])
+        match = re.search(r,line.strip().lower())
+
+        try:
+            tokens = [n(g) for n,g in zip(net_objs,match.groups())]
+        except AttributeError as e:
+            logging.exception(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{r}'")
+
+        params = tokens[3].value
         try:
             param_number = types[params['type']]
         except AttributeError as e:
@@ -71,10 +75,10 @@ class V(VoltageDefinedComponent):
         if dc_value == None and function == None:
             raise ValueError(f"Neither dc value nor time function defined for voltage source in:\n\t{line}")
 
-        n1 = circ.add_node(str(cls.tokens[1]))
-        n2 = circ.add_node(str(cls.tokens[2]))
+        n1 = circ.add_node(str(tokens[1]))
+        n2 = circ.add_node(str(tokens[2]))
 
-        comp = cls(part_id=str(cls.tokens[0]), n1=n1, n2=n2, dc_value=dc_value, ac_value=vac)
+        comp = cls(part_id=str(tokens[0]), n1=n1, n2=n2, dc_value=dc_value, ac_value=vac)
 
         if function is not None:
             comp.is_timedependent = True
@@ -82,7 +86,6 @@ class V(VoltageDefinedComponent):
 
         return [comp]
 
-    # FIXME: this does not belong here
     def parse_time_function(self, ftype, line_elements, stype):
         import copy
         from ...time_functions import time_fun_specs

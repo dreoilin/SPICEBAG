@@ -212,7 +212,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
     for index in range(len(circ)):
         if circ[index].part_id.lower() == elem_descr:
             if elem_type == 'v':
-                if isinstance(circ[index], components.sources.VSource):
+                if isinstance(circ[index], components.sources.V):
                     source_elem = circ[index]
                     break
             if elem_type == 'i':
@@ -222,7 +222,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
     if not source_elem:
         raise ValueError(".DC: source %s was not found." % source)
 
-    if isinstance(source_elem, components.sources.VSource):
+    if isinstance(source_elem, components.sources.V):
         initial_value = source_elem.value
     else:
         initial_value = source_elem.dc_value
@@ -239,7 +239,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
     index = 0
     for sweep_value in dc_iter:
         index = index + 1
-        if isinstance(source_elem, components.sources.VSource):
+        if isinstance(source_elem, components.sources.V):
             source_elem.value = sweep_value
         else:
             source_elem.dc_value = sweep_value
@@ -261,7 +261,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
         logging.info("done")
 
     # clean up
-    if isinstance(source_elem, components.sources.VSource):
+    if isinstance(source_elem, components.sources.V):
         source_elem.value = initial_value
     else:
         source_elem.dc_value = initial_value

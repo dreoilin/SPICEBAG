@@ -102,15 +102,15 @@ Module reference
 
 import numpy as np
 from abc import ABC, abstractmethod
+from .Parseable import Parseable
 
-# TODO: convert Component to ABC
-class Component(ABC):
+# TODO: finish converting Component to ABC
+class Component(Parseable):
 
-    """Base Component class.
-
-    This component is not meant for direct use, rather all other (simple)
-    components are a subclass of this element.
-
+    """
+    Base Component class.
+    Inherits from Parseable to provide interface to process netlist objects
+    
     """
 
     def __init__(self, part_id=None, n1=None, n2=None, is_nonlinear=False, is_symbolic=True, value=None):

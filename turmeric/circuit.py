@@ -236,7 +236,7 @@ class Circuit(list):
         n1 = self.add_node(n1)
         n2 = self.add_node(n2)
 
-        elem = components.sources.VSource(part_id=part_id, n1=n1, n2=n2, value=dc_value, ac_value=ac_value)
+        elem = components.sources.V(part_id=part_id, n1=n1, n2=n2, value=dc_value, ac_value=ac_value)
 
         if function is not None:
             elem.is_timedependent = True
@@ -497,11 +497,11 @@ class Circuit(list):
                 # KVL
                 M0[index, elem.n1] = +1.0
                 M0[index, elem.n2] = -1.0
-                if isinstance(elem, components.sources.VSource) and not elem.is_timedependent:
+                if isinstance(elem, components.sources.V) and not elem.is_timedependent:
                     # corretto, se e' def una parte tempo-variabile ci pensa
                     # mdn_solver a scegliere quella giusta da usare.
                     ZDC0[index, 0] = -1.0 * elem.V()
-                elif isinstance(elem, components.sources.VSource) and elem.is_timedependent:
+                elif isinstance(elem, components.sources.V) and elem.is_timedependent:
                     pass  # taken care step by step
                 elif isinstance(elem, components.sources.EVSource):
                     M0[index, elem.sn1] = -1.0 * elem.alpha
@@ -578,8 +578,8 @@ class Circuit(list):
         # create empty array to store ZAC0
         ZAC = np.zeros((ZAC_size, 1))
         for elem in self:
-            if (isinstance(elem, components.sources.VSource) or isinstance(elem, components.sources.ISource)) and elem.is_timedependent:
-                if isinstance(elem, components.sources.VSource):
+            if (isinstance(elem, components.sources.V) or isinstance(elem, components.sources.ISource)) and elem.is_timedependent:
+                if isinstance(elem, components.sources.V):
                     ZAC[NNODES - 1 + v_index, 0] = -1 * elem.V(time)
                 elif isinstance(elem, components.sources.ISource):
                     if elem.n1:
@@ -597,7 +597,7 @@ class Circuit(list):
 # TODO: make member function of Circuit
 def is_elem_voltage_defined(elem):
     
-    if isinstance(elem, components.sources.VSource) or isinstance(elem, components.sources.EVSource) or \
+    if isinstance(elem, components.sources.V) or isinstance(elem, components.sources.EVSource) or \
         isinstance(elem, components.sources.HVSource) or isinstance(elem, components.Inductor) \
             or (hasattr(elem, "is_voltage_defined") and elem.is_voltage_defined):
         return True
