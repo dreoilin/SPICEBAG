@@ -45,7 +45,23 @@ class Circuit(list):
     def __str__(self):
         s = "* " + self.title + "\n"
         for elem in self:
-            s += elem.get_netlist_elem_line(self.nodes_dict) + "\n"
+            if hasattr(elem,'__str__'):
+                s += str(elem)
+            elif hasattr(elem,'__repr__'):
+                s += repr(elem)
+            else:
+                s += elem.get_netlist_elem_line(self.nodes_dict) 
+            s += '\n'
+        return s[:-1]
+
+    def __repr__(self):
+        s = "* " + self.title + "\n"
+        for elem in self:
+            if hasattr(elem,'__repr__'):
+                s += repr(elem)
+            else:
+                s += elem.get_netlist_elem_line(self.nodes_dict) + "\n"
+            s += '\n'
         return s[:-1]
 
     def create_node(self, name):

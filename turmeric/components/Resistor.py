@@ -43,6 +43,9 @@ class Resistor(CurrentDefinedComponent):
 
         return [cls(part_id=tok[0], n1=n1, n2=n2, value=value)]
 
+    def __repr__(self):
+        rep = f"{self.part_id} {self.n1} {self.n2} {self.value}"
+        return rep
 
     def stamp(self, M, ZDC, ZAC, D):
         M[self.n1, self.n1] = M[self.n1, self.n1] + self.g

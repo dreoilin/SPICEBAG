@@ -119,7 +119,7 @@ def main(filename, outfile="stdout"):
 
     
     logging.info("Parsed circuit:")
-    logging.info(str(circ))
+    logging.info(repr(circ))
     logging.info("Models:")
     for m in circ.models:
         circ.models[m].print_model()

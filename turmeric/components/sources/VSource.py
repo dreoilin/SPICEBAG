@@ -46,15 +46,7 @@ class VSource(VoltageDefinedComponent):
         ZDC[index, 0] = -1.0 * self.V()
 
     def __str__(self):
-        rep = ""
-        if self.value is not None:
-            rep = rep + "type=vdc value=" + str(self.value) + " "
-        if self.abs_ac is not None:
-            #   TODO:   netlist parser doesn't accept `arg=` from `self.arg_ac`
-            rep = rep + "vac=" + str(self.abs_ac) + " "
-        if self.is_timedependent:
-            rep = rep + str(self._time_function)
-        return rep
+        return repr(self)
 
     def V(self, time=None):
         """Evaluate the voltage applied by the voltage source.
@@ -80,31 +72,12 @@ class VSource(VoltageDefinedComponent):
         else:
             return self._time_function(time)
 
-    def get_netlist_elem_line(self, nodes_dict):
-        """A netlist line that, parsed, evaluates to the same instance
-
-        **Parameters:**
-
-        nodes_dict : dict
-            The nodes dictionary of the circuit, so that the method
-            can convert its internal node IDs to the corresponding
-            external ones.
-
-        **Returns:**
-
-        ntlst_line : string
-            The netlist line.
-        """
-        rep = ""
-        rep += "%s %s %s " % (self.part_id, nodes_dict[self.n1],
-                             nodes_dict[self.n2])
-        if self.value is not None:
-            rep = rep + "type=vdc value=" + str(self.value) + " "
-        if self.abs_ac is not None:
-            #   TODO:   netlist parser doesn't accept `arg=` from `self.arg_ac`
-            rep = rep + "vac=" + str(self.abs_ac) + " "
-        if self.is_timedependent:
-            rep = rep + str(self._time_function)
+    def __repr__(self):
+        rep = f"{self.part_id} {self.n1} {self.n2} "
+        rep += f"type=vdc value={self.value} " if self.value is not None else ''
+        # TODO: netlist_parser not working with `arg=' from `self.arg_ac'
+        rep += f"vac={str(self.abs_ac)} " if self.abs_ac is not None else ''
+        rep += f"{self._time_function}" if self.is_timedependent else '' 
         return rep
 
     def get_op_info(self, ports_v, current):
