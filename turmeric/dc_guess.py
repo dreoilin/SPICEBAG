@@ -11,9 +11,9 @@ from . import utilities
 
 def get_dc_guess(circ, verbose=3):
 
-    nv = circ.get_nodes_number()
-    M = np.zeros((1, nv))
-    T = np.zeros((1, 1))
+    NNODES = circ.get_nodes_number()
+    M = np.zeros((NNODES, 1))
+    T = np.zeros(1)
     index = 0
     v_eq = 0  # number of current equations
     one_element_with_dc_guess_found = False

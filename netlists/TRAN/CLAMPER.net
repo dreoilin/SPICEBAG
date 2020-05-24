@@ -4,7 +4,7 @@
 * Ref: Online
 
 V1 1 0 type=sin VO=0 VA=2.5 FREQ=100 TD=0 THETA=0
-C1 2 1 47µ
+C1 2 1 47u
 D1 0 2 D
 D2 2 0 D
 R1 2 0 1k
