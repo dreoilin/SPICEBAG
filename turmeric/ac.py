@@ -285,7 +285,7 @@ def _generate_AC(circ, shape):
     for elem in circ:
         if circuit.is_elem_voltage_defined(elem) and not isinstance(elem, components.Inductor):
             i_eq = i_eq + 1
-        elif isinstance(elem, components.Capacitor):
+        elif isinstance(elem, components.C):
             n1 = elem.n1
             n2 = elem.n2
             AC[n1, n1] = AC[n1, n1] + elem.value

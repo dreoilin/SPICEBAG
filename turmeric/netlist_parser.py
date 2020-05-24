@@ -134,7 +134,7 @@ def parse_network(filename):
 def main_netlist_parser(circ, netlist_lines, models):
     elements = []
     parse_function = {
-        'c': lambda line: parse_elem_capacitor(line, circ),
+        'c': lambda line: components.C(line, circ),
         'd': lambda line: parse_elem_diode(line, circ, models),
         'e': lambda line: parse_elem_vcvs(line, circ),
         'f': lambda line: parse_elem_cccs(line, circ),
@@ -185,7 +185,7 @@ def parse_elem_capacitor(line, circ):
     n1 = circ.add_node(ext_n1)
     n2 = circ.add_node(ext_n2)
 
-    elem = components.Capacitor(part_id=line_elements[0], n1=n1, n2=n2,
+    elem = components.C(part_id=line_elements[0], n1=n1, n2=n2,
                              value=convert_units(line_elements[3]), ic=ic)
 
     return [elem]

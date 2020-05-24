@@ -1,6 +1,6 @@
 from ..VoltageDefinedComponent import VoltageDefinedComponent
 from ..Component import Component
-from ..tokens import rex, Value, Label, Node, EqualsParam, ParamDict
+from ..tokens import rex, Value, Label, Node, ParamDict
 import logging
 import numpy as np
 
@@ -50,7 +50,7 @@ class V(VoltageDefinedComponent):
         dc_value = float(params['vdc']) if 'vdc' in params else None
         vac = float(params['vac']) if 'vac' in params else None
         # TODO: test that time function is being parsed correctly
-        function = self.parse_time_function(self, params['type'],[str(k)+'='+str(v) for k,v in params.items()],"voltage") if not dc_value and not vac else None
+        function = self.parse_time_function(params['type'],[str(k)+'='+str(v) for k,v in params.items()],"voltage") if not dc_value and not vac else None
 
         if dc_value == None and function == None:
             raise ValueError(f"Neither dc value nor time function defined for voltage source in:\n\t{line}")
@@ -64,16 +64,13 @@ class V(VoltageDefinedComponent):
         self.value=dc_value
         self.ac_value=vac
 
-        if function is not None:
-            comp.is_timedependent = True
-            comp._time_function = function
         #super().__init__(part_id, n1, n2, dc_value)
         self.abs_ac = np.abs(self.ac_value) if self.ac_value else None
         self.arg_ac = np.angle(self.ac_value) if self.ac_value else None
         self.is_nonlinear = False
         self.is_symbolic = True
-        self.is_timedependent = False
-        self._time_function = None
+        self.is_timedependent = function is not None
+        self._time_function = function if function is not None else None
         if self.value is not None:
             self.dc_guess = [self.value]
 
@@ -83,7 +80,7 @@ class V(VoltageDefinedComponent):
         from ...time_functions import time_fun_specs
 
         if not ftype in time_fun_specs:
-            raise ValueError("Unknown time function: %s" % ftype)
+            raise ValueError(f"Unknown time function: {ftype}")
         prot_params = list(copy.deepcopy(time_fun_specs[ftype]['tokens']))
 
         fun_params = {}
@@ -91,18 +88,20 @@ class V(VoltageDefinedComponent):
             token = line_elements[i]
             if token[0] == "*":
                 break
-            if is_valid_value_param_string(token):
+            if token.strip().count('=') == 1:
                 (label, value) = token.split('=')
             else:
                 label, value = None, token
             assigned = False
             for t in prot_params:
                 if (label is None and t['pos'] == i) or label == t['label']:
-                    fun_params.update({t['dest']: convert(value, t['type'])})
+                    fun_params.update({t['dest']: self.convert(value, t['type'])})
                     assigned = True
                     break
             if assigned:
                 prot_params.pop(prot_params.index(t))
+                continue
+            elif label == 'type':
                 continue
             else:
                 raise ValueError("Unknown .%s parameter: pos %d (%s=)%s" % \
@@ -118,9 +117,47 @@ class V(VoltageDefinedComponent):
         for t in prot_params:
             fun_params.update({t['dest']: t['default']})
 
+        from ...time_functions import sin, pulse, exp, sffm, am
+        time_functions = {}
+        for i in sin, pulse, exp, sffm, am:
+            time_functions.update({i.__name__:i})
+
         fun = time_functions[ftype](**fun_params)
         fun._type = "V" * (stype.lower() == "voltage") + "I" * (stype.lower() == "current")
         return fun
+
+    # FIXME: this does not belong here
+    def convert(self, astr, rtype, raise_exception=False):
+        
+        if rtype == float:
+            try:
+                ret = float(Value(astr))
+            except ValueError as msg:
+                if raise_exception:
+                    raise ValueError(msg)
+                else:
+                    ret = astr
+        elif rtype == str:
+            ret = astr
+        elif rtype == bool:
+            ret = convert_boolean(astr)
+        elif raise_exception:
+            raise ValueError("Unknown type %s" % rtype)
+        else:
+            ret = astr
+        return ret
+
+    # FIXME: this does not belong here
+    def convert_boolean(self, value):
+        
+        if value == 'no' or value == 'false' or value == '0' or value == 0:
+            return_value = False
+        elif value == 'yes' or value == 'true' or value == '1' or value == 1:
+            return_value = True
+        else:
+            raise ValueError("invalid boolean: " + value)
+
+        return return_value
 
     def stamp(self, M, ZDC, ZAC, D):
         ZDC[index, 0] = -1.0 * self.V()

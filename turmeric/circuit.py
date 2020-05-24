@@ -218,7 +218,7 @@ class Circuit(list):
         n1 = self.add_node(n1)
         n2 = self.add_node(n2)
 
-        elem = components.Capacitor(part_id=part_id, n1=n1, n2=n2, value=value, ic=ic)
+        elem = components.C(part_id=part_id, n1=n1, n2=n2, value=value, ic=ic)
 
         self.append(elem)
 
@@ -458,7 +458,7 @@ class Circuit(list):
                 M0[elem.n1, elem.n2] = M0[elem.n1, elem.n2] - elem.g()
                 M0[elem.n2, elem.n1] = M0[elem.n2, elem.n1] - elem.g()
                 M0[elem.n2, elem.n2] = M0[elem.n2, elem.n2] + elem.g()
-            elif isinstance(elem, components.Capacitor):
+            elif isinstance(elem, components.C):
                 pass  # In a capacitor I(V) = 0
             elif isinstance(elem, components.sources.GISource):
                 M0[elem.n1, elem.sn1] = M0[elem.n1, elem.sn1] + elem.alpha
@@ -548,7 +548,7 @@ class Circuit(list):
         for elem in self:
             if is_elem_voltage_defined(elem) and not isinstance(elem, components.Inductor):
                 i_eq = i_eq + 1
-            elif isinstance(elem, components.Capacitor):
+            elif isinstance(elem, components.C):
                 n1 = elem.n1
                 n2 = elem.n2
                 D0[n1, n1] = D0[n1, n1] + elem.value

@@ -1,5 +1,5 @@
 from .CurrentDefinedComponent import CurrentDefinedComponent
-from .tokens import rex, Value, Label, Node, EqualsParam, ParamDict
+from .tokens import rex, Value, Label, Node
 
 class R(CurrentDefinedComponent):
     """A resistor.
