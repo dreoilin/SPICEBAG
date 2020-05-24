@@ -1,6 +1,6 @@
 from .CurrentDefinedComponent import CurrentDefinedComponent
 
-class Resistor(CurrentDefinedComponent,list):
+class Resistor(CurrentDefinedComponent):
     """A resistor.
 
     **Parameters:**
