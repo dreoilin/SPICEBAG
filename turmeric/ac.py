@@ -1,92 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Fri May  1 11:23:45 2020
-
-@author: cian
-
-This module contains the methods required to perform an AC analysis.
-
-.. note::
-
-    Typically, the user does not need to call the functions in this module
-    directly, instead, we recommend defining an AC analysis object through the
-    convenience method :func:`ahkab.ahkab.new_ac` and then running it calling
-    :func:`ahkab.ahkab.run`.
-
-Overview of AC simulations
---------------------------
-
-The AC simulation problem
-'''''''''''''''''''''''''
-
-Our AC analysis problem can be written as:
-
-.. math::
-
-    MNA\\ x + AC(\\omega )\\ x + J x + N_{ac}(\\omega) = 0
-
-We need:
-
-    1. the Modified Nodal Analysis matrix :math:`MNA`,
-    2. the :math:`AC` matrix, holding the frequency dependent parts,
-    3. :math:`J`, the Jacobian matrix from the linearized non-linear elements,
-    4. :math:`N_{ac}`, the AC sources contribution.
-
-An Operating Point (OP) has to be computed first if there is any non-linear
-device in the circuit to perform the linearization.
-
-When all the matrices are available, it is possible to solve the system
-for the frequency values specified by the user, providing the resulting
-matrix is not singular (and possibly well conditioned).
-
-Building the AC matrix
-''''''''''''''''''''''
-
-It's easy to set up the voltage lines, since line 2 refers to
-node 2, etc...
-
-A capacitor between two example nodes ``n1`` and ``n2`` introduces the
-following elements:
-
-.. math::
-
-    \\mathrm{(KCL\\ node\\ n1)}\\qquad +j\\omega C\\ V(n1) - j\\omega C V(n2) + ... = ...
-
-    \\mathrm{(KCL\\ node\\ n2)}\\qquad -j\\omega C\\ V(n1) + j\\omega C V(n2) + ... = ...
-
-Inductors generate, together with voltage sources, Current-Controlled Voltage
-sources (CCVS), Voltage-Controlled Voltage Sources (VCVS), an
-additional line in the :math:`MNA` matrix, and hence in :math:`AC` too.
-In fact, the current flowing through the device gets added to the unknowns
-vector, :math:`x`.
-
-For example, in the case of an inductors, we have:
-
-.. math::
-
-    \\mathrm{(KVL\\ over\\ n1\\ and\\ n2)}\\qquad V(n1) - V(n2) - j\\omega L\\ I(\\mathrm{inductor}) = 0
-
-To understand on which line is the KVL line for an inductor, we use the
-*order* of the elements in :mod:`ahkab.circuit`:
-
-* first are assembled all the voltage rows,
-* then the current rows, in the same order in which the elements that introduce
-  them are found in :class:`ahkab.circuit.Circuit`.
-
-Solving
-'''''''
-
-For each angular frequency :math:`\\omega`, the simulator solves the matrix
-equation described.
-
-Since the equation is linear, solving is performed with a single matrix
-inversion and multiplication for each step.
-
-Module reference
-----------------
-
-"""
 
 import numpy as np
 
@@ -97,6 +10,7 @@ from . import options
 from . import printing
 from . import results
 from . import utilities
+import logging
 
 specs = {'ac': {'tokens': ({
                            'label': 'type',
@@ -135,12 +49,9 @@ specs = {'ac': {'tokens': ({
 
 
 def ac_analysis(circ, start, points, stop, sweep_type=None,
-                x0=None, mna=None, AC=None, Nac=None, J=None,
-                outfile="stdout"):
+                x0=None, AC=None, outfile="stdout"):
 
-    if outfile == 'stdout':
-        verbose = 0
-
+    
     # check step/start/stop parameters
     if start == 0:
         raise ValueError("AC analysis has start frequency = 0")
@@ -155,55 +66,39 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
     else:
         raise ValueError("Unknown sweep type %s" % sweep_type)
 
-    tmpstr = "Vea =", options.vea, "Ver =", options.ver, "Iea =", options.iea, "Ier =", \
-        options.ier, "max_ac_nr_iter =", options.ac_max_nr_iter
-    printing.print_info_line((tmpstr, 5), verbose)
-    del tmpstr
 
-    printing.print_info_line(("Starting AC analysis: ", 1), verbose)
-    tmpstr = "w: start = %g Hz, stop = %g Hz, %d points" % (start, stop, points)
-    printing.print_info_line((tmpstr, 3), verbose)
-    del tmpstr
-
-    # It's a good idea to call AC with prebuilt MNA matrix if the circuit is
-    # big
-    if mna is None:
-        mna, N = dc.generate_mna_and_N(circ, verbose=verbose)
-        del N
-        mna = utilities.remove_row_and_col(mna)
-    if Nac is None:
-        Nac = _generate_Nac(circ)
-        Nac = utilities.remove_row(Nac, rrow=0)
-    if AC is None:
-        AC = _generate_AC(circ, [mna.shape[0], mna.shape[0]])
-        AC = utilities.remove_row_and_col(AC)
+    logging.info("Starting AC analysis: ")
+    logging.info("w: start = %g Hz, stop = %g Hz, %d points" % (start, stop, points))
+    
+    #if mna is None:
+    #    mna, N = dc.generate_mna_and_N(circ, verbose=verbose)
+    #    del N
+    #    mna = utilities.remove_row_and_col(mna)
+    #if Nac is None:
+    #    Nac = _generate_Nac(circ)
+    #    Nac = utilities.remove_row(Nac, rrow=0)
+    #if AC is None:
+    #    AC = _generate_AC(circ, [mna.shape[0], mna.shape[0]])
+    #    AC = utilities.remove_row_and_col(AC)
 
     if circ.is_nonlinear():
-        if J is not None:
-            pass
-            # we used the supplied linearization matrix
-        else:
-            if x0 is None:
-                printing.print_info_line(("Starting OP analysis to get a " +
-                                          "linearization point...", 3), verbose,
-                                         print_nl=False)
+        if x0 is None:
+            #msg = "No initial estimate provided"    
+            #logging.info( +
+            #                              "linearization point...", 3), verbose,
+            #                             print_nl=False)
                 # silent OP
-                x0 = dc.op_analysis(circ, verbose=0)
-                if x0 is None:  # still! Then op_analysis has failed!
-                    printing.print_info_line(("failed.", 3), verbose)
-                    raise RuntimeError("OP analysis failed, no " +
+            x0 = dc.op_analysis(circ, verbose=0)
+            if x0 is None:  # still! Then op_analysis has failed!
+                logging.info("failed.")
+                raise RuntimeError("OP analysis failed, no " +
                                        "linearization point available.")
-                else:
-                    printing.print_info_line(("done.", 3), verbose)
-            printing.print_info_line(
-                ("Linearization point (xop):", 5), verbose)
-            if verbose > 4:
-                x0.print_short()
-            printing.print_info_line(("Linearizing the circuit...", 5), verbose,
-                                     print_nl=False)
+            else:
+                    logging.info("done.")
+            logging.info("Linearization point (xop):")
             J = _generate_J(xop=x0.asarray(), circ=circ,
                             reduced_mna_size=mna.shape[0])
-            printing.print_info_line((" done.", 5), verbose)
+            logging.info(" done.")
             # we have J, continue
     else:  # not circ.is_nonlinear()
         # no J matrix is required.

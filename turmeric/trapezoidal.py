@@ -6,7 +6,7 @@ Created on Fri May  1 11:23:45 2020
 @author: cian
 """
 
-def get_df(buf, step):
+def get_coefs(buf, step):
     """
     (C1, C0)
 
