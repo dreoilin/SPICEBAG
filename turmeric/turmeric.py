@@ -99,7 +99,7 @@ def main(filename, outfile="stdout"):
     
     logging.info(f"Parsing netlist file `{filename}'")
     try:
-        (circ, directives) = netlist_parser.parse_network(filename)
+        (circ, analyses) = netlist_parser.parse_network(filename)
     except FileNotFoundError as e:
         logging.exception(f"{e}: netlist file {filename} was not found")
         sys.exit()
@@ -119,20 +119,13 @@ def main(filename, outfile="stdout"):
 
     
     logging.info("Parsed circuit:")
-    print(circ)
+    logging.info(str(circ))
     logging.info("Models:")
     for m in circ.models:
         circ.models[m].print_model()
 
-    ic_list = netlist_parser.parse_ics(directives)
-    _handle_netlist_ics(circ, an_list=[], ic_list=ic_list)
     results = {}
-    for an in netlist_parser.parse_analysis(circ, directives):
-        if 'outfile' not in list(an.keys()) or not an['outfile']:
-            an.update(
-                {'outfile': outfile + ("." + an['type']) * (outfile != 'stdout')})
-        _handle_netlist_ics(circ, [an], ic_list=[])
-        
+    for an in analyses:
         logging.info("Requested an.:")
         # print to logger
         printing.print_analysis(an)
@@ -140,19 +133,4 @@ def main(filename, outfile="stdout"):
         results.update(run(circ, [an]))
 
     return results
-
-
-def _handle_netlist_ics(circ, an_list, ic_list):
-    for ic in ic_list:
-        ic_label = list(ic.keys())[0]
-        icdict = ic[ic_label]
-        _x0s.update({ic_label: new_x0(circ, icdict)})
-    for an in an_list:
-        if 'x0' in an and isinstance(an['x0'], str):
-            if an['x0'] in list(_x0s.keys()):
-                an['x0'] = _x0s[an['x0']]
-            elif an_list.index(an) == 0:
-                raise ValueError(("The x0 '%s' is not available." % an["x0"]) +\
-                                 (an['x0'] == 'op' or an['x0'] == 'op+ic')*
-                                 " Perhaps you forgot to define an .OP?")
 

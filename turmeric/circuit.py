@@ -220,8 +220,7 @@ class Circuit(list):
         n1 = self.add_node(n1)
         n2 = self.add_node(n2)
 
-        elem = components.sources.VSource(part_id=part_id, n1=n1, n2=n2, dc_value=dc_value,
-                               ac_value=ac_value)
+        elem = components.sources.VSource(part_id=part_id, n1=n1, n2=n2, value=dc_value, ac_value=ac_value)
 
         if function is not None:
             elem.is_timedependent = True

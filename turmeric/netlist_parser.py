@@ -106,9 +106,10 @@ def digest_raw_netlist(filename):
             
             net_lines.append((line, i + 1))
     models = parse_models(model_directives)
+    analyses = parse_analysis(directives)
     logging.info(f"Finished processing `{filename}'")
     
-    return (title, directives, models, net_lines)
+    return (title, analyses, models, net_lines)
 
 
 def parse_network(filename):
@@ -118,15 +119,16 @@ def parse_network(filename):
 
     (circuit_instance, plotting directives)
     """
-    (title, directives, models, net_lines) = digest_raw_netlist(filename)
+    (title, analyses, models, net_lines) = digest_raw_netlist(filename)
     circ = circuit.Circuit(title=title, filename=filename)
 
     # PARSE CIRCUIT
     circ += main_netlist_parser(circ, net_lines, models)
-    # FIXME: surely models should be assigned when passed through the constructor
+    # FIXME: surely models should be assigned through the constructor
     circ.models = models
     circ.generate_M0_and_ZDC0()
-    return (circ, directives)
+
+    return (circ, analyses)
 
 
 def main_netlist_parser(circ, netlist_lines, models):
@@ -665,7 +667,7 @@ def parse_ics(directives):
     return ics
 
 
-def parse_analysis(circ, directives):
+def parse_analysis(directives):
     
     an = []
     for line, line_n in directives:
