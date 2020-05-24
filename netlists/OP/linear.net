@@ -1,0 +1,19 @@
+* Test of Linear Components 
+* (controlled and independent)
+* ****************************
+* COD, TOR, JD
+* ref: Circuit Theory - Dr. T. Siriburanon
+
+V1 1 0 type=vdc vdc=5
+R1 1 2 10k
+* CCCS
+F1 0 2 V1 1.2
+R2 2 4 300
+R3 2 3 1k
+* Isource
+I1 0 3 type=idc idc=2m type=iac iac=1
+R4 3 4 3meg
+
+.op
+.end
+

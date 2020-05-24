@@ -7,7 +7,7 @@
 *       - Jan Ogrodski
 * cut-off f 1kHz
 
-V1 1 0 type=vdc vdc=0 type=vac vac=1
+V1 0 1 type=vdc vdc=0 type=vac vac=1
 R1 1 2 10k
 C1 2 0 29.7n
 L1 2 3 1.43
