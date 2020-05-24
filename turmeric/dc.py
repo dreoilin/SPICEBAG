@@ -223,7 +223,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
         raise ValueError(".DC: source %s was not found." % source)
 
     if isinstance(source_elem, components.sources.VSource):
-        initial_value = source_elem.dc_value
+        initial_value = source_elem.value
     else:
         initial_value = source_elem.dc_value
 
@@ -240,7 +240,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
     for sweep_value in dc_iter:
         index = index + 1
         if isinstance(source_elem, components.sources.VSource):
-            source_elem.dc_value = sweep_value
+            source_elem.value = sweep_value
         else:
             source_elem.dc_value = sweep_value
         # silently calculate the op
@@ -262,7 +262,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
 
     # clean up
     if isinstance(source_elem, components.sources.VSource):
-        source_elem.dc_value = initial_value
+        source_elem.value = initial_value
     else:
         source_elem.dc_value = initial_value
 

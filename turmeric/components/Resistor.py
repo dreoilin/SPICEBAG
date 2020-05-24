@@ -1,6 +1,6 @@
-from .Component import Component
+from .CurrentDefinedComponent import CurrentDefinedComponent
 
-class Resistor(Component,list):
+class Resistor(CurrentDefinedComponent,list):
     """A resistor.
 
     **Parameters:**
@@ -21,9 +21,7 @@ class Resistor(Component,list):
     #                \/    \/    \/
     #
     def __init__(self, part_id, n1, n2, value):
-        self.part_id = part_id
-        self._value = value
-        self._g = 1./value
+        super().__init__(part_id, value)
         self.is_nonlinear = False
         self.n1 = n1
         self.n2 = n2
@@ -43,7 +41,7 @@ class Resistor(Component,list):
         if value == 0:
             raise ValueError(f"A resistor must have a value: `{line}'")
 
-        return cls(part_id=tok[0], n1=n1, n2=n2, value=value)
+        return [cls(part_id=tok[0], n1=n1, n2=n2, value=value)]
 
 
     def stamp(self, M, ZDC, ZAC, D):
@@ -52,26 +50,6 @@ class Resistor(Component,list):
         M[self.n2, self.n1] = M[self.n2, self.n1] - self.g
         M[self.n2, self.n2] = M[self.n2, self.n2] + self.g
 
-    @property
-    def g(self, v=0, time=0):
-        return self._g
-
-    @g.setter
-    def g(self, g):
-        self._g = g
-        self._value = 1./g
-
-    @property
-    def value(self, v=0, time=0):
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        self._value = value
-        self._g = 1./value
-
-    def i(self, v, time=0):
-        return 0
 
     def get_op_info(self, ports_v):
         """Information regarding the Operating Point (OP)

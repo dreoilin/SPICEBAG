@@ -1,7 +1,7 @@
-from ..Component import Component
+from ..VoltageDefinedComponent import VoltageDefinedComponent
 import numpy as np
 
-class VSource(Component):
+class VSource(VoltageDefinedComponent):
     """An ideal voltage source.
 
     .. image:: images/elem/vsource.svg
@@ -32,10 +32,7 @@ class VSource(Component):
     """
 
     def __init__(self, part_id, n1, n2, dc_value, ac_value=0):
-        self.part_id = part_id
-        self.dc_value = dc_value
-        self.n1 = n1
-        self.n2 = n2
+        super().__init__(part_id, n1, n2, dc_value)
         self.abs_ac = np.abs(ac_value) if ac_value else None
         self.arg_ac = np.angle(ac_value) if ac_value else None
         self.is_nonlinear = False
@@ -43,15 +40,15 @@ class VSource(Component):
         self.is_timedependent = False
         self._time_function = None
         if dc_value is not None:
-            self.dc_guess = [self.dc_value]
+            self.dc_guess = [self.value]
 
     def stamp(self, M, ZDC, ZAC, D):
         ZDC[index, 0] = -1.0 * self.V()
 
     def __str__(self):
         rep = ""
-        if self.dc_value is not None:
-            rep = rep + "type=vdc value=" + str(self.dc_value) + " "
+        if self.value is not None:
+            rep = rep + "type=vdc value=" + str(self.value) + " "
         if self.abs_ac is not None:
             #   TODO:   netlist parser doesn't accept `arg=` from `self.arg_ac`
             rep = rep + "vac=" + str(self.abs_ac) + " "
@@ -78,8 +75,8 @@ class VSource(Component):
 
         if (not self.is_timedependent or\
             self._time_function is None) or \
-                (time is None and self.dc_value is not None):
-            return self.dc_value
+                (time is None and self.value is not None):
+            return self.value
         else:
             return self._time_function(time)
 
@@ -101,8 +98,8 @@ class VSource(Component):
         rep = ""
         rep += "%s %s %s " % (self.part_id, nodes_dict[self.n1],
                              nodes_dict[self.n2])
-        if self.dc_value is not None:
-            rep = rep + "type=vdc value=" + str(self.dc_value) + " "
+        if self.value is not None:
+            rep = rep + "type=vdc value=" + str(self.value) + " "
         if self.abs_ac is not None:
             #   TODO:   netlist parser doesn't accept `arg=` from `self.arg_ac`
             rep = rep + "vac=" + str(self.abs_ac) + " "
