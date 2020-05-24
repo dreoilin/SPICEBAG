@@ -144,7 +144,7 @@ def main_netlist_parser(circ, netlist_lines, models):
         'l': lambda line: parse_elem_inductor(line, circ),
         'm': lambda line: parse_elem_mos(line, circ, models),
         'r': lambda line: components.Resistor.from_line(line, circ),
-        'v': lambda line: parse_elem_vsource(line, circ)
+        'v': lambda line: components.sources.VSource.from_line(line,circ)#parse_elem_vsource(line, circ)
     }
     try:
         for line, line_n in netlist_lines:

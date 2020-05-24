@@ -1,4 +1,6 @@
 from ..VoltageDefinedComponent import VoltageDefinedComponent
+from ..tokens import rex, Value, Label, Node, EqualsParam
+import logging
 import numpy as np
 
 class VSource(VoltageDefinedComponent):
@@ -42,11 +44,59 @@ class VSource(VoltageDefinedComponent):
         if dc_value is not None:
             self.dc_guess = [self.value]
 
+    @classmethod
+    def from_line(cls, line, circ):
+        """
+        Format: v<label> n1 n2 [type=vdc vdc=float] [type=vac vac=float] [type=....]
+        Example: v1 1 0 type=vdc vdc=5
+        """
+        import re
+        types = {'vdc':0,'vac':0,'pulse':7,'exp':6,'sin':5,'sffm':5,'am':5}
+        net_objs = [Label,Node,Node
+                ,EqualsParam.defined('vdc',cls,default=0)
+                ,EqualsParam.defined('vac',cls,default=0)
+                ,EqualsParam.defined('type',cls,value_enum=list(types.keys()))
+                ]
+        r = "^" + "v" + '(?: +)'.join([rex(o) for o in net_objs])
+        match = re.search(r,line.strip().lower())
+
+        try:
+            tokens = [n(g) for n,g in zip(net_objs,match.groups())]
+        except AttributeError as e:
+            logging.exception(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{r}'")
+
+
+        #r = '^' + 'v' + rex(Label) + '(?: +)'.join([
+        #    rex(Node),rex(Node),
+        #    f'(?:type=vdc vdc={rex(Value)})?',
+        #    f'(?:type=vac vac={rex(Value)})?',
+        #    f'(?:type={"|".join(types.keys())})'
+        #    ])
+
+
+        param_number = types[cls.type]
+
+        dc_value = float(getattr(cls,'vdc')) if hasattr(cls,'vdc') else None
+        vac = float(getattr(cls,'vac')) if hasattr(cls,'vac') else None
+        # FIXME: process type's time function properly
+        function = None
+
+        if dc_value == None and function == None:
+            raise ValueError(f"Neither dc value nor time function defined for voltage source in:\n\t{line}")
+
+        n1 = circ.add_node(str(tokens[1]))
+        n2 = circ.add_node(str(tokens[2]))
+
+        comp = cls(part_id=str(tokens[0]), n1=n1, n2=n2, dc_value=dc_value, ac_value=vac)
+
+        if function is not None:
+            comp.is_timedependent = True
+            comp._time_function = function
+
+        return [comp]
+
     def stamp(self, M, ZDC, ZAC, D):
         ZDC[index, 0] = -1.0 * self.V()
-
-    def __str__(self):
-        return repr(self)
 
     def V(self, time=None):
         """Evaluate the voltage applied by the voltage source.
@@ -72,13 +122,17 @@ class VSource(VoltageDefinedComponent):
         else:
             return self._time_function(time)
 
+    def __str__(self):
+        return repr(self)
+
     def __repr__(self):
         rep = f"{self.part_id} {self.n1} {self.n2} "
-        rep += f"type=vdc value={self.value} " if self.value is not None else ''
+        rep += f"type=vdc vdc={self.value} " if self.value is not None else ''
         # TODO: netlist_parser not working with `arg=' from `self.arg_ac'
         rep += f"vac={str(self.abs_ac)} " if self.abs_ac is not None else ''
         rep += f"{self._time_function}" if self.is_timedependent else '' 
         return rep
+
 
     def get_op_info(self, ports_v, current):
         """Information regarding the Operating Point (OP)
