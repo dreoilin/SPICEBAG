@@ -2,6 +2,7 @@
 Tokens that appear in a netlist line
 """
 from abc import ABC, abstractmethod
+import re
 
 def rex(objs):
     """
@@ -110,7 +111,38 @@ class Value(NetlistToken):
         prefix = next(k for k,v in si.items() if v == self.__order)
         return str(self.value / self.__order)+prefix
 
+class ParamDict(NetlistToken):
+    def __init__(self, val):
+        r = '([^ \n]+=[^ \n]+)'
+        m = re.findall(r,val)
+        d = {}
+        for g in m:
+            p = KVParam(g)
+            d.update({p.key : p.value})
+        super().__init__(d)
+
+    @classproperty
+    def __re__(cls):
+        return r"((?:(?: *)[^ \n]+=[^ \n]+)+)"
+
+class KVParam(NetlistToken):
+    def __init__(self, val):
+        r = r"([^ ]+)=([^ ]+)"
+        m = re.search(r,val)
+        g = m.groups()
+        self.key = g[0]
+        super().__init__(g[1])
+
+    @classproperty
+    def __re__(cls):
+        return r"([^ \n]+=[^ \n]+)"
+
 class NoLabel(NetlistToken):
+    """
+    Blank spacer token, used to account for directives, etc.
+    """
+ 
+    # TODO: verify needed when directive parsing completed
     def __init__(self, val):
         super().__init__(val)
 

@@ -1,5 +1,5 @@
 from ..VoltageDefinedComponent import VoltageDefinedComponent
-from ..tokens import rex, Value, Label, Node, EqualsParam
+from ..tokens import rex, Value, Label, Node, EqualsParam, ParamDict
 import logging
 import numpy as np
 
@@ -52,11 +52,7 @@ class VSource(VoltageDefinedComponent):
         """
         import re
         types = {'vdc':0,'vac':0,'pulse':7,'exp':6,'sin':5,'sffm':5,'am':5}
-        net_objs = [Label,Node,Node
-                ,EqualsParam.defined('vdc',cls,default=0)
-                ,EqualsParam.defined('vac',cls,default=0)
-                ,EqualsParam.defined('type',cls,value_enum=list(types.keys()))
-                ]
+        net_objs = [Label,Node,Node,ParamDict]
         r = "^" + "v" + '(?: +)'.join([rex(o) for o in net_objs])
         match = re.search(r,line.strip().lower())
 
@@ -65,19 +61,14 @@ class VSource(VoltageDefinedComponent):
         except AttributeError as e:
             logging.exception(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{r}'")
 
+        params = tokens[3].value
+        try:
+            param_number = types[params['type']]
+        except AttributeError as e:
+            logging.exception(f"Type of source not specified in `{line}'")
 
-        #r = '^' + 'v' + rex(Label) + '(?: +)'.join([
-        #    rex(Node),rex(Node),
-        #    f'(?:type=vdc vdc={rex(Value)})?',
-        #    f'(?:type=vac vac={rex(Value)})?',
-        #    f'(?:type={"|".join(types.keys())})'
-        #    ])
-
-
-        param_number = types[cls.type]
-
-        dc_value = float(getattr(cls,'vdc')) if hasattr(cls,'vdc') else None
-        vac = float(getattr(cls,'vac')) if hasattr(cls,'vac') else None
+        dc_value = float(params['vdc']) if 'vdc' in params else None
+        vac = float(params['vac']) if 'vac' in params else None
         # FIXME: process type's time function properly
         function = None
 
