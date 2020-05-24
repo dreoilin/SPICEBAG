@@ -47,10 +47,21 @@ class V(VoltageDefinedComponent):
         except AttributeError as e:
             logging.exception(f"Type of source not specified or source type is unsupported in `{line}'")
 
-        dc_value = float(params['vdc']) if 'vdc' in params else None
-        vac = float(params['vac']) if 'vac' in params else None
+        dc_value = None
+        ac_value = None
+        if params['type'] == 'vdc':
+            if 'vdc' in params:
+                dc_value = float(params['vdc'])
+            else:
+                raise KeyError(f"When specifying a dc voltage source, specify its value (vdc=<value>) : `{line}'")
+        elif params['type'] == 'vac':
+            if 'vac' in params:
+                ac_value = float(params['vac'])
+            else:
+                raise KeyError(f'When specifying an ac voltage source, specify its value (vac=<value>) : `{line}')
+
         # TODO: test that time function is being parsed correctly
-        function = self.parse_time_function(params['type'],[str(k)+'='+str(v) for k,v in params.items()],"voltage") if not dc_value and not vac else None
+        function = self.parse_time_function(params['type'],[str(k)+'='+str(v) for k,v in params.items()],"voltage") if not dc_value and not ac_value else None
 
         if dc_value == None and function == None:
             raise ValueError(f"Neither dc value nor time function defined for voltage source in:\n\t{line}")
@@ -62,7 +73,7 @@ class V(VoltageDefinedComponent):
         self.n1=n1
         self.n2=n2
         self.value=dc_value
-        self.ac_value=vac
+        self.ac_value=ac_value
 
         #super().__init__(part_id, n1, n2, dc_value)
         self.abs_ac = np.abs(self.ac_value) if self.ac_value else None
@@ -160,7 +171,8 @@ class V(VoltageDefinedComponent):
         return return_value
 
     def stamp(self, M, ZDC, ZAC, D):
-        ZDC[index, 0] = -1.0 * self.V()
+        raise NotImplementedError
+        #ZDC[index, 0] = -1.0 * self.V()
 
     def V(self, time=None):
         """Evaluate the voltage applied by the voltage source.

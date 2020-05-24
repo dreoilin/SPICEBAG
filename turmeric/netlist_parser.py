@@ -141,7 +141,7 @@ def main_netlist_parser(circ, netlist_lines, models):
         'g': lambda line: parse_elem_vccs(line, circ),
         'h': lambda line: parse_elem_ccvs(line, circ),
         'i': lambda line: parse_elem_isource(line, circ),
-        'l': lambda line: parse_elem_inductor(line, circ),
+        'l': lambda line: components.L(line, circ),
         'm': lambda line: parse_elem_mos(line, circ, models),
         'r': lambda line: components.R(line, circ),
         'v': lambda line: components.sources.V(line,circ)
@@ -164,33 +164,6 @@ def main_netlist_parser(circ, netlist_lines, models):
     return elements
 
 
-def parse_elem_capacitor(line, circ):
-    
-    line_elements = line.split()
-    if len(line_elements) < 4 or \
-       (len(line_elements) > 5 and not line_elements[5][0] == "*" and
-        not line_elements[4][0] == "*"):
-        raise NetlistParseError("%s: malformed line" % __name__)
-
-    ic = None
-    if len(line_elements) == 5 and not line_elements[4][0] == '*':
-        (label, value) = parse_param_value_from_string(line_elements[4])
-        if label == "ic":
-            ic = convert_units(value)
-        else:
-            raise NetlistParseError("%s: unknown parameter " % __name__ + label )
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-
-    elem = components.C(part_id=line_elements[0], n1=n1, n2=n2,
-                             value=convert_units(line_elements[3]), ic=ic)
-
-    return [elem]
-
-
 def parse_elem_inductor(line, circ):
     
     line_elements = line.split()
@@ -210,7 +183,7 @@ def parse_elem_inductor(line, circ):
     n1 = circ.add_node(ext_n1)
     n2 = circ.add_node(ext_n2)
 
-    elem = components.Inductor(part_id=line_elements[0], n1=n1, n2=n2,
+    elem = components.L(part_id=line_elements[0], n1=n1, n2=n2,
                             value=convert_units(line_elements[3]), ic=ic)
 
     return [elem]

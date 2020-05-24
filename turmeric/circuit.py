@@ -227,7 +227,7 @@ class Circuit(list):
         n1 = self.add_node(n1)
         n2 = self.add_node(n2)
 
-        elem = components.Inductor(part_id=part_id, n1=n1, n2=n2, value=value, ic=ic)
+        elem = components.L(part_id=part_id, n1=n1, n2=n2, value=value, ic=ic)
 
         self.append(elem)
 
@@ -437,7 +437,7 @@ class Circuit(list):
         # == CD = {R , C , GISource, ISource (time independant)}
         
         # Next, voltage defined elements
-        # == VD = { V (time independant ) , EVSource , HVSource , Inductor }
+        # == VD = { V (time independant ) , EVSource , HVSource , L }
         # Operations common to all VD elements:
         #index = M0.shape[0]  # get_matrix_size(M0)[0]
         #M0 = utilities.expand_matrix(M0, add_a_row=True, add_a_col=True)
@@ -506,7 +506,7 @@ class Circuit(list):
                 elif isinstance(elem, components.sources.EVSource):
                     M0[index, elem.sn1] = -1.0 * elem.alpha
                     M0[index, elem.sn2] = +1.0 * elem.alpha
-                elif isinstance(elem, components.Inductor):
+                elif isinstance(elem, components.L):
                     # ZDC0[index,0] = 0 pass, it's already zero
                     pass
                 elif isinstance(elem, components.sources.HVSource):
@@ -546,7 +546,7 @@ class Circuit(list):
         nv = self.get_nodes_number()
         i_eq = 0 #each time we find a vsource or vcvs or ccvs, we'll add one to this.
         for elem in self:
-            if is_elem_voltage_defined(elem) and not isinstance(elem, components.Inductor):
+            if is_elem_voltage_defined(elem) and not isinstance(elem, components.L):
                 i_eq = i_eq + 1
             elif isinstance(elem, components.C):
                 n1 = elem.n1
@@ -555,7 +555,7 @@ class Circuit(list):
                 D0[n1, n2] = D0[n1, n2] - elem.value
                 D0[n2, n2] = D0[n2, n2] + elem.value
                 D0[n2, n1] = D0[n2, n1] - elem.value
-            elif isinstance(elem, components.Inductor):
+            elif isinstance(elem, components.L):
                 D0[ nv + i_eq, nv + i_eq ] = -1 * elem.value
                 
                 # carry on as usual
@@ -598,7 +598,7 @@ class Circuit(list):
 def is_elem_voltage_defined(elem):
     
     if isinstance(elem, components.sources.V) or isinstance(elem, components.sources.EVSource) or \
-        isinstance(elem, components.sources.HVSource) or isinstance(elem, components.Inductor) \
+        isinstance(elem, components.sources.HVSource) or isinstance(elem, components.L) \
             or (hasattr(elem, "is_voltage_defined") and elem.is_voltage_defined):
         return True
     else:

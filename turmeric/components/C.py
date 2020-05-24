@@ -39,7 +39,13 @@ class C(CurrentDefinedComponent):
         self.is_nonlinear = False
 
     def stamp(self, M, ZDC, ZAC, D):
-        pass
+        raise NotImplementedError
+
+    def __repr__(self):
+        """
+        C<string> n1 n2 <value>
+        """
+        return f"C{self.part_id} {self.n1} {self.n2} {self.value}"
 
     def g(self, v, time=0):
         return 0

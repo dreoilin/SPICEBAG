@@ -283,7 +283,7 @@ def _generate_AC(circ, shape):
     nv = circ.get_nodes_number()  # - 1
     i_eq = 0  # each time we find a vsource or vcvs or ccvs, we'll add one to this.
     for elem in circ:
-        if circuit.is_elem_voltage_defined(elem) and not isinstance(elem, components.Inductor):
+        if circuit.is_elem_voltage_defined(elem) and not isinstance(elem, components.L):
             i_eq = i_eq + 1
         elif isinstance(elem, components.C):
             n1 = elem.n1
@@ -292,7 +292,7 @@ def _generate_AC(circ, shape):
             AC[n1, n2] = AC[n1, n2] - elem.value
             AC[n2, n2] = AC[n2, n2] + elem.value
             AC[n2, n1] = AC[n2, n1] - elem.value
-        elif isinstance(elem, components.Inductor):
+        elif isinstance(elem, components.L):
             AC[nv + i_eq, nv + i_eq] = -1 * elem.value
             if len(elem.coupling_devices):
                 for cd in elem.coupling_devices:

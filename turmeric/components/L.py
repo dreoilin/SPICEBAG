@@ -1,21 +1,7 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright 2006 Giuseppe Venturini
+from .VoltageDefinedComponent import VoltageDefinedComponent
+from .tokens import rex, Value, Label, Node
 
-# This file is part of the ahkab simulator.
-#
-# Ahkab is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 2 of the License.
-#
-# Ahkab is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License v2
-# along with ahkab.  If not, see <http://www.gnu.org/licenses/>.
-from .Component import Component
-class Inductor(Component):
+class L(VoltageDefinedComponent):
     """An inductor.
 
     .. image:: images/elem/inductor.svg
@@ -31,25 +17,30 @@ class Inductor(Component):
         *Internal* node to be connected to the cathode.
     value : float
         The inductance in Henry.
-    ic : float
-        The initial condition (IC) to be used for time-based simulations,
-        such as TRAN analyses, when requested, expressed in Ampere.
-
     """
     #
     #             L
     #  n1 o----((((((((----o n2
     #
     #
-    def __init__(self, part_id, n1, n2, value, ic=None):
-        self.value = value
-        self.n1 = n1
-        self.n2 = n2
-        self.part_id = part_id
-        self.ic = ic
-        self.coupling_devices = []
+    def __init__(self, line, circ):
+        self.net_objs = [Label,Node,Node,Value]
+        super().__init__(line)
+
+        self.part_id = str(self.tokens[0])
+        self.n1 = circ.add_node(str(self.tokens[1]))
+        self.n2 = circ.add_node(str(self.tokens[2]))
+        self.value = float(self.tokens[3])
         self.is_nonlinear = False
-        self.is_symbolic = True
+
+    def stamp(self, M, ZDC, ZAC, D):
+        raise NotImplementedError
+
+    def __repr__(self):
+        """
+        L<string> n1 n2 <value>
+        """
+        return f"L{self.part_id} {self.n1} {self.n2} {self.value}"
 
     def get_op_info(self, ports_v, current):
         """Information regarding the Operating Point (OP)
