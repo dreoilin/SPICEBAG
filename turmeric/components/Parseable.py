@@ -1,26 +1,21 @@
 from abc import ABC, abstractmethod
+import logging
 import re
+from .tokens import rex
 
 class Parseable(ABC):
 
-    @abstractmethod
-    def __init__(self):
-        pass
-    
-    @classmethod
-    @abstractmethod
-    def from_line(cls,line):
-        print(f"from_line in {__file__} called")
-        cls.name = type(cls).__name__
-        if not hasattr(cls, '__re__'):
-            cls.__re__ = ''
-        cls.__re__ = "^" + cls.__re__ + f"{cls.name}" + '(?: +)'.join([rex(o) for o in cls.net_objs])
-        match = re.search(r,line.strip().lower())
+    def __init__(self,line):
+        self.name = type(self).__name__.lower()
+        if not hasattr(self, '__re__'):
+            self.__re__ = ''
+        self.__re__ = "^" + f"{self.name}" + '(?: +)'.join([rex(o) for o in self.net_objs])
+        match = re.search(self.__re__,line.strip().lower())
         try:
-            # FOR THIS TO WORK, EACH PARAMETER IN cls.net_objs MUST EVALUATE TO EXACTLY ONE REGEX GROUP
-            cls.tokens = [n(g) for n,g in zip(cls.net_objs,match.groups())]
+            # FOR THIS TO WORK, EACH PARAMETER IN self.net_objs MUST EVALUATE TO EXACTLY ONE REGEX GROUP
+            self.tokens = [n(g) for n,g in zip(self.net_objs,match.groups())]
         except AttributeError as e:
-            logging.exception(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{r}'")
+            logging.exception(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{self.__re__}'")
 
     @property
     def __re__(self):

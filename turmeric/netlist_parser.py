@@ -143,13 +143,15 @@ def main_netlist_parser(circ, netlist_lines, models):
         'i': lambda line: parse_elem_isource(line, circ),
         'l': lambda line: parse_elem_inductor(line, circ),
         'm': lambda line: parse_elem_mos(line, circ, models),
-        'r': lambda line: components.Resistor.from_line(line, circ),
-        'v': lambda line: components.sources.V.from_line(line,circ)#parse_elem_vsource(line, circ)
+        'r': lambda line: components.R(line, circ),
+        'v': lambda line: components.sources.V(line,circ)
     }
     try:
         for line, line_n in netlist_lines:
             try:
-                elements += parse_function[line[0]](line)
+                e = parse_function[line[0]](line)
+                # TODO: remove once all elements parsed via inheritance
+                elements.append(e if type(e) is not list else e[0])
             except KeyError:
                 raise NetlistParseError(f"Cannot parse {line[0]} element")
     except NetlistParseError as npe:
@@ -210,79 +212,6 @@ def parse_elem_inductor(line, circ):
 
     elem = components.Inductor(part_id=line_elements[0], n1=n1, n2=n2,
                             value=convert_units(line_elements[3]), ic=ic)
-
-    return [elem]
-
-
-def parse_elem_vsource(line, circ):
-    
-    line_elements = line.split()
-    if len(line_elements) < 3:
-        raise NetlistParseError("%s: malformed line" % __name__)
-
-    dc_value = None
-    vac = None
-    function = None
-
-    index = 3
-    while True:
-        if index >= len(line_elements):
-            break
-        if line_elements[index][0] == '*':
-            break
-
-        label, value = parse_param_value_from_string(line_elements[index])
-
-        if label == 'type':
-            if value == 'vdc':
-                param_number = 0
-            elif value == 'vac':
-                param_number = 0
-            elif value == 'pulse':
-                param_number = 7
-            elif value == 'exp':
-                param_number = 6
-            elif value == 'sin':
-                param_number = 5
-            elif value == 'sffm':
-                param_number = 5
-            elif value == 'am':
-                param_number = 5
-            else:
-                raise NetlistParseError("%s: unknown signal" % __name__ +
-                                        "type %s" % value)
-            if param_number and function is None:
-                function = parse_time_function(value,
-                                               line_elements[index + 1:
-                                                             index + param_number
-                                                             + 1],
-                                               "voltage")
-                index = index + param_number
-            elif function is not None:
-                raise NetlistParseError("%s: only a time function can be defined." % __name__)
-        elif label == 'vdc':
-            dc_value = convert_units(value)
-        elif label == 'vac':
-            vac = convert_units(value)
-        else:
-            raise NetlistParseError("%s: unknown type %s" % __name__,
-                                    label)
-        index = index + 1
-
-    if dc_value == None and function == None:
-        raise NetlistParseError("%s: neither vdc nor a time function are defined" % __name__)
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-
-    elem = components.sources.V(part_id=line_elements[0], n1=n1, n2=n2,
-                           dc_value=dc_value, ac_value=vac)
-
-    if function is not None:
-        elem.is_timedependent = True
-        elem._time_function = function
 
     return [elem]
 

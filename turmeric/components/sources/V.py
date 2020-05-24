@@ -1,4 +1,5 @@
 from ..VoltageDefinedComponent import VoltageDefinedComponent
+from ..Component import Component
 from ..tokens import rex, Value, Label, Node, EqualsParam, ParamDict
 import logging
 import numpy as np
@@ -33,35 +34,14 @@ class V(VoltageDefinedComponent):
 
     """
 
-    def __init__(self, part_id, n1, n2, dc_value, ac_value=0):
-        super().__init__(part_id, n1, n2, dc_value)
-        self.abs_ac = np.abs(ac_value) if ac_value else None
-        self.arg_ac = np.angle(ac_value) if ac_value else None
-        self.is_nonlinear = False
-        self.is_symbolic = True
-        self.is_timedependent = False
-        self._time_function = None
-        if dc_value is not None:
-            self.dc_guess = [self.value]
+    #def __init__(self, part_id, n1, n2, dc_value, ac_value=0):
+    def __init__(self, line, circ):
+        self.net_objs = [Label,Node,Node,ParamDict]
+        super().__init__(line)
 
-    @classmethod
-    def from_line(cls, line, circ):
-        """
-        Format: v<label> n1 n2 [type=vdc vdc=float] [type=vac vac=float] [type=....]
-        Example: v1 1 0 type=vdc vdc=5
-        """
-        import re
+        # TODO: have/find one list of accepted methods
         types = {'vdc':0,'vac':0,'pulse':7,'exp':6,'sin':5,'sffm':5,'am':5}
-        net_objs = [Label,Node,Node,ParamDict]
-        r = "^" + "v" + '(?: +)'.join([rex(o) for o in net_objs])
-        match = re.search(r,line.strip().lower())
-
-        try:
-            tokens = [n(g) for n,g in zip(net_objs,match.groups())]
-        except AttributeError as e:
-            logging.exception(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{r}'")
-
-        params = tokens[3].value
+        params = self.tokens[3].value
         try:
             param_number = types[params['type']]
         except AttributeError as e:
@@ -70,22 +50,34 @@ class V(VoltageDefinedComponent):
         dc_value = float(params['vdc']) if 'vdc' in params else None
         vac = float(params['vac']) if 'vac' in params else None
         # TODO: test that time function is being parsed correctly
-        function = cls.parse_time_function(cls, params['type'],[str(k)+'='+str(v) for k,v in params.items()],"voltage") if not dc_value and not vac else None
+        function = self.parse_time_function(self, params['type'],[str(k)+'='+str(v) for k,v in params.items()],"voltage") if not dc_value and not vac else None
 
         if dc_value == None and function == None:
             raise ValueError(f"Neither dc value nor time function defined for voltage source in:\n\t{line}")
 
-        n1 = circ.add_node(str(tokens[1]))
-        n2 = circ.add_node(str(tokens[2]))
+        n1 = circ.add_node(str(self.tokens[1]))
+        n2 = circ.add_node(str(self.tokens[2]))
 
-        comp = cls(part_id=str(tokens[0]), n1=n1, n2=n2, dc_value=dc_value, ac_value=vac)
+        self.part_id=str(self.tokens[0])
+        self.n1=n1
+        self.n2=n2
+        self.value=dc_value
+        self.ac_value=vac
 
         if function is not None:
             comp.is_timedependent = True
             comp._time_function = function
+        #super().__init__(part_id, n1, n2, dc_value)
+        self.abs_ac = np.abs(self.ac_value) if self.ac_value else None
+        self.arg_ac = np.angle(self.ac_value) if self.ac_value else None
+        self.is_nonlinear = False
+        self.is_symbolic = True
+        self.is_timedependent = False
+        self._time_function = None
+        if self.value is not None:
+            self.dc_guess = [self.value]
 
-        return [comp]
-
+    # FIXME: this does not belong here
     def parse_time_function(self, ftype, line_elements, stype):
         import copy
         from ...time_functions import time_fun_specs
@@ -157,11 +149,8 @@ class V(VoltageDefinedComponent):
         else:
             return self._time_function(time)
 
-    def __str__(self):
-        return repr(self)
-
     def __repr__(self):
-        rep = f"{self.part_id} {self.n1} {self.n2} "
+        rep = f"{self.name}{self.part_id} {self.n1} {self.n2} "
         rep += f"type=vdc vdc={self.value} " if self.value is not None else ''
         # TODO: netlist_parser not working with `arg=' from `self.arg_ac'
         rep += f"vac={str(self.abs_ac)} " if self.abs_ac is not None else ''

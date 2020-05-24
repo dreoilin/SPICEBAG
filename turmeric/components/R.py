@@ -1,6 +1,7 @@
 from .CurrentDefinedComponent import CurrentDefinedComponent
+from .tokens import rex, Value, Label, Node, EqualsParam, ParamDict
 
-class Resistor(CurrentDefinedComponent):
+class R(CurrentDefinedComponent):
     """A resistor.
 
     **Parameters:**
@@ -20,31 +21,22 @@ class Resistor(CurrentDefinedComponent):
     #     n1 o---+  \  /  \  /  \  +---o n2
     #                \/    \/    \/
     #
-    def __init__(self, part_id, n1, n2, value):
-        super().__init__(part_id, value)
-        self.is_nonlinear = False
-        self.n1 = n1
-        self.n2 = n2
+    #def __init__(self, part_id, n1, n2, value):
+    def __init__(self, line, circ):
+        self.net_objs = [Label,Node,Node,Value]
+        super().__init__(line)
 
-    @classmethod
-    def from_line(cls, line, circ):
-        tok = line.split()
-        if len(tok) < 4 or (len(tok) > 4 and not tok[4][0] == "*"):
-            raise ValueError("Malformed line: `{line}'")
-
-        n1 = circ.add_node(tok[1])
-        n2 = circ.add_node(tok[2])
-
-        # TODO: use value types from old project
-        value = float(tok[3])
-
-        if value == 0:
+        self.value=float(self.tokens[3])
+        if self.value == 0:
             raise ValueError(f"A resistor must have a value: `{line}'")
 
-        return [cls(part_id=tok[0], n1=n1, n2=n2, value=value)]
+        self.part_id=str(self.tokens[0])
+        self.n1=circ.add_node(str(self.tokens[1]))
+        self.n2=circ.add_node(str(self.tokens[2]))
+        self.is_nonlinear = False
 
     def __repr__(self):
-        rep = f"{self.part_id} {self.n1} {self.n2} {self.value}"
+        rep = f"{self.name}{self.part_id} {self.n1} {self.n2} {self.value}"
         return rep
 
     def stamp(self, M, ZDC, ZAC, D):
@@ -53,6 +45,8 @@ class Resistor(CurrentDefinedComponent):
         M[self.n2, self.n1] = M[self.n2, self.n1] - self.g
         M[self.n2, self.n2] = M[self.n2, self.n2] + self.g
 
+    def g(self):
+        return 1./self.value
 
     def get_op_info(self, ports_v):
         """Information regarding the Operating Point (OP)

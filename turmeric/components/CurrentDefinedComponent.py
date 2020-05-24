@@ -3,16 +3,18 @@ from .Component import Component
 class CurrentDefinedComponent(Component):
     """
     Base class for current defined components:
-    - Resistor
-    - Capacitor
+    - R
+    - C
     - G cccs
     - I independent current source
     """
 
-    def __init__(self, part_id, value):
-        self.part_id = part_id
-        self._value = value
-        self._g = 1./value
+    # The below is "generalised" from R.py and might only be specific to a resistor
+    def __init__(self, line):
+        super().__init__(line)
+        self.part_id=str(self.tokens[0])
+        self._value =float(self.tokens[3])
+        self._g = 1./self._value
 
     @property
     def g(self, v=0, time=0):

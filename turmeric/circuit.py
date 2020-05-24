@@ -207,7 +207,7 @@ class Circuit(list):
         if value == 0:
             raise CircuitError("ZERO-valued resistors are not allowed.")
 
-        elem = components.Resistor(part_id=part_id, n1=n1, n2=n2, value=value)
+        elem = components.R(part_id=part_id, n1=n1, n2=n2, value=value)
         self.append(elem)
 
     def add_capacitor(self, part_id, n1, n2, value, ic=None):
@@ -453,11 +453,11 @@ class Circuit(list):
         for elem in self:
             if elem.is_nonlinear:
                 continue
-            elif isinstance(elem, components.Resistor):
-                M0[elem.n1, elem.n1] = M0[elem.n1, elem.n1] + elem.g
-                M0[elem.n1, elem.n2] = M0[elem.n1, elem.n2] - elem.g
-                M0[elem.n2, elem.n1] = M0[elem.n2, elem.n1] - elem.g
-                M0[elem.n2, elem.n2] = M0[elem.n2, elem.n2] + elem.g
+            elif isinstance(elem, components.R):
+                M0[elem.n1, elem.n1] = M0[elem.n1, elem.n1] + elem.g()
+                M0[elem.n1, elem.n2] = M0[elem.n1, elem.n2] - elem.g()
+                M0[elem.n2, elem.n1] = M0[elem.n2, elem.n1] - elem.g()
+                M0[elem.n2, elem.n2] = M0[elem.n2, elem.n2] + elem.g()
             elif isinstance(elem, components.Capacitor):
                 pass  # In a capacitor I(V) = 0
             elif isinstance(elem, components.sources.GISource):

@@ -113,17 +113,14 @@ class Component(Parseable):
     
     """
 
-    def __init__(self, part_id=None, n1=None, n2=None, is_nonlinear=False, is_symbolic=True, value=None):
-        self.part_id = part_id
-        self.n1 = n1
-        self.n2 = n2
-        self.value = value
-        self.is_nonlinear = is_nonlinear
+    def __init__(self, line):
+        super().__init__(line)
 
     #   Used by `get_netlist_elem_line` for value
     def __str__(self):
         return str(self.value)
 
+    # TODO: what does this do and how is it different from just redefining the functions in a base class?
     #   must be called to define the element!
     def set_char(self, i_function=None, g_function=None):
         if i_function:
