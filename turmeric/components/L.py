@@ -34,7 +34,9 @@ class L(VoltageDefinedComponent):
         self.is_nonlinear = False
 
     def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
-        D0[-1, -1] *= -1 * elem.value
+        (M0, ZDC0, ZAC0, D0, ZT0) = super().stamp(M0, ZDC0, ZAC0, D0, ZT0, time)
+        D0[-1, -1] = -1 * self.value
+        return (M0, ZDC0, ZAC0, D0, ZT0)
 
     def __repr__(self):
         """
