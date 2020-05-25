@@ -1,5 +1,5 @@
 from ..VoltageDefinedComponent import VoltageDefinedComponent
-class EVSource(VoltageDefinedComponent):
+class E(VoltageDefinedComponent):
     """
     VCVS
     """

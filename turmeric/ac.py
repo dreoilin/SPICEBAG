@@ -283,7 +283,7 @@ def _generate_AC(circ, shape):
     nv = circ.get_nodes_number()  # - 1
     i_eq = 0  # each time we find a vsource or vcvs or ccvs, we'll add one to this.
     for elem in circ:
-        if circuit.is_elem_voltage_defined(elem) and not isinstance(elem, components.L):
+        if isinstance(elem, components.VoltageDefinedComponent) and not isinstance(elem, components.L):
             i_eq = i_eq + 1
         elif isinstance(elem, components.C):
             n1 = elem.n1
@@ -348,7 +348,7 @@ def _generate_Nac(circ):
     # for each vsource, introduce a new variable: the current flowing through it.
     # then we introduce a KVL equation to be able to solve the circuit
     for elem in circ:
-        if circuit.is_elem_voltage_defined(elem):
+        if isinstance(elem, components.VoltageDefinedComponent):
             index = Nac.shape[0]
             Nac = utilities.expand_matrix(Nac, add_a_row=True, add_a_col=False)
             if isinstance(elem, components.sources.V) and elem.abs_ac is not None:

@@ -137,7 +137,7 @@ def main_netlist_parser(circ, netlist_lines, models):
         'd': lambda line: parse_elem_diode(line, circ, models),
         'e': lambda line: components.sources.E(line, circ),
         'f': lambda line: parse_elem_cccs(line, circ),
-        'g': lambda line: parse_elem_vccs(line, circ),
+        'g': lambda line: components.sources.G(line, circ),
         'h': lambda line: components.sources.H(line, circ),
         'i': lambda line: parse_elem_isource(line, circ),
         'l': lambda line: components.L(line, circ),
@@ -291,28 +291,6 @@ def parse_elem_ccvs(line, circ):
     elem = components.sources.H(part_id=line_elements[0], n1=n1, n2=n2,
                             source_id=line_elements[3],
                             value=convert_units(line_elements[4]))
-
-    return [elem]
-
-
-def parse_elem_vccs(line, circ):
-    
-    line_elements = line.split()
-    if len(line_elements) < 6 or (len(line_elements) > 6
-       and not line_elements[6][0] == "*"):
-        raise NetlistParseError("")
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    ext_sn1 = line_elements[3]
-    ext_sn2 = line_elements[4]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-    sn1 = circ.add_node(ext_sn1)
-    sn2 = circ.add_node(ext_sn2)
-
-    elem = components.sources.GISource(part_id=line_elements[0], n1=n1, n2=n2, sn1=sn1,
-                            sn2=sn2, value=convert_units(line_elements[5]))
 
     return [elem]
 

@@ -176,7 +176,7 @@ class op_solution(solution, _mutable_data):
 
         index = nv_1 - 1
         for elem in circ:
-            if circuit.is_elem_voltage_defined(elem):
+            if isinstance(elem, components.VoltageDefinedComponent):
                 index = index + 1
                 varname = ("I("+elem.part_id.upper()+")").upper()
                 self.variables += [varname]
@@ -258,7 +258,7 @@ class op_solution(solution, _mutable_data):
                     if port[1]:
                         tempv = tempv - x[port[1]-1]
                     ports_v_v = ((tempv,),)
-                if circuit.is_elem_voltage_defined(elem):
+                if isinstance(elem, components.VoltageDefinedComponent):
                     i = circ.find_vde_index(elem.part_id)
                     nv_1 = circ.get_nodes_number() - 1
                     opk, opi = elem.get_op_info(ports_v_v, x[nv_1 + i])
@@ -276,7 +276,7 @@ class op_solution(solution, _mutable_data):
                     op_info.update({elem.part_id.upper():opi})
                     op_keys.update({elem.part_id.upper():[[]]})
 
-            if isinstance(elem, components.sources.GISource):
+            if isinstance(elem, components.sources.G):
                 v = 0
                 v = v + x[elem.n1-1] if elem.n1 != 0 else v
                 v = v - x[elem.n2-1] if elem.n2 != 0 else v
@@ -290,7 +290,7 @@ class op_solution(solution, _mutable_data):
                 v = v - x[elem.n2-1] if elem.n2 != 0 else v
                 tot_power = tot_power - v*elem.I()
             elif isinstance(elem, components.sources.V) or \
-                 isinstance(elem, components.sources.EVSource):
+                 isinstance(elem, components.sources.E):
                 v = 0
                 v = v + x[elem.n1-1] if elem.n1 != 0 else v
                 v = v - x[elem.n2-1] if elem.n2 != 0 else v
@@ -300,7 +300,7 @@ class op_solution(solution, _mutable_data):
                 local_i_index = 0
                 found_source = False
                 for e in circ:
-                    if circuit.is_elem_voltage_defined(e):
+                    if isinstance(e, components.VoltageDefinedComponent):
                         if isinstance(e, components.sources.V) and e.part_id.lower() == elem.source_id.lower():
                             found_source = True
                             break
@@ -322,7 +322,7 @@ class op_solution(solution, _mutable_data):
                 local_i_index2 = circ.find_vde_index(elem.part_id)
                 tot_power = tot_power - elem.alpha*x[nv_1 + local_i_index, 0]* \
                                         x[nv_1 + local_i_index2, 0]
-            elif circuit.is_elem_voltage_defined(elem):
+            elif isinstance(elem, components.VoltageDefinedComponent):
                 i_index = i_index + 1
 
         #op_info.append("TOTAL POWER: %e W\n" % (tot_power,))
@@ -479,7 +479,7 @@ class ac_solution(solution, _mutable_data):
             self.units.update({varname: "V"})
 
         for elem in circ:
-            if circuit.is_elem_voltage_defined(elem):
+            if isinstance(elem, components.VoltageDefinedComponent):
                 varname = "I(%s)" % elem.part_id.upper()
                 self.variables += [varname]
                 self.units.update({varname: "A"})
@@ -637,7 +637,7 @@ class dc_solution(solution, _mutable_data):
             self.units.update({varname:"V"})
 
         for elem in circ:
-            if circuit.is_elem_voltage_defined(elem):
+            if isinstance(elem, components.VoltageDefinedComponent):
                 varname = "I(%s)" % (elem.part_id.upper(),)
                 self.variables += [varname]
                 self.units.update({varname:"A"})
@@ -704,7 +704,7 @@ class tran_solution(solution, _mutable_data):
             self.units.update({varname:"V"})
 
         for elem in circ:
-            if circuit.is_elem_voltage_defined(elem):
+            if isinstance(elem, components.VoltageDefinedComponent):
                 varname = ("I(%s)" % (elem.part_id.upper(),)).upper()
                 self.variables += [varname]
                 self.units.update({varname:"A"})
