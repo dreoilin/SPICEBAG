@@ -1,0 +1,22 @@
+* 5th Order Elliptic Lowpass
+* COD, TOR, JD
+* ************************ *
+* Reference:
+* Circuit Simulation and 
+*       Algorithms
+*       - Jan Ogrodski
+* cut-off f 1kHz
+
+V1 0 1 type=vdc vdc=0 type=vac vac=1
+R1 1 2 10k
+C1 2 0 29.7n
+L1 2 3 1.43
+C2 2 3 5.28n
+C3 3 0 34.9n
+L2 3 4 0.987
+C4 3 4 15.5n
+C5 4 0 23.3n
+R2 4 0 10k
+.op
+.AC LOG 10 100 10k
+.END
