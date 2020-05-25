@@ -24,7 +24,7 @@ class Editor(Tk):
         self.make_menu()
 
         self.pwd = Path('.').resolve()
-        self.tabs = []
+        self.netlistTextEditors = []
         self.tabeditor=TabEditor(self)
 
     def read_config(self):
@@ -94,9 +94,12 @@ class Editor(Tk):
 
     def newnetlisttab(self,e=None,filename=None):
         title = Path(filename).relative_to(self.pwd) if filename is not None else UNTITLED
+        #t = self.tabeditor.insert(self.tabeditor.index(self.tabeditor.select()),text=title)
         t = self.tabeditor.addtab(title)
         filedata = open(filename, 'r').read() if filename else None
-        self.tabs.append(NetlistEditor(t,filedata).focus_set())
+        self.netlistTextEditors.append(NetlistEditor(t,filedata).focus_set())
+
+        self.tabeditor.select(t)
 
     def open_file(self, e=None):
         files = filedialog.askopenfilenames(parent=self.master,title='Open Netlist',filetypes=[('Netlist','*.net')])
@@ -106,23 +109,21 @@ class Editor(Tk):
             else:
                 print("IMPLEMENT EDITOR FOR OTHER FILES") # TODO
 
-    def save_file(self, event=None):
-        tab = self.nametowidget(self.tabeditor.select())
-        ed = tab.children['!frame'].children['!netlisteditor']
-        import pdb;pdb.set_trace()
-
-        title = tab.title
-        if tab.title == UNDEFINED:
-            print('SAVE AS')
+    def save_file(self, event=None, filename=None):
+        ed = self.nametowidget(self.tabeditor.select()).children['!frame'].children['!netlisteditor']
+        savefilename = self.tabeditor.tab(self.tabeditor.select(), option='text') if filename is None else filename
+        if savefilename == UNTITLED:
+            self.save_file_as(event)
         else:
-            f = open(title, 'w')
+            f = open(savefilename, 'w')
             f.write(ed.get(1.0,END))
             f.close()
     
     def save_file_as(self, event=None, text=None):
-        f = filedialog.asksaveasfile(mode='w')
+        f = filedialog.asksaveasfilename(filetypes=[('Netlist','*.net'),('Any','*')])
         if f is not None:
-            f.write()
+            self.save_file(event,filename=f)
+            self.tabeditor.tab(self.tabeditor.select(), text=str(Path(f).relative_to(self.pwd)))
 
 if __name__ == '__main__':
     ed = Editor()
