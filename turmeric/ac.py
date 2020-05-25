@@ -3,13 +3,8 @@
 
 import numpy as np
 
-from . import circuit
-from . import dc
-from . import components
 from . import options
-from . import printing
 from . import results
-from . import utilities
 import logging
 
 specs = {'ac': {'tokens': ({
@@ -51,9 +46,6 @@ specs = {'ac': {'tokens': ({
 def ac_analysis(circ, start, points, stop, sweep_type=None,
                 x0=None, mna=None, AC=None, Nac=None, J=None,
                 outfile="stdout"):
-
-    if outfile == 'stdout':
-        verbose = 0
 
     # check step/start/stop parameters
     if start == 0:
