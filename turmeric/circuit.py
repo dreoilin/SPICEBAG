@@ -374,7 +374,7 @@ class Circuit(list):
                              (index + len(self.nodes_dict)/2 - 1))
         return e
     
-    def gen_matrices(self):
+    def gen_matrices(self, time=0):
         n = self.get_nodes_number()
         M0 = np.zeros((n,n))
         ZDC0 = np.zeros((n, 1))
@@ -385,11 +385,11 @@ class Circuit(list):
         # First, current defined, linear elements
         # == CD = {R , C , GISource, ISource (time independant)}
         CD = [components.R, components.C, components.sources.GISource, components.sources.ISource]
-        [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0) for elem in self if type(elem) in CD]
+        [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time) for elem in self if type(elem) in CD]
         VD = [components.sources.V,components.sources.EVSource,components.sources.H, components.L]
         for elem in self:
             if type(elem) in VD:
-                (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0)
+                (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time)
 
         #mats = [M0, ZDC0, ZAC0, D0, ZT0]
         #for n, m in zip(['M0', 'ZDC0', 'ZAC0', 'D0', 'ZT0'],mats):
