@@ -1,21 +1,7 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright 2006 Giuseppe Venturini
+from .CurrentDefinedComponent import CurrentDefinedComponent
+from .tokens import rex, Value, Label, Node
 
-# This file is part of the ahkab simulator.
-#
-# Ahkab is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 2 of the License.
-#
-# Ahkab is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License v2
-# along with ahkab.  If not, see <http://www.gnu.org/licenses/>.
-from .Component import Component
-class Capacitor(Component):
+class C(CurrentDefinedComponent):
     """A capacitor.
 
     .. image:: images/elem/capacitor.svg
@@ -31,10 +17,6 @@ class Capacitor(Component):
         *Internal* node to be connected to the cathode.
     value : float
         The capacitance in Farads.
-    ic : float
-        The initial condition (IC) to be used for time-based simulations,
-        such as TRAN analyses, when requested, expressed in Volt.
-
     """
     #
     #               |  |
@@ -43,14 +25,31 @@ class Capacitor(Component):
     #               |  |
     #               |  |
     #
-    def __init__(self, part_id, n1, n2, value, ic=None):
-        self.part_id = part_id
-        self.value = value
-        self.n1 = n1
-        self.n2 = n2
-        self.ic = ic
+    def __init__(self, line, circ):
+        self.net_objs = [Label,Node,Node,Value]
+        super().__init__(line)
+
+        self.value=float(self.tokens[3])
+        if self.value == 0:
+            raise ValueError(f"A capacitor must have a value: `{line}'")
+
+        self.part_id=str(self.tokens[0])
+        self.n1=circ.add_node(str(self.tokens[1]))
+        self.n2=circ.add_node(str(self.tokens[2]))
         self.is_nonlinear = False
-        self.is_symbolic = True
+
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+        D0[self.n1, self.n1] += self.value
+        D0[self.n1, self.n2] -= self.value
+        D0[self.n2, self.n2] += self.value
+        D0[self.n2, self.n1] -= self.value
+
+
+    def __repr__(self):
+        """
+        C<string> n1 n2 <value>
+        """
+        return f"C{self.part_id} {self.n1} {self.n2} {self.value}"
 
     def g(self, v, time=0):
         return 0

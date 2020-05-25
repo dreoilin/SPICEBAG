@@ -1,21 +1,3 @@
-# -*- coding: iso-8859-1 -*-
-# Component.py
-# Devices for simulation
-# Copyright 2006 Giuseppe Venturini
-
-# This file is part of the ahkab simulator.
-#
-# Ahkab is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 2 of the License.
-#
-# Ahkab is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License v2
-# along with ahkab.  If not, see <http://www.gnu.org/licenses/>.
 """
 This module contains several basic element classes.
 
@@ -99,12 +81,6 @@ the voltages in the ``voltages_vector``.
 
 A non linear element must have a ``elem.is_nonlinear`` field set to True.
 
-6. ``elem.is_symbolic``
-
-This boolean flag is used to know whether the element should be treated
-symbolically by the ymbolic solver or not. It is meant to be toggled
-by the user at will.
-
 7. Every element should have a ``get_netlist_elem_line(self, nodes_dict)``
 allowing the element to print a netlist entry that parses to itself.
 
@@ -124,38 +100,37 @@ Module reference
 
 """
 
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
 import numpy as np
+from abc import ABC, abstractmethod
+from .Parseable import Parseable
 
-class Component(object):
-
-    """Base Component class.
-
-    This component is not meant for direct use, rather all other (simple)
-    components are a subclass of this element.
+# TODO: finish converting Component to ABC
+class Component(Parseable):
 
     """
+    Base Component class.
+    Inherits from Parseable to provide interface to process netlist objects
+    
+    """
 
-    def __init__(self, part_id=None, n1=None, n2=None, is_nonlinear=False, is_symbolic=True, value=None):
-        self.part_id = part_id
-        self.n1 = n1
-        self.n2 = n2
-        self.value = value
-        self.is_nonlinear = is_nonlinear
-        self.is_symbolic = is_symbolic
+    def __init__(self, line):
+        super().__init__(line)
 
     #   Used by `get_netlist_elem_line` for value
     def __str__(self):
         return str(self.value)
 
+    # TODO: what does this do and how is it different from just redefining the functions in a base class?
     #   must be called to define the element!
     def set_char(self, i_function=None, g_function=None):
         if i_function:
             self.i = i_function
         if g_function:
             self.g = g_function
+
+    @abstractmethod
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+        pass
 
     def g(self, v):
         return 1./self.value
@@ -178,5 +153,6 @@ class Component(object):
         ntlst_line : string
             The netlist line.
         """
+        # TODO: verify that the internal nodeIDs are equivalent to the external ones
         return "%s %s %s %g" % (self.part_id, nodes_dict[self.n1],
                                 nodes_dict[self.n2], self.value)

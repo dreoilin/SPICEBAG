@@ -1,21 +1,5 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright 2006 Giuseppe Venturini
-
-# This file is part of the ahkab simulator.
-#
-# Ahkab is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 2 of the License.
-#
-# Ahkab is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License v2
-# along with ahkab.  If not, see <http://www.gnu.org/licenses/>.
-from ..Component import Component
-class EVSource(Component):
+from ..VoltageDefinedComponent import VoltageDefinedComponent
+class EVSource(VoltageDefinedComponent):
     """Linear voltage-controlled voltage source
 
     .. image:: images/elem/vcvs.svg
@@ -61,27 +45,16 @@ class EVSource(Component):
         self.sn1 = sn1
         self.sn2 = sn2
         self.is_nonlinear = False
-        self.is_symbolic = True
 
-    def __str__(self):
-        return "alpha=%s" % self.alpha
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+        (M0, ZDC0, ZAC0, D0, ZT0) = super().stamp(M0, ZDC0, ZAC0, D0, ZT0)
+        M0[-1, elem.sn1] = -float(elem.alpha)
+        M0[-1, elem.sn2] =  float(elem.alpha)
+        return (M0, ZDC0, ZAC0, D0, ZT0) 
 
-    def get_netlist_elem_line(self, nodes_dict):
-        """A netlist line that, parsed, evaluates to the same instance
-
-        **Parameters:**
-
-        nodes_dict : dict
-            The nodes dictionary of the circuit, so that the method
-            can convert its internal node IDs to the corresponding
-            external ones.
-
-        **Returns:**
-
-        ntlst_line : string
-            The netlist line.
+    def __repr__(self):
         """
-        return "%s %s %s %s %s %g" % (self.part_id, nodes_dict[self.n1],
-                                nodes_dict[self.n2], nodes_dict[self.sn1],
-                                nodes_dict[self.sn2], self.alpha)
+        E<string> n+ n- ns+ ns- <value>
+        """
+        return f"E{self.part_id} {self.n1} {self.n2} {self.sn1} {self.sn2} {self.alpha}"
 

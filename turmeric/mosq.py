@@ -36,9 +36,6 @@ Module reference
 ----------------
 
 """
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
 import math
 import numpy as np
 

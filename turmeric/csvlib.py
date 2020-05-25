@@ -30,15 +30,6 @@ The separator can be selected setting:
 
 """
 
-# Additionally the following internal functions are
-# available:
-#3. Internal routines
-#    _get_fp(filename, mode='rb')
-#    _close_fp(fp, filename)
-
-from __future__ import (unicode_literals, absolute_import,
-                        division, print_function)
-
 import io
 import sys
 import copy

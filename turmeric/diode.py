@@ -292,8 +292,7 @@ class diode_model(object):
         self.KF = float(KF) if KF is not None else KF_DEFAULT
         self.AF = float(AF) if AF is not None else AF_DEFAULT
         self.FFE = float(FFE) if FFE is not None else FFE_DEFAULT
-        self.TEMP = utilities.Celsius2Kelvin(
-            float(TEMP)) if TEMP is not None else TEMP_DEFAULT
+        self.TEMP = utilities.Celsius2Kelvin(float(TEMP)) if TEMP is not None else TEMP_DEFAULT
         self.XTI = float(XTI) if XTI is not None else XTI_DEFAULT
         self.EG = float(EG) if EG is not None else EG_DEFAULT
         self.TBV = float(TBV) if TBV is not None else TBV_DEFAULT
@@ -308,15 +307,7 @@ class diode_model(object):
         self.material=material
 
     def print_model(self):
-        strm = ".model diode %s IS=%g N=%g ISR=%g NR=%g RS=%g CJ0=%g M=%g " + \
-               "VJ=%g FC=%g CP=%g TT=%g BV=%g IBV=%g KF=%g AF=%g FFE=%g " + \
-               "TEMP=%g XTI=%g EG=%g TBV=%g TRS=%g TTT1=%g TTT2=%g TM1=%g " + \
-               "TM2=%g"
-        print(strm % (self.name, self.IS, self.N, self.ISR, self.NR, self.RS,
-                      self.CJ0, self.M, self.VJ, self.FC, self.CP, self.TT,
-                      self.BV, self.IBV, self.KF, self.AF, self.FFE, self.TEMP,
-                      self.XTI, self.EG, self.TBV, self.TRS, self.TTT1,
-                      self.TTT2, self. TM1, self. TM2))
+        print(str(self))
 
     @utilities.memoize
     def get_i(self, vext, dev):
@@ -379,7 +370,15 @@ class diode_model(object):
         return dev.AREA * gm
 
     def __str__(self):
-        pass
+        strm = ".model diode %s IS=%g N=%g ISR=%g NR=%g RS=%g CJ0=%g M=%g " + \
+               "VJ=%g FC=%g CP=%g TT=%g BV=%g IBV=%g KF=%g AF=%g FFE=%g " + \
+               "TEMP=%g XTI=%g EG=%g TBV=%g TRS=%g TTT1=%g TTT2=%g TM1=%g " + \
+               "TM2=%g"
+        return strm % (self.name, self.IS, self.N, self.ISR, self.NR, self.RS,
+                      self.CJ0, self.M, self.VJ, self.FC, self.CP, self.TT,
+                      self.BV, self.IBV, self.KF, self.AF, self.FFE, self.TEMP,
+                      self.XTI, self.EG, self.TBV, self.TRS, self.TTT1,
+                      self.TTT2, self. TM1, self. TM2)
 
     def set_temperature(self, T):
         T = float(T)

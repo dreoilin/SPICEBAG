@@ -53,7 +53,6 @@ class solution(object):
         self.iea = options.iea
         self.ier = options.ier
         self.gmin = options.gmin
-        self.cmin = options.cmin
         self.temp = constants.T
         self.filename = outfile
         self._init_file_done = False
@@ -162,7 +161,7 @@ class op_solution(solution, _mutable_data):
         solution.__init__(self, circ, outfile)
         self.sol_type = "OP"
         self.iterations = iterations
-
+        # reduced num nodes
         nv_1 = circ.get_nodes_number() - 1
         self.results = case_insensitive_dict()
         self.errors = case_insensitive_dict()
@@ -174,8 +173,6 @@ class op_solution(solution, _mutable_data):
             self.results.update({varname: x[index, 0]})
             self.errors.update({varname: error[index, 0]})
             self.units.update({varname: "V"})
-            if circ.is_int_node_internal_only(index+1):
-                self.skip_nodes_list.append(index)
 
         index = nv_1 - 1
         for elem in circ:
@@ -292,7 +289,7 @@ class op_solution(solution, _mutable_data):
                 v = v + x[elem.n1-1] if elem.n1 != 0 else v
                 v = v - x[elem.n2-1] if elem.n2 != 0 else v
                 tot_power = tot_power - v*elem.I()
-            elif isinstance(elem, components.sources.VSource) or \
+            elif isinstance(elem, components.sources.V) or \
                  isinstance(elem, components.sources.EVSource):
                 v = 0
                 v = v + x[elem.n1-1] if elem.n1 != 0 else v
@@ -304,7 +301,7 @@ class op_solution(solution, _mutable_data):
                 found_source = False
                 for e in circ:
                     if circuit.is_elem_voltage_defined(e):
-                        if isinstance(e, components.sources.VSource) and e.part_id.lower() == elem.source_id.lower():
+                        if isinstance(e, components.sources.V) and e.part_id.lower() == elem.source_id.lower():
                             found_source = True
                             break
                         else:
@@ -316,7 +313,7 @@ class op_solution(solution, _mutable_data):
                 v = v + x[elem.n1 - 1] if elem.n1 != 0 else v
                 v = v - x[elem.n2 - 1] if elem.n2 != 0 else v
                 tot_power = tot_power - v * elem.alpha * x[nv_1 + local_i_index, 0]
-            elif isinstance(elem, components.sources.HVSource):
+            elif isinstance(elem, components.sources.H):
                 try:
                     local_i_index = circ.find_vde_index(elem.source_id)
                 except ValueError:
@@ -480,8 +477,6 @@ class ac_solution(solution, _mutable_data):
             varname = "V%s" % str(circ.nodes_dict[index + 1])
             self.variables += [varname]
             self.units.update({varname: "V"})
-            if circ.is_int_node_internal_only(index+1):
-                self.skip_nodes_list.append(index)
 
         for elem in circ:
             if circuit.is_elem_voltage_defined(elem):
@@ -640,8 +635,6 @@ class dc_solution(solution, _mutable_data):
             varname = "V%s" % (str(circ.nodes_dict[index + 1]),)
             self.variables += [varname]
             self.units.update({varname:"V"})
-            if circ.is_int_node_internal_only(index+1):
-                self.skip_nodes_list.append(index)
 
         for elem in circ:
             if circuit.is_elem_voltage_defined(elem):
@@ -709,8 +702,6 @@ class tran_solution(solution, _mutable_data):
             varname = ("V%s" % (str(circ.nodes_dict[index + 1]),)).upper()
             self.variables += [varname]
             self.units.update({varname:"V"})
-            if circ.is_int_node_internal_only(index+1):
-                self.skip_nodes_list.append(index)
 
         for elem in circ:
             if circuit.is_elem_voltage_defined(elem):
