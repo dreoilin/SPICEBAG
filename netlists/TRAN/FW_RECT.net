@@ -1,0 +1,19 @@
+* Full Wave Rectifier
+* ******************
+* TOR, COD, JD
+* ******************
+* Netlist for a full wave rectifier
+* with smoothing capacitor
+* ******************
+D1 1 3 D
+D4 0 1 D
+D3 2 3 D
+D2 0 2 D
+V1 1 2 type=sin VO=0 VA=20 FREQ=50 TD=0 THETA=0
+R1 3 0 300
+.model D d
+.op
+.tran tstop=50m tstep=1p
+.end
+
+* ref: google images
