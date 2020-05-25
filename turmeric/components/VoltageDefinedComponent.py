@@ -15,7 +15,7 @@ class VoltageDefinedComponent(Component):
         super().__init__(line)
         self.part_id=str(self.tokens[0])
 
-    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time=0):
         """
         PAD MATRICES LIKE THIS
         |     +| |     +| | | | || || |
