@@ -1,8 +1,8 @@
 from ..VoltageDefinedComponent import VoltageDefinedComponent
-from ..Component import Component
 from ..tokens import rex, Value, Label, Node, ParamDict
 import logging
 import numpy as np
+from ... import utilities
 
 class V(VoltageDefinedComponent):
     """An ideal voltage source.
@@ -170,9 +170,12 @@ class V(VoltageDefinedComponent):
 
         return return_value
 
-    def stamp(self, M, ZDC, ZAC, D):
-        raise NotImplementedError
-        #ZDC[index, 0] = -1.0 * self.V()
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+        (M0, ZDC0, ZAC0, D0, ZT0) = super().stamp(M0, ZDC0, ZAC0, D0, ZT0)
+        ZDC0[-1, 0] = -1.0 * self.value if self.value is not None else 0.
+        ZAC0[-1, 0] = -1.0 * self.ac_value if self.ac_value is not None else 0.
+        ZT0[-1, 0] = -1.0 * self._time_function(0) if self._time_function is not None else 0.
+        return (M0, ZDC0, ZAC0, D0, ZT0) 
 
     def V(self, time=None):
         """Evaluate the voltage applied by the voltage source.
@@ -191,9 +194,7 @@ class V(VoltageDefinedComponent):
             The voltage, in Volt.
         """
 
-        if (not self.is_timedependent or\
-            self._time_function is None) or \
-                (time is None and self.value is not None):
+        if (not self.is_timedependent or self._time_function is None) or (time is None and self.value is not None):
             return self.value
         else:
             return self._time_function(time)

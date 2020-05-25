@@ -1,23 +1,7 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright 2006 Giuseppe Venturini
-
-# This file is part of the ahkab simulator.
-#
-# Ahkab is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 2 of the License.
-#
-# Ahkab is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License v2
-# along with ahkab.  If not, see <http://www.gnu.org/licenses/>.
-from ..Component import Component
+from ..CurrentDefinedComponent import CurrentDefinedComponent
 import numpy as np
 
-class ISource(Component):
+class ISource(CurrentDefinedComponent):
     """An ideal current source.
 
     .. image:: images/elem/isource.svg
@@ -57,6 +41,14 @@ class ISource(Component):
         self.is_symbolic = True
         self.is_timedependent = False
         self._time_function = None
+
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+        ZDC0[self.n1, 0] += self.dc_value
+        ZDC0[self.n2, 0] -= self.dc_value
+        ZAC0[self.n1, 0] += self.ac_value
+        ZAC0[self.n2, 0] -= self.ac_value
+        ZT0[self.n1, 0]  += self._time_function(0)
+        ZT0[self.n2, 0]  -= self._time_function(0)
 
     def __str__(self):
         rep = ""

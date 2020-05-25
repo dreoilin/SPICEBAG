@@ -129,7 +129,7 @@ class Component(Parseable):
             self.g = g_function
 
     @abstractmethod
-    def stamp(self, M, ZDC, ZAC, D):
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
         pass
 
     def g(self, v):

@@ -359,7 +359,7 @@ class Circuit(list):
         
         n1 = self.add_node(n1)
         n2 = self.add_node(n2)
-        elem = components.sources.HVSource(part_id=part_id, n1=n1, n2=n2,
+        elem = components.sources.H(part_id=part_id, n1=n1, n2=n2,
                                 source_id=source_id, value=value)
         
         self.append(elem)
@@ -427,17 +427,61 @@ class Circuit(list):
                              (index + len(self.nodes_dict)/2 - 1))
         return e
     
-    # TODO: refactor generation of M0 and ZDC0 into components' classes
-    def generate_M0_and_ZDC0(self):
-        n_of_nodes = self.get_nodes_number()
-        M0 = np.zeros((n_of_nodes, n_of_nodes))
-        ZDC0 = np.zeros((n_of_nodes, 1))
+    def gen_matrices(self):
+        n = self.get_nodes_number()
+        M0 = np.zeros((n,n))
+        ZDC0 = np.zeros((n, 1))
+        ZAC0 = np.zeros(ZDC0.shape)
+        D0 = np.zeros(M0.shape)
+        ZT0 = np.zeros(ZDC0.shape)
 
         # First, current defined, linear elements
         # == CD = {R , C , GISource, ISource (time independant)}
+        CD = [components.R, components.C, components.sources.GISource, components.sources.ISource]
+        [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0) for elem in self if type(elem) in CD]
+        VD = [components.sources.V,components.sources.EVSource,components.sources.H, components.L]
+        for elem in self:
+            if type(elem) in VD:
+                (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0)
+
+        #mats = [M0, ZDC0, ZAC0, D0, ZT0]
+        #for n, m in zip(['M0', 'ZDC0', 'ZAC0', 'D0', 'ZT0'],mats):
+        #    print(f"{n}: {m}")
+
+        self.M0   = M0
+        self.ZDC0 = ZDC0
+        self.ZAC0 = ZAC0
+        self.D0   = D0
+        self.ZT0  = ZT0 
+
+    # TODO: refactor generation of M0 and ZDC0 into components' classes
+    def generate_M0_and_ZDC0(self):
+        n = self.get_nodes_number()
+        M0 = np.zeros((n,n))
+        ZDC0 = np.zeros((n, 1))
+        ZAC0 = np.zeros(ZDC0.shape)
+        D0 = np.zeros(M0.shape)
+        ZT0 = np.zeros(ZDC0.shape)
+
+        # First, current defined, linear elements
+        # == CD = {R , C , GISource, ISource (time independant)}
+        CD = [components.R, components.C, components.sources.GISource, components.sources.ISource]
+        [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0) for elem in self if type(elem) in CD]
+        VD = [components.sources.V,components.sources.EVSource,components.sources.H, components.L]
+        for elem in self:
+            if type(elem) in VD:
+                (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0)
+
+        mats = [M0, ZDC0, ZAC0, D0, ZT0]
+        for n, m in zip(['M0', 'ZDC0', 'ZAC0', 'D0', 'ZT0'],mats):
+            print(f"{n}: {m}")
+
+        self.M0 = M0
+        self.ZDC0 = ZDC0
+
         
         # Next, voltage defined elements
-        # == VD = { V (time independant ) , EVSource , HVSource , L }
+        # == VD = { V (time independant ) , EVSource , H , L }
         # Operations common to all VD elements:
         #index = M0.shape[0]  # get_matrix_size(M0)[0]
         #M0 = utilities.expand_matrix(M0, add_a_row=True, add_a_col=True)
@@ -449,93 +493,6 @@ class Circuit(list):
         #M0[index, elem.n1] = +1.0
         #M0[index, elem.n2] = -1.0
         # Finally FISource
-
-        for elem in self:
-            if elem.is_nonlinear:
-                continue
-            elif isinstance(elem, components.R):
-                M0[elem.n1, elem.n1] = M0[elem.n1, elem.n1] + elem.g()
-                M0[elem.n1, elem.n2] = M0[elem.n1, elem.n2] - elem.g()
-                M0[elem.n2, elem.n1] = M0[elem.n2, elem.n1] - elem.g()
-                M0[elem.n2, elem.n2] = M0[elem.n2, elem.n2] + elem.g()
-            elif isinstance(elem, components.C):
-                pass  # In a capacitor I(V) = 0
-            elif isinstance(elem, components.sources.GISource):
-                M0[elem.n1, elem.sn1] = M0[elem.n1, elem.sn1] + elem.alpha
-                M0[elem.n1, elem.sn2] = M0[elem.n1, elem.sn2] - elem.alpha
-                M0[elem.n2, elem.sn1] = M0[elem.n2, elem.sn1] - elem.alpha
-                M0[elem.n2, elem.sn2] = M0[elem.n2, elem.sn2] + elem.alpha
-            elif isinstance(elem, components.sources.ISource):
-                if not elem.is_timedependent:  # convenzione normale!
-                    ZDC0[elem.n1, 0] = ZDC0[elem.n1, 0] + elem.I()
-                    ZDC0[elem.n2, 0] = ZDC0[elem.n2, 0] - elem.I()
-                else:
-                    pass  # vengono aggiunti volta per volta
-            elif is_elem_voltage_defined(elem):
-                pass
-                # we'll add its lines afterwards
-            elif isinstance(elem, components.sources.FISource):
-                # we add these last, they depend on voltage sources
-                # to sense the current
-                pass
-            else:
-                logging.WARNING(f"Unknown linear element found: `{elem}'")
-        # Next, voltage defined elements
-        # process vsources
-        # i generatori di tensione non sono pilotabili in tensione: g e' infinita
-        # for each vsource, introduce a new variable: the current flowing through it.
-        # then we introduce a KVL equation to be able to solve the circuit
-
-        for elem in self:
-            if is_elem_voltage_defined(elem):
-                index = M0.shape[0]  # get_matrix_size(M0)[0]
-                M0 = utilities.expand_matrix(M0, add_a_row=True, add_a_col=True)
-                ZDC0 = utilities.expand_matrix(ZDC0, add_a_row=True, add_a_col=False)
-                # KCL
-                M0[elem.n1, index] = 1.0
-                M0[elem.n2, index] = -1.0
-                # KVL
-                M0[index, elem.n1] = +1.0
-                M0[index, elem.n2] = -1.0
-                if isinstance(elem, components.sources.V) and not elem.is_timedependent:
-                    # corretto, se e' def una parte tempo-variabile ci pensa
-                    # mdn_solver a scegliere quella giusta da usare.
-                    ZDC0[index, 0] = -1.0 * elem.V()
-                elif isinstance(elem, components.sources.V) and elem.is_timedependent:
-                    pass  # taken care step by step
-                elif isinstance(elem, components.sources.EVSource):
-                    M0[index, elem.sn1] = -1.0 * elem.alpha
-                    M0[index, elem.sn2] = +1.0 * elem.alpha
-                elif isinstance(elem, components.L):
-                    # ZDC0[index,0] = 0 pass, it's already zero
-                    pass
-                elif isinstance(elem, components.sources.HVSource):
-                    index_source = self.find_vde_index(elem.source_id)
-                    M0[index, n_of_nodes+index_source] = 1.0 * elem.alpha
-                else:
-                    print("dc_analysis.py: BUG - found an unknown voltage_def elem.")
-                    print(elem)
-                    sys.exit(33)
-    
-        # iterate again for devices that depend on voltage-defined ones.
-        # TODO: matrix stamping for FISource
-        for elem in self:
-            if isinstance(elem, components.sources.FISource):
-                local_i_index = self.find_vde_index(elem.source_id, verbose=0)
-                M0[elem.n1, n_of_nodes + local_i_index] = M0[elem.n1, n_of_nodes + local_i_index] + elem.alpha
-                M0[elem.n2, n_of_nodes + local_i_index] = M0[elem.n2, n_of_nodes + local_i_index] - elem.alpha
-    
-        # Seems a good place to run some sanity check
-        # for the time being we do not halt the execution
-        # utilities.check_ground_paths(M0, circ, reduced_mna=False, verbose=verbose)
-    
-        # all done
-        self.M0 = M0
-        self.ZDC0 = ZDC0
-        #import codecs, json
-        #for mat, matname in zip([M0, ZDC0],['M0','ZDC0']):
-        #    with open(f'tests/data/matrices/VRD.{matname}.json','w+') as f:
-        #        json.dump(mat.tolist(), f, sort_keys=True)
 
 
     # generate unreduced dynamic matrix. Might be good to bundle 
@@ -598,7 +555,7 @@ class Circuit(list):
 def is_elem_voltage_defined(elem):
     
     if isinstance(elem, components.sources.V) or isinstance(elem, components.sources.EVSource) or \
-        isinstance(elem, components.sources.HVSource) or isinstance(elem, components.L) \
+        isinstance(elem, components.sources.H) or isinstance(elem, components.L) \
             or (hasattr(elem, "is_voltage_defined") and elem.is_voltage_defined):
         return True
     else:

@@ -39,12 +39,11 @@ class R(CurrentDefinedComponent):
         rep = f"{self.name}{self.part_id} {self.n1} {self.n2} {self.value}"
         return rep
 
-    def stamp(self, M, ZDC, ZAC, D):
-        raise NotImplementedError
-        #M[self.n1, self.n1] = M[self.n1, self.n1] + self.g
-        #M[self.n1, self.n2] = M[self.n1, self.n2] - self.g
-        #M[self.n2, self.n1] = M[self.n2, self.n1] - self.g
-        #M[self.n2, self.n2] = M[self.n2, self.n2] + self.g
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+        M0[self.n1, self.n1] += self.g()
+        M0[self.n1, self.n2] -= self.g()
+        M0[self.n2, self.n1] -= self.g()
+        M0[self.n2, self.n2] += self.g()
 
     def g(self):
         return 1./self.value

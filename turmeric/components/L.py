@@ -33,8 +33,8 @@ class L(VoltageDefinedComponent):
         self.value = float(self.tokens[3])
         self.is_nonlinear = False
 
-    def stamp(self, M, ZDC, ZAC, D):
-        raise NotImplementedError
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+        D0[-1, -1] *= -1 * elem.value
 
     def __repr__(self):
         """
