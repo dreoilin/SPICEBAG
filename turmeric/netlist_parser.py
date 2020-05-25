@@ -135,7 +135,7 @@ def main_netlist_parser(circ, netlist_lines, models):
     parse_function = {
         'c': lambda line: components.C(line, circ),
         'd': lambda line: parse_elem_diode(line, circ, models),
-        'e': lambda line: parse_elem_vcvs(line, circ),
+        'e': lambda line: components.sources.E(line, circ),
         'f': lambda line: parse_elem_cccs(line, circ),
         'g': lambda line: parse_elem_vccs(line, circ),
         'h': lambda line: components.sources.H(line, circ),
@@ -273,27 +273,6 @@ def parse_elem_diode(line, circ, models=None):
         raise NetlistParseError("parse_elem_diode(): Unknown model id: " + model_label)
     elem = diode.diode(part_id=line_elements[0], n1=n1, n2=n2, model=models[
                        model_label], AREA=Area, ic=ic, off=off)
-    return [elem]
-
-
-def parse_elem_vcvs(line, circ):
-    
-    line_elements = line.split()
-    if len(line_elements) < 6 or (len(line_elements) > 6 and not line_elements[6][0] == "*"):
-        raise NetlistParseError("")
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    ext_sn1 = line_elements[3]
-    ext_sn2 = line_elements[4]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-    sn1 = circ.add_node(ext_sn1)
-    sn2 = circ.add_node(ext_sn2)
-
-    elem = components.sources.EVSource(part_id=line_elements[0], n1=n1, n2=n2, sn1=sn1,
-                            sn2=sn2, value=convert_units(line_elements[5]))
-
     return [elem]
 
 
