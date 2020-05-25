@@ -13,7 +13,7 @@ import numpy as np
 import sys
 
 from . import components
-from . import diode, mosq
+from . import diode
 
 from . import printing
 from . import utilities
@@ -181,9 +181,6 @@ class Circuit(list):
 
         if 'name' not in model_parameters:
             model_parameters.update({'name':model_label})
-        elif model_type == "mosq":
-            model_iter = mosq.mosq_mos_model(**model_parameters)
-            model_iter.name = model_label
         elif model_type == "diode":
             model_iter = diode.diode_model(**model_parameters)
             model_iter.name = model_label
@@ -297,56 +294,6 @@ class Circuit(list):
         self.append(elem)
 
 
-    def add_mos(self, part_id, nd, ng, ns, nb, w, l, model_label, models=None,
-                m=1, n=1):
-        """Adds a mosfet to the circuit (also takes care that the nodes
-        are added as well).
-
-        **Parameters:**
-
-        part_id : string
-            The mos part_id (eg "M1"). The first letter is always M.
-        nd : string
-            The drain node.
-        ng : string
-            The gate node.
-        ns : string
-            The source node.
-        nb : string
-            The bulk node.
-        w : float
-            The gate width.
-        l : float
-            The gate length.
-        model_label : string
-            The model identifier.
-        models : dict, optional
-            The circuit models.
-        m : int, optional
-            Shunt multiplier value. Defaults to 1.
-        n : int, optional
-            Series multiplier value, not always supported. Defaults to 1.
-        """
-        nd = self.add_node(nd)
-        ng = self.add_node(ng)
-        ns = self.add_node(ns)
-        nb = self.add_node(nb)
-
-        if models is None:
-            models = self.models
-
-        if model_label not in models:
-            raise ModelError("Unknown model id: " + model_label)
-
-        if isinstance(models[model_label], mosq.mosq_mos_model):
-            elem = mosq.mosq_device(part_id, nd, ng, ns, nb, w, l,
-                                    models[model_label], m, n)
-        else:
-            raise Exception("Unknown model type for " + model_label)
-
-        self.append(elem)
-
-
     def add_cccs(self, part_id, n1, n2, source_id, value):
         
         n1 = self.add_node(n1)
@@ -427,7 +374,7 @@ class Circuit(list):
                              (index + len(self.nodes_dict)/2 - 1))
         return e
     
-    def gen_matrices(self, time):
+    def gen_matrices(self, time=0):
         n = self.get_nodes_number()
         M0 = np.zeros((n,n))
         ZDC0 = np.zeros((n, 1))

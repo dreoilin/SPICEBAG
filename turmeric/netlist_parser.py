@@ -15,7 +15,7 @@ import logging
 
 from . import circuit
 from . import components
-from . import diode, mosq
+from . import diode
 from . import printing
 
 # analyses syntax
@@ -54,10 +54,7 @@ def parse_models(lines):
                 break
             (label, value) = parse_param_value_from_string(tokens[index])
             model_parameters.update({label.upper(): value})
-        if model_type == "mosq":
-            model_iter = mosq.mosq_mos_model(**model_parameters)
-            model_iter.name = model_label
-        elif model_type == "diode" or model_type == 'd':
+        if model_type == "diode" or model_type == 'd':
             model_parameters.update({'name': model_label})
             model_iter = diode.diode_model(**model_parameters)
         else:
@@ -71,6 +68,7 @@ def parse_models(lines):
 def digest_raw_netlist(filename):
     logging.info(f"Processing netlist `{filename}'")
     directives = []
+    models = []
     model_directives = []
     net_lines = []
     title = ""
@@ -84,7 +82,7 @@ def digest_raw_netlist(filename):
                 continue
             if line.isspace() or line == '' or line[0] == "*":
                 continue
-
+            
             # Directives, models statements, etc.
             if line[0] == ".":
                 tokens = line.split()

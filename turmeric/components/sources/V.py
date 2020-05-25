@@ -5,36 +5,7 @@ import numpy as np
 from ... import utilities
 
 class V(VoltageDefinedComponent):
-    """An ideal voltage source.
 
-    .. image:: images/elem/vsource.svg
-
-    Defaults to a DC voltage source.
-
-    To implement a time-varying source:
-
-    * set ``_time_function`` to an appropriate instance having a
-      ``value(self, time)`` method,
-    * set ``is_timedependent`` to ``True``.
-
-    **Parameters:**
-
-    part_id : string
-        The unique identifier of this element. The first letter should be
-        ``'V'``.
-    n1 : int
-        *Internal* node to be connected to the anode.
-    n2 : int
-        *Internal* node to be connected to the cathode.
-    dc_value : float
-        DC voltage in Volt.
-    ac_value : complex float, optional
-        AC voltage in Volt. Defaults to no AC characteristics,
-        ie :math:`V(\\omega) = 0 \\;\\;\\forall \\omega > 0`.
-
-    """
-
-    #def __init__(self, part_id, n1, n2, dc_value, ac_value=0):
     def __init__(self, line, circ):
         self.net_objs = [Label,Node,Node,ParamDict]
         super().__init__(line)
@@ -171,10 +142,10 @@ class V(VoltageDefinedComponent):
         return return_value
 
     def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
-        (M0, ZDC0, ZAC0, D0, ZT0) = super().stamp(M0, ZDC0, ZAC0, D0, ZT0)
+        (M0, ZDC0, ZAC0, D0, ZT0) = super().stamp(M0, ZDC0, ZAC0, D0, ZT0, time)
         ZDC0[-1, 0] = -1.0 * self.value if self.value is not None else 0.
         ZAC0[-1, 0] = -1.0 * self.ac_value if self.ac_value is not None else 0.
-        ZT0[-1, 0] = -1.0 * self._time_function(0) if self._time_function is not None else 0.
+        ZT0[-1, 0] = -1.0 * self._time_function(time) if self._time_function is not None else 0.
         return (M0, ZDC0, ZAC0, D0, ZT0) 
 
     def V(self, time=None):
