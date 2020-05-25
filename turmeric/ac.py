@@ -70,12 +70,6 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
     M0 = circ.M0
     ZAC0 = circ.ZAC0
     D0 = circ.D0
-    #mats = [M0, ZAC0, D0]
-    #keys = ['M0', 'ZAC0', 'D0']
-    #for mat in zip(keys, mats):
-    #    print(mat)
-    #    
-    #input()
         
     # reduce the matrices
     M = M0[1:, 1:]
@@ -91,7 +85,7 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
                               stype=sweep_type, op=x0, outfile=outfile)
 
     j = np.complex('j')
-    print(fs)
+    
     for f in fs:
         # evaluate the impedance at
         # the current frequency
