@@ -75,7 +75,7 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
     M = M0[1:, 1:]
     ZAC = ZAC0[1:]
     D = D0[1:, 1:]
-    ZAC[0,0] = 1
+    
     if circ.is_nonlinear():
         logging.error("AC analysis does not currently support analysis of \
                       non-linear circuits")
