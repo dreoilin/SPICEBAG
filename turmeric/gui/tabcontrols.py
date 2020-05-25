@@ -16,7 +16,6 @@ class TabEditor(ttk.Notebook):
         self.master.bind('<Control-w>', self.remove_tab)
 
         self.enable_traversal()
-        selidx = 0
 
         self.hiddentabs = []
 
