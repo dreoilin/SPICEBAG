@@ -56,9 +56,9 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
         raise ValueError("ac_analysis(): AC analysis has number of points < 2 & start != stop")
     
     if sweep_type.upper() == options.ac_log_step or sweep_type is None:
-        fs = np.logspace(start, stop, points, endpoint=True)
+        fs = np.logspace(int(start), int(stop), int(points), endpoint=True)
     elif sweep_type.upper() == options.ac_lin_step:
-        fs = np.linspace(start, stop, points, endpoint=True)
+        fs = np.linspace(int(start), int(stop), int(points), endpoint=True)
     else:
         raise ValueError(f"ac_analysis(): unknown sweep type {sweep_type}")
 
@@ -70,7 +70,13 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
     M0 = circ.M0
     ZAC0 = circ.ZAC0
     D0 = circ.D0
-    
+    mats = [M0, ZAC0, D0]
+    keys = ['M0', 'ZAC0', 'D0']
+    for mat in zip(keys, mats):
+        print(mat)
+        
+    input()
+        
     # reduce the matrices
     M = M0[1:, 1:]
     ZAC = ZAC0[1:]
