@@ -199,8 +199,8 @@ class V(VoltageDefinedComponent):
             The values corresponding to ``op_keys``.
         """
         vn1n2 = float(ports_v[0][0])
-        power = self.V() * current
+        power = self.value * current
         op_keys = ['Part ID', "V(n1,n2) [V]", "I(n1->n2) [A]", "P [W]"]
-        op_info = [self.part_id.upper(), self.V(), current, power]
+        op_info = [self.part_id.upper(), self.value, current, power]
         return op_keys, op_info
 
