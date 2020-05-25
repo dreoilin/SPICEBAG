@@ -38,7 +38,7 @@ class C(CurrentDefinedComponent):
         self.n2=circ.add_node(str(self.tokens[2]))
         self.is_nonlinear = False
 
-    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
         D0[self.n1, self.n1] += self.value
         D0[self.n1, self.n2] -= self.value
         D0[self.n2, self.n2] += self.value

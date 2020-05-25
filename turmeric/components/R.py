@@ -39,7 +39,7 @@ class R(CurrentDefinedComponent):
         rep = f"{self.name}{self.part_id} {self.n1} {self.n2} {self.value}"
         return rep
 
-    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
         M0[self.n1, self.n1] += self.g()
         M0[self.n1, self.n2] -= self.g()
         M0[self.n2, self.n1] -= self.g()

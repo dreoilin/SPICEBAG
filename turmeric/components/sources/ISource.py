@@ -42,7 +42,7 @@ class ISource(CurrentDefinedComponent):
         self.is_timedependent = False
         self._time_function = None
 
-    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
         ZDC0[self.n1, 0] += self.dc_value
         ZDC0[self.n2, 0] -= self.dc_value
         ZAC0[self.n1, 0] += self.ac_value

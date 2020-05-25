@@ -427,7 +427,7 @@ class Circuit(list):
                              (index + len(self.nodes_dict)/2 - 1))
         return e
     
-    def gen_matrices(self):
+    def gen_matrices(self, time):
         n = self.get_nodes_number()
         M0 = np.zeros((n,n))
         ZDC0 = np.zeros((n, 1))
@@ -435,18 +435,12 @@ class Circuit(list):
         D0 = np.zeros(M0.shape)
         ZT0 = np.zeros(ZDC0.shape)
 
-        # First, current defined, linear elements
-        # == CD = {R , C , GISource, ISource (time independant)}
         CD = [components.R, components.C, components.sources.GISource, components.sources.ISource]
-        [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0) for elem in self if type(elem) in CD]
+        [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time) for elem in self if type(elem) in CD]
         VD = [components.sources.V,components.sources.EVSource,components.sources.H, components.L]
         for elem in self:
             if type(elem) in VD:
-                (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0)
-
-        #mats = [M0, ZDC0, ZAC0, D0, ZT0]
-        #for n, m in zip(['M0', 'ZDC0', 'ZAC0', 'D0', 'ZT0'],mats):
-        #    print(f"{n}: {m}")
+                (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time)
 
         self.M0   = M0
         self.ZDC0 = ZDC0
@@ -454,32 +448,8 @@ class Circuit(list):
         self.D0   = D0
         self.ZT0  = ZT0 
 
-    # TODO: refactor generation of M0 and ZDC0 into components' classes
-    def generate_M0_and_ZDC0(self):
-        n = self.get_nodes_number()
-        M0 = np.zeros((n,n))
-        ZDC0 = np.zeros((n, 1))
-        ZAC0 = np.zeros(ZDC0.shape)
-        D0 = np.zeros(M0.shape)
-        ZT0 = np.zeros(ZDC0.shape)
-
         # First, current defined, linear elements
         # == CD = {R , C , GISource, ISource (time independant)}
-        CD = [components.R, components.C, components.sources.GISource, components.sources.ISource]
-        [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0) for elem in self if type(elem) in CD]
-        VD = [components.sources.V,components.sources.EVSource,components.sources.H, components.L]
-        for elem in self:
-            if type(elem) in VD:
-                (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0)
-
-        mats = [M0, ZDC0, ZAC0, D0, ZT0]
-        for n, m in zip(['M0', 'ZDC0', 'ZAC0', 'D0', 'ZT0'],mats):
-            print(f"{n}: {m}")
-
-        self.M0 = M0
-        self.ZDC0 = ZDC0
-
-        
         # Next, voltage defined elements
         # == VD = { V (time independant ) , EVSource , H , L }
         # Operations common to all VD elements:
