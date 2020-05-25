@@ -25,8 +25,6 @@ from . import utilities
 from . import results
 from . import solvers as slv
 
-from . import dc_guess
-
 from .utilities import convergence_check
 
 
