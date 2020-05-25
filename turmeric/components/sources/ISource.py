@@ -2,34 +2,6 @@ from ..CurrentDefinedComponent import CurrentDefinedComponent
 import numpy as np
 
 class ISource(CurrentDefinedComponent):
-    """An ideal current source.
-
-    .. image:: images/elem/isource.svg
-
-    Defaults to a DC current source.
-
-    To implement a time-varying source:
-
-    * set ``_time_function`` to an appropriate instance having a
-      ``value(self, time)`` method,
-    * set ``is_timedependent`` to ``True``.
-
-    **Parameters:**
-
-    part_id : string
-        The unique identifier of this element. The first letter should be
-        ``'I'``.
-    n1 : int
-        *Internal* node to be connected to the anode.
-    n2 : int
-        *Internal* node to be connected to the cathode.
-    dc_value : float
-        DC voltage in Ampere.
-    ac_value : complex float, optional
-        AC current in Ampere. Defaults to no AC characteristics,
-        ie :math:`I(\\omega) = 0 \\;\\;\\forall \\omega > 0`.
-
-    """
     def __init__(self, part_id, n1, n2, dc_value=None, ac_value=0):
         self.part_id = part_id
         self.dc_value = dc_value

@@ -2,26 +2,7 @@ from .CurrentDefinedComponent import CurrentDefinedComponent
 from .tokens import rex, Value, Label, Node
 
 class R(CurrentDefinedComponent):
-    """A resistor.
 
-    **Parameters:**
-
-    part_id : string
-        The unique identifier of this element. The first letter should be ``'R'``.
-    n1 : int
-        *Internal* node to be connected to the anode.
-    n2 : int
-        *Internal* node to be connected to the cathode.
-    value : float
-        Resistance in ohms.
-
-     """
-    #
-    #             /\    /\    /\
-    #     n1 o---+  \  /  \  /  \  +---o n2
-    #                \/    \/    \/
-    #
-    #def __init__(self, part_id, n1, n2, value):
     def __init__(self, line, circ):
         self.net_objs = [Label,Node,Node,Value]
         super().__init__(line)

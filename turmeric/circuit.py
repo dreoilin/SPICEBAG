@@ -318,7 +318,7 @@ class Circuit(list):
         sn1 = self.add_node(sn1)
         sn2 = self.add_node(sn2)
 
-        elem = components.sources.EVSource(part_id=part_id, n1=n1, n2=n2, sn1=sn1, sn2=sn2,
+        elem = components.sources.E(part_id=part_id, n1=n1, n2=n2, sn1=sn1, sn2=sn2,
                                 value=value)
 
         self.append(elem)
@@ -331,7 +331,7 @@ class Circuit(list):
         sn1 = self.add_node(sn1)
         sn2 = self.add_node(sn2)
 
-        elem = components.sources.GISource(part_id=part_id, n1=n1, n2=n2, sn1=sn1, sn2=sn2,
+        elem = components.sources.G(part_id=part_id, n1=n1, n2=n2, sn1=sn1, sn2=sn2,
                                 value=value)
 
         self.append(elem)
@@ -346,7 +346,7 @@ class Circuit(list):
             part_id = elem_or_id
         vde_index = 0
         for elem in self:
-            if is_elem_voltage_defined(elem):
+            if isinstance(elem, components.VoltageDefinedComponent):
                 if elem.part_id.upper() == part_id.upper():
                     break
                 else:
@@ -364,7 +364,7 @@ class Circuit(list):
         index = index - len(self.nodes_dict)/2 + 1
         ni = 0
         for e in self:
-            if is_elem_voltage_defined(e):
+            if isinstance(e, components.VoltageDefinedComponent):
                 if index == ni:
                     break
                 else:
@@ -382,18 +382,12 @@ class Circuit(list):
         D0 = np.zeros(M0.shape)
         ZT0 = np.zeros(ZDC0.shape)
 
-        # First, current defined, linear elements
-        # == CD = {R , C , GISource, ISource (time independant)}
-        CD = [components.R, components.C, components.sources.GISource, components.sources.ISource]
+        CD = [components.R, components.C, components.sources.G, components.sources.ISource]
         [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time) for elem in self if type(elem) in CD]
-        VD = [components.sources.V,components.sources.EVSource,components.sources.H, components.L]
+        VD = [components.sources.V,components.sources.E,components.sources.H, components.L]
         for elem in self:
             if type(elem) in VD:
                 (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time)
-
-        #mats = [M0, ZDC0, ZAC0, D0, ZT0]
-        #for n, m in zip(['M0', 'ZDC0', 'ZAC0', 'D0', 'ZT0'],mats):
-        #    print(f"{n}: {m}")
 
         self.M0   = M0
         self.ZDC0 = ZDC0
@@ -401,34 +395,10 @@ class Circuit(list):
         self.D0   = D0
         self.ZT0  = ZT0 
 
-    # TODO: refactor generation of M0 and ZDC0 into components' classes
-    def generate_M0_and_ZDC0(self):
-        n = self.get_nodes_number()
-        M0 = np.zeros((n,n))
-        ZDC0 = np.zeros((n, 1))
-        ZAC0 = np.zeros(ZDC0.shape)
-        D0 = np.zeros(M0.shape)
-        ZT0 = np.zeros(ZDC0.shape)
-
         # First, current defined, linear elements
-        # == CD = {R , C , GISource, ISource (time independant)}
-        CD = [components.R, components.C, components.sources.GISource, components.sources.ISource]
-        [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0) for elem in self if type(elem) in CD]
-        VD = [components.sources.V,components.sources.EVSource,components.sources.H, components.L]
-        for elem in self:
-            if type(elem) in VD:
-                (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0)
-
-        mats = [M0, ZDC0, ZAC0, D0, ZT0]
-        for n, m in zip(['M0', 'ZDC0', 'ZAC0', 'D0', 'ZT0'],mats):
-            print(f"{n}: {m}")
-
-        self.M0 = M0
-        self.ZDC0 = ZDC0
-
-        
+        # == CD = {R , C , G, ISource (time independant)}
         # Next, voltage defined elements
-        # == VD = { V (time independant ) , EVSource , H , L }
+        # == VD = { V (time independant ) , E , H , L }
         # Operations common to all VD elements:
         #index = M0.shape[0]  # get_matrix_size(M0)[0]
         #M0 = utilities.expand_matrix(M0, add_a_row=True, add_a_col=True)
@@ -442,73 +412,6 @@ class Circuit(list):
         # Finally FISource
 
 
-    # generate unreduced dynamic matrix. Might be good to bundle 
-    # this in with MNA gen and have a separate get function
-    def generate_D0(self, shape):
-    
-        D0 = np.zeros(self.M0.shape[0])
-        nv = self.get_nodes_number()
-        i_eq = 0 #each time we find a vsource or vcvs or ccvs, we'll add one to this.
-        for elem in self:
-            if is_elem_voltage_defined(elem) and not isinstance(elem, components.L):
-                i_eq = i_eq + 1
-            elif isinstance(elem, components.C):
-                n1 = elem.n1
-                n2 = elem.n2
-                D0[n1, n1] = D0[n1, n1] + elem.value
-                D0[n1, n2] = D0[n1, n2] - elem.value
-                D0[n2, n2] = D0[n2, n2] + elem.value
-                D0[n2, n1] = D0[n2, n1] - elem.value
-            elif isinstance(elem, components.L):
-                D0[ nv + i_eq, nv + i_eq ] = -1 * elem.value
-                
-                # carry on as usual
-                i_eq = i_eq + 1
-    
-
-        return D0    
-    
-    # TODO: move stamping of ZAC0 into components' constructors
-        # if you are clever you should be able to alter this function
-        # to generate ZAC0 using existing stamps and then slice matrix at end
-        # talk to me about this
-        # this method is called thousands of times in transient. We might need a quicker solution
-    def generate_ZAC(self, time=None):
-        
-        # index to count voltage defined elements
-        v_index = 0
-        ZAC_size = self.M0.shape[0]-1
-        NNODES = self.get_nodes_number()
-        # create empty array to store ZAC0
-        ZAC = np.zeros((ZAC_size, 1))
-        for elem in self:
-            if (isinstance(elem, components.sources.V) or isinstance(elem, components.sources.ISource)) and elem.is_timedependent:
-                if isinstance(elem, components.sources.V):
-                    ZAC[NNODES - 1 + v_index, 0] = -1 * elem.V(time)
-                elif isinstance(elem, components.sources.ISource):
-                    if elem.n1:
-                        ZAC[elem.n1 - 1, 0] += elem.I(time)
-                    if elem.n2:
-                        ZAC[elem.n2 - 1, 0] += - elem.I(time)
-            if is_elem_voltage_defined(elem):
-                v_index += 1
-        # all done
-        self.ZAC = ZAC
-
-# STATIC METHODS
-# this should definitely be a member variable
-# a sytematic way of sorting member variables would be nice
-# TODO: make member function of Circuit
-def is_elem_voltage_defined(elem):
-    
-    if isinstance(elem, components.sources.V) or isinstance(elem, components.sources.EVSource) or \
-        isinstance(elem, components.sources.H) or isinstance(elem, components.L) \
-            or (hasattr(elem, "is_voltage_defined") and elem.is_voltage_defined):
-        return True
-    else:
-        return False
-    
-    
 class NodeNotFoundError(Exception):
     pass
 
