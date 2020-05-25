@@ -54,7 +54,7 @@ class GISource(CurrentDefinedComponent):
         self.sn2 = sn2
         self.is_nonlinear = False
 
-    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
         M0[self.n1, self.sn1] = M0[self.n1, self.sn1] + self.alpha
         M0[self.n1, self.sn2] = M0[self.n1, self.sn2] - self.alpha
         M0[self.n2, self.sn1] = M0[self.n2, self.sn1] - self.alpha

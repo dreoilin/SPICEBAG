@@ -42,13 +42,13 @@ class ISource(CurrentDefinedComponent):
         self.is_timedependent = False
         self._time_function = None
 
-    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
-        ZDC0[self.n1, 0] += self.dc_value
-        ZDC0[self.n2, 0] -= self.dc_value
-        ZAC0[self.n1, 0] += self.ac_value
-        ZAC0[self.n2, 0] -= self.ac_value
-        ZT0[self.n1, 0]  += self._time_function(0)
-        ZT0[self.n2, 0]  -= self._time_function(0)
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
+        ZDC0[self.n1, 0] += self.dc_value if self.dc_value is not None else 0.
+        ZDC0[self.n2, 0] -= self.dc_value if self.dc_value is not None else 0.
+        ZAC0[self.n1, 0] += self.ac_value if self.ac_value is not None else 0.
+        ZAC0[self.n2, 0] -= self.ac_value if self.ac_value is not None else 0.
+        ZT0[self.n1, 0]  += self._time_function(time) if self.is_timedependent else 0.
+        ZT0[self.n2, 0]  -= self._time_function(time) if self.is_timedependent else 0.
 
     def __str__(self):
         rep = ""

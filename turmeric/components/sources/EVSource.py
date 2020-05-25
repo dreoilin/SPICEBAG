@@ -46,7 +46,7 @@ class EVSource(VoltageDefinedComponent):
         self.sn2 = sn2
         self.is_nonlinear = False
 
-    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
         (M0, ZDC0, ZAC0, D0, ZT0) = super().stamp(M0, ZDC0, ZAC0, D0, ZT0)
         M0[-1, elem.sn1] = -float(elem.alpha)
         M0[-1, elem.sn2] =  float(elem.alpha)

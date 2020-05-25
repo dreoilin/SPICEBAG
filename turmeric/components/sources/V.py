@@ -170,11 +170,11 @@ class V(VoltageDefinedComponent):
 
         return return_value
 
-    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
         (M0, ZDC0, ZAC0, D0, ZT0) = super().stamp(M0, ZDC0, ZAC0, D0, ZT0)
         ZDC0[-1, 0] = -1.0 * self.value if self.value is not None else 0.
         ZAC0[-1, 0] = -1.0 * self.ac_value if self.ac_value is not None else 0.
-        ZT0[-1, 0] = -1.0 * self._time_function(0) if self._time_function is not None else 0.
+        ZT0[-1, 0] = -1.0 * self._time_function(time) if self._time_function is not None else 0.
         return (M0, ZDC0, ZAC0, D0, ZT0) 
 
     def V(self, time=None):

@@ -66,7 +66,7 @@ class H(VoltageDefinedComponent):  # H
             raise ValueError(f"Could not find source `{label}' specified before parsing CCVS `{self.part_id}'")
         self.source_id = vde_index # + circ.get_nodes_number() # TODO: Until this is correct, H not usable
 
-    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0):
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
         (M0, ZDC0, ZAC0, D0, ZT0) = super().stamp(M0, ZDC0, ZAC0, D0, ZT0)
         M0[-1, n_of_nodes+index_source] = 1.0 * elem.alpha
         return (M0, ZDC0, ZAC0, D0, ZT0) 
