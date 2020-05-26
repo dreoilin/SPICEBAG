@@ -9,9 +9,9 @@ Created on Fri May  1 11:23:45 2020
 import sys
 import logging
 
-# LU algorithms from /FORTRAN/
 from .FORTRAN.LU import ludcmp, lubksb
 from .FORTRAN.DC_SUBRS import gmin_mat
+from .FORTRAN.DET import determinant
 
 from numpy.linalg import norm
 import numpy as np    
