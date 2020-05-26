@@ -464,8 +464,8 @@ class ac_solution(solution, _mutable_data):
     def __init__(self, circ, start, stop, points, stype, op, outfile):
         solution.__init__(self, circ, outfile)
         self.sol_type = "AC"
-        self.linearization_op = op
         self.stype = stype
+        self.linearization = 'op'
         self.ostart, self.ostop, self.opoints = start, stop, points
 
         self.variables += ["f"]

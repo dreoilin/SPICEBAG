@@ -7,7 +7,7 @@ Created on Mon May 25 18:07:33 2020
 """
 import sys
 import logging
-
+import numpy as np
 
 # linear components
 from . import components
@@ -62,30 +62,31 @@ specs = {'dc': {'tokens': ({
 
 def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True, x0=None, outfile="stdout"):
     
-    logging.info("Starting DC analysis:")
+    logging.info("Starting DC analysis...")
     elem_type, elem_descr = source[0].lower(), source.lower()
     sweep_label = elem_type[0].upper() + elem_descr[1:]
-
-    if sweep_type == options.dc_log_step and stop - start < 0:
-        logging.error("DC analysis has log sweeping and negative stepping.")
-        sys.exit(1)
-    if (stop - start) * step < 0:
-        raise ValueError("Unbounded stepping in DC analysis.")
-
+    
     points = (stop - start) / step + 1
     sweep_type = sweep_type.upper()[:3]
-
-    if sweep_type == options.dc_log_step:
-        dc_iter = utilities.log_axis_iterator(start, stop, points=points)
-    elif sweep_type == options.dc_lin_step:
-        dc_iter = utilities.lin_axis_iterator(start, stop, points=points)
+    
+    if sweep_type == 'LOG' and stop - start < 0:
+        logging.error("dc_analysis(): DC analysis has log sweeping and negative stepping.")
+        raise ValueError
+    if (stop - start) * step < 0:
+        logging.error("Unbounded stepping in DC analysis.")
+        raise ValueError
+    
+    if sweep_type == 'LOG':
+        dcs = np.logspace(int(start), np.log(int(stop)), num=int(points), endpoint=True)
+    elif sweep_type == 'LIN':
+        dcs = np.linspace(int(start), int(stop), num=int(points), endpoint=True)
     else:
-        logging.error("Unknown sweep type: %s" % (sweep_type,))
-        sys.exit(1)
+        logging.error(f"dc_analysis(): unknown sweep type {sweep_type}")
+        raise ValueError
 
     if elem_type != 'v' and elem_type != 'i':
-        logging.error("Sweeping is possible only with voltage and current sources. (" + str(elem_type) + ")")
-        sys.exit(1)
+        logging.error("Sweeping is possible only with voltage and current sources.")
+        raise ValueError(f"Source is type: {str(elem_type)}")
 
     source_elem = None
     for index in range(len(circ)):
