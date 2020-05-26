@@ -14,18 +14,18 @@ class V(VoltageDefinedComponent):
         types = {'vdc':0,'vac':0,'pulse':7,'exp':6,'sin':5,'sffm':5,'am':5}
         params = self.tokens[3].value
         try:
-            param_number = types[params['type']]
+            params['type']
         except AttributeError as e:
             logging.exception(f"Type of source not specified or source type is unsupported in `{line}'")
 
         dc_value = None
         ac_value = None
-        if params['type'] == 'vdc':
+        if 'vdc' in params['type']:
             if 'vdc' in params:
                 dc_value = float(params['vdc'])
             else:
                 raise KeyError(f"When specifying a dc voltage source, specify its value (vdc=<value>) : `{line}'")
-        elif params['type'] == 'vac':
+        if 'vac' in params['type']:
             if 'vac' in params:
                 ac_value = float(params['vac'])
             else:
@@ -147,28 +147,6 @@ class V(VoltageDefinedComponent):
         ZAC0[-1, 0] = -1.0 * self.ac_value if self.ac_value is not None else 0.
         ZT0[-1, 0] = -1.0 * self._time_function(time) if self._time_function is not None else 0.
         return (M0, ZDC0, ZAC0, D0, ZT0) 
-
-    def V(self, time=None):
-        """Evaluate the voltage applied by the voltage source.
-
-        If ``time`` is not supplied, or if it is set to ``None``, or if the
-        source is only specified for DC, returns ``dc_value``.
-
-        **Parameters:**
-
-        time : float or None, optional
-            The time at which the voltage is evaluated, if any.
-
-        **Returns:**
-
-        V : float
-            The voltage, in Volt.
-        """
-
-        if (not self.is_timedependent or self._time_function is None) or (time is None and self.value is not None):
-            return self.value
-        else:
-            return self._time_function(time)
 
     def __repr__(self):
         rep = f"{self.name}{self.part_id} {self.n1} {self.n2} "

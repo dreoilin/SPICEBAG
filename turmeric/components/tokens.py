@@ -118,7 +118,15 @@ class ParamDict(NetlistToken):
         d = {}
         for g in m:
             p = KVParam(g)
-            d.update({p.key : p.value})
+            if p.key in d:
+                if isinstance(d[p.key],list):
+                    d[p.key].append(p.value)
+                else:
+                    l = [d[p.key]]
+                    l.append(p.value)
+                    d[p.key] = l
+            else:
+                d.update({p.key : p.value})
         super().__init__(d)
 
     @classproperty
