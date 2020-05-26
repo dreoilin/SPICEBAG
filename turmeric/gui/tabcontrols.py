@@ -1,12 +1,12 @@
 from tkinter import *
 from tkinter import ttk
 
+from .statusbar import Statusbar
 
 class TabEditor(ttk.Notebook):
     def __init__(self,master):
         super().__init__(master)
         self.master = master
-        #nb = ttk.Notebook(self.master)
         self.grid(row=0,column=0,sticky="nsew")
         self.tabs = []
 
