@@ -127,7 +127,7 @@ def main(filename, outfile="stdout"):
 
     results = {}
     for an in analyses:
-        logging.info("Requested an.:")
+        logging.info(f"Analysis {an}:")
         # print to logger
         printing.print_analysis(an)
         
