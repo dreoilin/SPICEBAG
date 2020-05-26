@@ -6,21 +6,9 @@ Created on Fri May  1 11:23:45 2020
 @author: cian
 """
 
-def get_df(buf, step):
+def get_coefs(buf, step):
     """
-    (C1, C0)
-
-        The derivative may be written as:
-
-        .. math::
-
-            d(x(n+1))/dt = C1 x(n+1) + C0
-
-        `x_lte_coeff` is the coefficient of the Local Truncation Error,
-        `predict_x` is the predicted value for :math:`x` and `predict_lte_coeff`
-        is the LTE coefficient for the prediction.
-
-    :raises ValueError: if the `pv_array` is malformed.
+    
     """
     # check if appropriate values 
     # our method needs x(n) dx(n)/dt

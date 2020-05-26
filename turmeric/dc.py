@@ -12,26 +12,19 @@ import logging
 # LU algorithms from /FORTRAN/
 from .FORTRAN.LINALG import ludcmp, lubksb
 from .FORTRAN.DC_SUBRS import gmin_mat
-# vector norm
-from numpy.linalg import norm
 
+from numpy.linalg import norm
 import numpy as np    
 
 # linear components
-from . import components
-# nl models
+from .components import VoltageDefinedComponent
 from . import constants
 from . import options
-# from . import circuit
 from . import utilities
 from . import results
 from . import solvers as slv
 
-from . import dc_guess
-
 from .utilities import convergence_check
-
-
     
 specs = {'op': {
     'tokens': ({
@@ -51,49 +44,7 @@ specs = {'op': {
                'default': None
                }
                )
-},
-    'dc': {'tokens': ({
-                      'label': 'source',
-                      'pos': 0,
-                      'type': str,
-                      'needed': True,
-                      'dest': 'source',
-                      'default': None
-                      },
-                      {
-                      'label': 'start',
-                      'pos': 1,
-                      'type': float,
-                      'needed': True,
-                      'dest': 'start',
-                      'default': None
-                      },
-                      {
-                      'label': 'stop',
-                      'pos': 2,
-                      'type': float,
-                      'needed': True,
-                      'dest': 'stop',
-                      'default': None
-                      },
-                      {
-                      'label': 'step',
-                      'pos': 3,
-                      'type': float,
-                      'needed': True,
-                      'dest': 'step',
-                      'default': None
-                      },
-                      {
-                      'label': 'type',
-                      'pos': None,
-                      'type': str,
-                      'needed': False,
-                      'dest': 'sweep_type',
-                      'default': options.dc_lin_step
-                      }
-                     )
-           }
+    }
 }
     
 
@@ -137,7 +88,7 @@ def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
     
     for solver in solvers:
         while (solver.failed is not True) and (not converged):
-            logging.info("Now solving with: %s" % solver.name)
+            logging.info(f"Now solving with: {solver.name}")
             # 1. Augment the matrices
             M_, ZDC_ = solver.operate_on_M_and_ZDC(np.array(M),\
                                     np.array(ZDC), np.array(Gmin))
@@ -181,138 +132,73 @@ def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
     return (x, error, converged, iters)
 
 
-def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True, x0=None, outfile="stdout"):
-    
-    logging.info("Starting DC analysis:")
-    elem_type, elem_descr = source[0].lower(), source.lower()
-    sweep_label = elem_type[0].upper() + elem_descr[1:]
-
-    if sweep_type == options.dc_log_step and stop - start < 0:
-        logging.error("DC analysis has log sweeping and negative stepping.")
-        sys.exit(1)
-    if (stop - start) * step < 0:
-        raise ValueError("Unbounded stepping in DC analysis.")
-
-    points = (stop - start) / step + 1
-    sweep_type = sweep_type.upper()[:3]
-
-    if sweep_type == options.dc_log_step:
-        dc_iter = utilities.log_axis_iterator(start, stop, points=points)
-    elif sweep_type == options.dc_lin_step:
-        dc_iter = utilities.lin_axis_iterator(start, stop, points=points)
-    else:
-        logging.error("Unknown sweep type: %s" % (sweep_type,))
-        sys.exit(1)
-
-    if elem_type != 'v' and elem_type != 'i':
-        logging.error("Sweeping is possible only with voltage and current sources. (" + str(elem_type) + ")")
-        sys.exit(1)
-
-    source_elem = None
-    for index in range(len(circ)):
-        if circ[index].part_id.lower() == elem_descr:
-            if elem_type == 'v':
-                if isinstance(circ[index], components.sources.V):
-                    source_elem = circ[index]
-                    break
-            if elem_type == 'i':
-                if isinstance(circ[index], components.sources.ISource):
-                    source_elem = circ[index]
-                    break
-    if not source_elem:
-        raise ValueError(".DC: source %s was not found." % source)
-
-    if isinstance(source_elem, components.sources.V):
-        initial_value = source_elem.value
-    else:
-        initial_value = source_elem.dc_value
-
-    x = x0
-
-    sol = results.dc_solution(
-        circ, start, stop, sweepvar=sweep_label, stype=sweep_type, outfile=outfile)
-
-    logging.info("Solving... ")
-
-    # sweep setup
-    
-    index = 0
-    for sweep_value in dc_iter:
-        index = index + 1
-        if isinstance(source_elem, components.sources.V):
-            source_elem.value = sweep_value
-        else:
-            source_elem.dc_value = sweep_value
-        # silently calculate the op
-        x = op_analysis(circ, x0=x, guess=guess, verbose=0)
-        if x is None:
-            if not options.dc_sweep_skip_allowed:
-                logging.info("Could't solve the circuit for sweep value:", start + index * step)
-                solved = False
-                break
-            else:
-                logging.info("Skipping sweep value:", start + index * step)
-                continue
-        solved = True
-        sol.add_op(sweep_value, x)
-
-        
-    if solved:
-        logging.info("done")
-
-    # clean up
-    if isinstance(source_elem, components.sources.V):
-        source_elem.value = initial_value
-    else:
-        source_elem.dc_value = initial_value
-
-    return sol if solved else None
-
-
 def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     
-    if not options.dc_use_guess:
-        guess = False
+    """
+    This function is the entry point for an operating point analysis
+    The analysis sets up the MNA matrices using a circuit object and constructs
+    the Gmin matrix used in the dc solve homopothies
     
-    logging.debug("Getting M0 and ZDC0 from circuit")
+    A circuit solution is attempted twice:
+        - Once with a Gmin matrix and
+        - a second time without (to enhance results)
+        
+    If the analysis cannot find a solution without Gmin, the Gmin solution is
+    returned with a warning. In this case, a solution is heavily dependent on
+    the minimum conductance to ground.
+    
+    If the circuit cannot be solved using any of the available solving methods,
+    the special value None is returned
+    """
+    
+    logging.debug("op_analysis(): getting M0 and ZDC0 from circuit")
     # unreduced MNA matrices computed by the circuit object
     M0 = circ.M0
     ZDC0 = circ.ZDC0
     # now create reduce matrices (used for calculation purposes)
-    logging.debug("Reducing MNA matrices")
+    logging.debug("op_analysis(): Reducing M0 and ZDC0 matrices")
     M = M0[1:, 1:]
     ZDC = ZDC0[1:]
     
-    logging.info("Starting operating point analysis")
+    logging.info("Beginning operating point analysis")
     
+    ##########################################################################
+    # Set up auxiliary solving assistance
+    ##########################################################################
+    
+    ### This calls a function to analyse the circuit topology and try to 
+    # compute an educational guess as to where the values will converge
     # A guess is only needed if
     # 1. We don't already have one
     # 2. Circuit contains non-linear elements
     # 3. User has specified to use DC guess
     if x0 is None and guess and circ.is_nonlinear():
-        x0 = dc_guess.get_dc_guess(circ, verbose=5)
+        logging.debug("op_analysis(): creating a (rough) estimate")
+        x0 = dc_estimator(circ)
 
-    ##########################################################################
-    # Attempt to solve with Gmin
-    ##########################################################################
-    logging.info("Constructing Gmin matrix")
+    logging.debug("op_analysis(): constructing Gmin matrix")
     # take away a single node because we have reduced M
     Gmin_matrix = gmin_mat(options.gmin, M.shape[0], circ.get_nodes_number()-1)
-    (x_min, e_min, converged, iters_min) = dc_solve(M, ZDC,
-                                              circ, Gmin=Gmin_matrix, x0=x0)
     ##########################################################################
     
+    logging.info("op_analysis(): solving with Gmin")
+    # now solve
+    (x_min, e_min, converged, iters_min) = dc_solve(M, ZDC,
+                                              circ, Gmin=Gmin_matrix, x0=x0)
+    
+    # convergence specifies a solution, but using Gmin
     if converged:
         # Create an op solution object
         op_min = results.op_solution(
             x_min, e_min, circ, outfile=outfile, iterations=iters_min)
         # now try without Gmin
-        logging.info("Now attempting without Gmin:")
+        logging.info("op_analysis(): now attempting without Gmin:")
         (x, e, solved, iters) = dc_solve(
             M, ZDC, circ, Gmin=None, x0=x_min)
     else:
         solved = False
-
+    
+    # solution specifies solving without Gmin
     if converged and not solved:
         logging.error("Can't solve without Gmin.")
         logging.warning("Solution is highly dependent on Gmin")
@@ -320,6 +206,7 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
         op_min.write_to_file(filename='stdout')
         opsolution = op_min
     elif converged and solved:
+        # this is ideal - we have solved without Gmin
         op = results.op_solution(
             x, e, circ, outfile=outfile, iterations=iters_min + iters)
         op.gmin = 0
@@ -479,3 +366,136 @@ def get_td(dx, locked_nodes, n=-1):
     return td
 
 
+def dc_estimator(circ):
+
+    nv = circ.get_nodes_number()
+    M = np.zeros((1, nv))
+    T = np.zeros((1, 1))
+    index = 0
+    v_eq = 0  # number of current equations
+    one_element_with_dc_guess_found = False
+
+    for elem in circ:
+        # In the meanwhile, check how many current equations are
+        # required to solve the circuit
+        if isinstance(elem, VoltageDefinedComponent):
+            v_eq = v_eq + 1
+        # This is the main focus: build a system of equations (M*x = T)
+        if hasattr(elem, "dc_guess") and elem.dc_guess is not None:
+            if not one_element_with_dc_guess_found:
+                one_element_with_dc_guess_found = True
+            if elem.is_nonlinear:
+                port_index = 0
+                for (n1, n2) in elem.ports:
+                    if n1 == n2:
+                        continue
+                    if index:
+                        M = utilities.expand_matrix(M, add_a_row=True,
+                                                    add_a_col=False)
+                        T = utilities.expand_matrix(T, add_a_row=True,
+                                                    add_a_col=False)
+                    M[index, n1] = +1
+                    M[index, n2] = -1
+                    T[index] = elem.dc_guess[port_index]
+                    port_index = port_index + 1
+                    index = index + 1
+            else:
+                if elem.n1 == elem.n2:
+                    continue
+                if index:
+                    M = utilities.expand_matrix(M, add_a_row=True,
+                                                add_a_col=False)
+                    T = utilities.expand_matrix(T, add_a_row=True,
+                                                add_a_col=False)
+                M[index, elem.n1] = +1
+                M[index, elem.n2] = -1
+                T[index] = elem.dc_guess[0]
+                index = index + 1
+
+    M = utilities.remove_row_and_col(M, rrow=10 * M.shape[0], rcol=0)
+
+    if not one_element_with_dc_guess_found:
+        #if verbose == 5:
+        #    print("DBG: get_dc_guess(): no element has a dc_guess")
+       # elif verbose <= 3:
+        #    print("skipped.")
+        #return None
+        pass
+
+    # We wish to find the linearly dependent lines of the M matrix.
+    # The matrix is made by +1, -1, 0 elements.
+    # Hence, if two lines are linearly dependent, one of these equations
+    # has to be satisfied: (L1, L2 are two lines)
+    # L1 + L2 = 0 (vector)
+    # L2 - L1 = 0 (vector)
+    # This is tricky, because I wish to remove lines of the matrix while
+    # browsing it.
+    # We browse the matrix by line from bottom up and compare each line
+    # with the upper lines. If a linearly dep. line is found, we remove
+    # the current line.
+    # Then break from the loop, get the next line (bottom up), which is
+    # the same we were considering before; compare with the upper lines..
+    # Not optimal, but it works.
+    for i in range(M.shape[0] - 1, -1, -1):
+        for j in range(i - 1, -1, -1):
+            # print i, j, M[i, :], M[j, :]
+            dummy1 = M[i, :] - M[j, :]
+            dummy2 = M[i, :] + M[j, :]
+            if not dummy1.any() or not dummy2.any():
+                # print "REM:", M[i, :]
+                M = utilities.remove_row(M, rrow=i)
+                T = utilities.remove_row(T, rrow=i)
+                break
+
+    # Remove empty columns:
+    # If a column is empty, we have no guess regarding the corresponding
+    # node. It makes the matrix singular. -> Remove the col & remember
+    # that we are _not_ calculating a guess for it.
+    removed_index = []
+    for i in range(M.shape[1] - 1, -1, -1):
+        if not M[:, i].any():
+            M = utilities.remove_row_and_col(M, rrow=M.shape[0], rcol=i)
+            removed_index.append(i)
+
+    # Now, we have a set of equations to be solved.
+    # There are three cases:
+    # 1. The M matrix has a different number of rows and columns.
+    #    We use the Moore-Penrose matrix inverse to get
+    #    the shortest length least squares solution to the problem
+    #          M*x + T = 0
+    # 2. The matrix is square.
+    #    It seems that if the circuit is not pathological,
+    #    we are likely to find a solution (the matrix has det != 0).
+    #    I'm not sure about this though.
+
+    if M.shape[0] != M.shape[1]:
+        Rp = np.dot(np.linalg.pinv(M), T)
+    else:  # case M.shape[0] == M.shape[1], use normal
+        if np.linalg.det(M) != 0:
+            try:
+                Rp = np.dot(np.linalg.inv(M), T)
+            except np.linalg.linalg.LinAlgError:
+                eig = np.linalg.eig(M)[0]
+                cond = abs(eig).max() / abs(eig).min()
+                
+                return None
+        else:
+            
+            return None
+
+    # Now we want to:
+    # 1. Add voltages for the nodes for which we have no clue to guess.
+    # 2. Append to each vector of guesses the values for currents in
+    #    voltage defined elem.
+    # Both them are set to 0
+    for index in removed_index:
+        Rp = np.concatenate((np.concatenate((Rp[:index, 0].reshape((-1, 1)),
+                                             np.zeros((1, 1))), axis=0),
+                             Rp[index:, 0].reshape((-1, 1))), axis=0)
+    # add the 0s for the currents due to the voltage defined
+    # elements (we have no guess for those...)
+    if v_eq > 0:
+        Rp = np.concatenate((Rp, np.zeros((v_eq, 1))), axis=0)
+
+
+    return Rp

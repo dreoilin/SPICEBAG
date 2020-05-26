@@ -1,21 +1,7 @@
-# -*- coding: iso-8859-1 -*-
-# Copyright 2006 Giuseppe Venturini
+from ..VoltageDefinedComponent import VoltageDefinedComponent
+from ..tokens import rex, Value, Label, Node
 
-# This file is part of the ahkab simulator.
-#
-# Ahkab is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 2 of the License.
-#
-# Ahkab is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License v2
-# along with ahkab.  If not, see <http://www.gnu.org/licenses/>.
-from ..Component import Component
-class HVSource(Component):  # H
+class H(VoltageDefinedComponent):  # H
 
     """Linear current-controlled voltage source
 
@@ -59,14 +45,38 @@ class HVSource(Component):  # H
 
     """
 
-    def __init__(self, part_id, n1, n2, value, source_id):
-        self.part_id = part_id
-        self.n1 = n1
-        self.n2 = n2
-        self.alpha = value
-        self.source_id = source_id
+    def __init__(self, line, circ):
+        'H<string> n1 n2 <label> <constant>'
+        self.net_objs = [Label,Node,Node,Label,Value]
+        super().__init__(line)
+        self.part_id = str(self.tokens[0])
+        self.n1 = circ.add_node(str(self.tokens[1]))
+        self.n2 = circ.add_node(str(self.tokens[2]))
+        controlling_label = str(self.tokens[3])
+        self.alpha = float(self.tokens[4])
         self.is_nonlinear = False
-        self.is_symbolic = True
+
+        vde_index = 0
+        for elem in [ e for e in circ if isinstance(self,VoltageDefinedComponent)]:
+            if elem.part_id.upper() == controlling_label.upper():
+                break
+            else:
+                vde_index += 1
+        else:
+            raise ValueError(f"Could not find source `{label}' specified before parsing CCVS `{self.part_id}'")
+        self.source_id = vde_index # + circ.get_nodes_number() # TODO: Until this is correct, H not usable
+
+    def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
+        (M0, ZDC0, ZAC0, D0, ZT0) = super().stamp(M0, ZDC0, ZAC0, D0, ZT0)
+        M0[-1, n_of_nodes+index_source] = 1.0 * elem.alpha
+        return (M0, ZDC0, ZAC0, D0, ZT0) 
+
+    def __repr__(self):
+        """
+        H<string> n1 n2 <label> <constant>
+        """
+        return f"H{self.part_id} {self.n1} {self.n2} {self.source_id} {self.alpha}"
+
 
     def get_netlist_elem_line(self, nodes_dict):
         """A netlist line that, parsed, evaluates to the same instance

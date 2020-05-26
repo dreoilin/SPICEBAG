@@ -15,11 +15,12 @@ import logging
 
 from . import circuit
 from . import components
-from . import diode, mosq
+from . import diode
 from . import printing
 
 # analyses syntax
 from .dc import specs as dc_spec
+from .dc_sweep import specs as sweep_specs
 from .ac import specs as ac_spec
 from .transient import specs as tran_spec
 from .time_functions import time_fun_specs
@@ -27,7 +28,7 @@ from .time_functions import sin, pulse, exp, sffm, am
 
 
 specs = {}
-for i in dc_spec, ac_spec, tran_spec:
+for i in dc_spec, sweep_specs, ac_spec, tran_spec:
     specs.update(i)
 
 time_functions = {}
@@ -54,10 +55,7 @@ def parse_models(lines):
                 break
             (label, value) = parse_param_value_from_string(tokens[index])
             model_parameters.update({label.upper(): value})
-        if model_type == "mosq":
-            model_iter = mosq.mosq_mos_model(**model_parameters)
-            model_iter.name = model_label
-        elif model_type == "diode" or model_type == 'd':
+        if model_type == "diode" or model_type == 'd':
             model_parameters.update({'name': model_label})
             model_iter = diode.diode_model(**model_parameters)
         else:
@@ -71,6 +69,7 @@ def parse_models(lines):
 def digest_raw_netlist(filename):
     logging.info(f"Processing netlist `{filename}'")
     directives = []
+    models = []
     model_directives = []
     net_lines = []
     title = ""
@@ -84,7 +83,7 @@ def digest_raw_netlist(filename):
                 continue
             if line.isspace() or line == '' or line[0] == "*":
                 continue
-
+            
             # Directives, models statements, etc.
             if line[0] == ".":
                 tokens = line.split()
@@ -126,7 +125,8 @@ def parse_network(filename):
     circ += main_netlist_parser(circ, net_lines, models)
     # FIXME: surely models should be assigned through the constructor
     circ.models = models
-    circ.generate_M0_and_ZDC0()
+    #circ.generate_M0_and_ZDC0()
+    circ.gen_matrices()
 
     return (circ, analyses)
 
@@ -136,13 +136,12 @@ def main_netlist_parser(circ, netlist_lines, models):
     parse_function = {
         'c': lambda line: components.C(line, circ),
         'd': lambda line: parse_elem_diode(line, circ, models),
-        'e': lambda line: parse_elem_vcvs(line, circ),
+        'e': lambda line: components.sources.E(line, circ),
         'f': lambda line: parse_elem_cccs(line, circ),
-        'g': lambda line: parse_elem_vccs(line, circ),
-        'h': lambda line: parse_elem_ccvs(line, circ),
+        'g': lambda line: components.sources.G(line, circ),
+        'h': lambda line: components.sources.H(line, circ),
         'i': lambda line: parse_elem_isource(line, circ),
         'l': lambda line: components.L(line, circ),
-        'm': lambda line: parse_elem_mos(line, circ, models),
         'r': lambda line: components.R(line, circ),
         'v': lambda line: components.sources.V(line,circ)
     }
@@ -164,33 +163,7 @@ def main_netlist_parser(circ, netlist_lines, models):
     return elements
 
 
-def parse_elem_inductor(line, circ):
-    
-    line_elements = line.split()
-    if len(line_elements) < 4 or (len(line_elements) > 5 and not line_elements[6][0] == "*"):
-        raise NetlistParseError("%s: malformed line" % __name__)
-
-    ic = None
-    if len(line_elements) == 5 and not line_elements[4][0] == '*':
-        (label, value) = parse_param_value_from_string(line_elements[4])
-        if label == "ic":
-            ic = convert_units(value)
-        else:
-            raise NetlistParseError("%s: unknown parameter " % __name__ + label)
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-
-    elem = components.L(part_id=line_elements[0], n1=n1, n2=n2,
-                            value=convert_units(line_elements[3]), ic=ic)
-
-    return [elem]
-
-
 def parse_elem_isource(line, circ):
-    
     line_elements = line.split()
     if len(line_elements) < 3:
         raise NetlistParseError("parse_elem_isource(): malformed line")
@@ -304,83 +277,6 @@ def parse_elem_diode(line, circ, models=None):
     return [elem]
 
 
-def parse_elem_mos(line, circ, models):
-    
-    line_elements = line.split()
-    if len(line_elements) < 6:
-        raise NetlistParseError("parse_elem_mos(): required parameters are missing.")
-
-    model_label = line_elements[5]
-
-    w = None
-    l = None
-    m = 1
-    n = 1
-    for index in range(6, len(line_elements)):
-        if line_elements[index][0] == '*':
-            break
-        param, value = parse_param_value_from_string(line_elements[index])
-        if param == "w":
-            w = convert_units(value)
-        elif param == "l":
-            l = convert_units(value)
-        elif param == "m":
-            m = convert_units(value)
-        elif param == "n":
-           n = convert_units(value)
-        else:
-            raise NetlistParseError("parse_elem_mos(): unknown parameter " + param)
-
-    if (w is None) or (l is None):
-        raise NetlistParseError('parse_elem_mos(): required parameter ' +
-                                'w'*(w is None) + ' and '*
-                                (w is None and l is None) + 'l'*(l is None)+
-                                'missing.')
-        
-    ext_nd = line_elements[1]
-    ext_ng = line_elements[2]
-    ext_ns = line_elements[3]
-    ext_nb = line_elements[4]
-    nd = circ.add_node(ext_nd)
-    ng = circ.add_node(ext_ng)
-    ns = circ.add_node(ext_ns)
-    nb = circ.add_node(ext_nb)
-
-    if model_label not in models:
-        raise NetlistParseError("parse_elem_mos(): Unknown model ID: " + model_label)
-
-    elem = None
-    
-    if isinstance(models[model_label], mosq.mosq_mos_model):
-        elem = mosq.mosq_device(line_elements[0], nd, ng, ns, nb, w, l,
-                                models[model_label], m, n)
-    else:
-        raise NetlistParseError("parse_elem_mos(): Unknown MOS model type: " + model_label)
-
-    return [elem]
-
-
-def parse_elem_vcvs(line, circ):
-    
-    line_elements = line.split()
-    if len(line_elements) < 6 or (len(line_elements) > 6 and not line_elements[6][0] == "*"):
-        raise NetlistParseError("")
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    ext_sn1 = line_elements[3]
-    ext_sn2 = line_elements[4]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-    sn1 = circ.add_node(ext_sn1)
-    sn2 = circ.add_node(ext_sn2)
-
-    elem = components.sources.EVSource(part_id=line_elements[0], n1=n1, n2=n2, sn1=sn1,
-                            sn2=sn2, value=convert_units(line_elements[5]))
-
-    return [elem]
-
-
 def parse_elem_ccvs(line, circ):
     
     line_elements = line.split()
@@ -393,31 +289,9 @@ def parse_elem_ccvs(line, circ):
     n1 = circ.add_node(ext_n1)
     n2 = circ.add_node(ext_n2)
 
-    elem = components.sources.HVSource(part_id=line_elements[0], n1=n1, n2=n2,
+    elem = components.sources.H(part_id=line_elements[0], n1=n1, n2=n2,
                             source_id=line_elements[3],
                             value=convert_units(line_elements[4]))
-
-    return [elem]
-
-
-def parse_elem_vccs(line, circ):
-    
-    line_elements = line.split()
-    if len(line_elements) < 6 or (len(line_elements) > 6
-       and not line_elements[6][0] == "*"):
-        raise NetlistParseError("")
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    ext_sn1 = line_elements[3]
-    ext_sn2 = line_elements[4]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-    sn1 = circ.add_node(ext_sn1)
-    sn2 = circ.add_node(ext_sn2)
-
-    elem = components.sources.GISource(part_id=line_elements[0], n1=n1, n2=n2, sn1=sn1,
-                            sn2=sn2, value=convert_units(line_elements[5]))
 
     return [elem]
 

@@ -197,9 +197,3 @@ def printoptions(*args, **kwargs):
     yield
     np.set_printoptions(**original)
 
-locale = os.getenv('LANG')
-if not locale:
-    print_warning('Locale appears not set! please export LANG="en_US.UTF-8" or'
-                  ' equivalent, ')
-    print_warning('or ahkab\'s unicode support is broken.')
-

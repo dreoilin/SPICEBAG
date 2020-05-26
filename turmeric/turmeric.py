@@ -8,6 +8,7 @@ import tabulate
 
 # analyses
 from . import dc
+from . import dc_sweep
 from . import transient
 from . import ac
 
@@ -69,7 +70,7 @@ def set_temperature(T):
         printing.print_warning("The temperature will be set to %f \xB0 C.")
     constants.T = utilities.Celsius2Kelvin(T)
 
-analysis = {'op': dc.op_analysis, 'dc': dc.dc_analysis,
+analysis = {'op': dc.op_analysis, 'dc': dc_sweep.dc_analysis,
             'tran': transient.transient_analysis, 'ac': ac.ac_analysis,
             'temp': set_temperature}
 
@@ -126,7 +127,7 @@ def main(filename, outfile="stdout"):
 
     results = {}
     for an in analyses:
-        logging.info("Requested an.:")
+        logging.info(f"Analysis {an}:")
         # print to logger
         printing.print_analysis(an)
         
