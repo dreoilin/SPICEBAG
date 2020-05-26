@@ -22,16 +22,20 @@ class TabEditor(ttk.Notebook):
     def remove_tab(self, e=None, tabid="current"):
         self.forget(tabid)
 
-    def addtab(self, text=""):
-        f = ttk.Frame(self)
-        f.grid()
-        f.grid_rowconfigure(0, weight=1)
-        f.grid_columnconfigure(0, weight=1)
+    def addtab(self, text="", frame=None):
+        if frame is None:
+            frame = ttk.Frame(self)
+            frame.grid()
+            frame.grid_rowconfigure(0, weight=1)
+            frame.grid_columnconfigure(0, weight=1)
         if len(self.tabs) == 0:
-            self.tabs.append(self.add(f, text=text, compound=TOP))
+            self.tabs.append(self.add(frame, text=text, compound=TOP))
         else:
-            self.tabs.append(self.add(f, text=text))
-        return f
+            self.tabs.append(self.add(frame, text=text))
+        return frame
+
+    def currentFrame(self):
+        return self.nametowidget(self.select())
 
     def onTabChange(self, e):
         #print(f"Tab changed, now {self.select()}")

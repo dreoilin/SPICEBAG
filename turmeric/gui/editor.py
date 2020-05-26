@@ -6,8 +6,7 @@ from tkinter import font
 from tkinter import messagebox
 
 from .tabcontrols import TabEditor
-from .netlisteditor import NetlistEditor
-from .plaintexteditor import PlainTextEditor
+from .EditorFrame import EditorFrame
 
 UNTITLED = 'Untitled'
 
@@ -24,7 +23,7 @@ class Editor(Tk):
         self.make_menu()
 
         self.pwd = Path('.').resolve()
-        self.netlistTextEditors = []
+        self.editors = []
         self.tabeditor=TabEditor(self)
 
     def read_config(self):
@@ -54,8 +53,8 @@ class Editor(Tk):
         self.menubar.add_cascade(menu=menu_file, label='File', underline = 0)
         self.menubar.add_cascade(menu=menu_edit, label='Edit', underline = 0)
         self.menubar.add_command(label='Run', underline = 0, command=lambda : messagebox.showwarning(message='THERE AINT NOTHIN RUNNABLE',icon='error',title='I CANNAE RUN NOTHING'))
-        menu_file.add_command(label='New', underline = 0, accelerator='Ctl N', command = self.newnetlisttab)
-        self.bind('<Control-n>', self.newnetlisttab)
+        menu_file.add_command(label='New', underline = 0, accelerator='Ctl N', command = self.new_editor_tab)
+        self.bind('<Control-n>', self.new_editor_tab)
         menu_file.add_command(label='Open...', underline = 0, command=self.open_file)
         self.bind('<Control-o>', lambda e: self.open_file(e))
 
@@ -92,31 +91,30 @@ class Editor(Tk):
 
         self.config(menu=self.menubar)
 
-    def newnetlisttab(self,e=None,filename=None):
+    def new_editor_tab(self,e=None,filename=None):
         title = Path(filename).relative_to(self.pwd) if filename is not None else UNTITLED
-        #t = self.tabeditor.insert(self.tabeditor.index(self.tabeditor.select()),text=title)
-        t = self.tabeditor.addtab(title)
         filedata = open(filename, 'r').read() if filename else None
-        self.netlistTextEditors.append(NetlistEditor(t,filedata).focus_set())
-
+        frame = EditorFrame(self.tabeditor,filedata)
+        self.editors.append(frame)
+        t = self.tabeditor.addtab(title,frame=frame)
+        frame.netlisteditor.focus_set()
         self.tabeditor.select(t)
 
     def open_file(self, e=None):
         files = filedialog.askopenfilenames(parent=self.master,title='Open Netlist',filetypes=[('Netlist','*.net')])
         for f in files:
             if '.net' in Path(f).suffixes:
-                self.newnetlisttab(filename=f)
+                self.new_editor_tab(filename=f)
             else:
                 print("IMPLEMENT EDITOR FOR OTHER FILES") # TODO
 
     def save_file(self, event=None, filename=None):
-        ed = self.nametowidget(self.tabeditor.select()).children['!frame'].children['!netlisteditor']
         savefilename = self.tabeditor.tab(self.tabeditor.select(), option='text') if filename is None else filename
         if savefilename == UNTITLED:
             self.save_file_as(event)
         else:
             f = open(savefilename, 'w')
-            f.write(ed.get(1.0,END))
+            f.write(self.tabeditor.currentFrame().netlisteditor.get(1.0,END))
             f.close()
     
     def save_file_as(self, event=None, text=None):

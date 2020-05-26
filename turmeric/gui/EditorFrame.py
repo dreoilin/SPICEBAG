@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import ttk
-from netlisteditor import NetlistEditor
-from statusbar import Statusbar
+from .netlisteditor import NetlistEditor
+from .statusbar import Statusbar
 
 class EditorFrame(ttk.Frame):
     def __init__(self, master, netFiledata=None):
@@ -10,34 +10,35 @@ class EditorFrame(ttk.Frame):
 
         paneH = ttk.PanedWindow(self,orient=HORIZONTAL)
         paneVL = ttk.PanedWindow(paneH,orient=VERTICAL)
-        self.netlistEditor = NetlistEditor(paneVL,netFiledata)
-        lc = Label(paneVL,text="CONSOLE")
-        lg = Label(paneH,text="PLOT OF RESULTS")
+        self.netlisteditor = NetlistEditor(paneVL,netFiledata)
+        self.console = Label(paneVL,text="CONSOLE")
+        self.plot = Label(paneH,text="PLOT OF RESULTS")
 
         paneH.grid(row=0,column=0,sticky=NSEW)
-        paneVL.add(self.netlistEditor, weight=1)
-        paneVL.add(lc,weight=1)
+        paneVL.add(self.netlisteditor, weight=1)
+        paneVL.add(self.console,weight=1)
         paneH.add(paneVL, weight=1)
-        paneH.add(lg,weight=1)
+        paneH.add(self.plot,weight=1)
 
         self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
         self.rowconfigure(1, weight=0)
-        self.netlistEditor.grid_propagate(0)
-        lc.grid_propagate(0)
-        lg.grid_propagate(0)
-        self.netlistEditor.columnconfigure(0, weight=1)
-        lc.columnconfigure(0, weight=1)
-        lg.columnconfigure(0, weight=1)
-        self.netlistEditor.rowconfigure(0, weight=1)
-        lc.rowconfigure(0, weight=1)
-        lg.rowconfigure(0, weight=1)
+        self.netlisteditor.grid_propagate(0)
+        self.console.grid_propagate(0)
+        self.plot.grid_propagate(0)
+        self.netlisteditor.columnconfigure(0, weight=1)
+        self.console.columnconfigure(0, weight=1)
+        self.plot.columnconfigure(0, weight=1)
+        self.netlisteditor.rowconfigure(0, weight=1)
+        self.console.rowconfigure(0, weight=1)
+        self.plot.rowconfigure(0, weight=1)
 
         self.statusbar = Statusbar(self)
         self.statusbar.grid(row=1,column=0)
 
-        self.netlistEditor.bind('<KeyRelease>', self.onKRelease)
-        self.netlistEditor.bind('<ButtonRelease>', self.onBRelease)
+        self.netlisteditor.bind('<KeyRelease>', self.onKRelease)
+        self.netlisteditor.bind('<ButtonRelease>', self.onBRelease)
 
     def onBRelease(self,e):
         self.updateStatusbar(e)
@@ -46,7 +47,7 @@ class EditorFrame(ttk.Frame):
         self.updateStatusbar(e)
 
     def updateStatusbar(self,e):
-        rcs = self.netlistEditor.index(INSERT)
+        rcs = self.netlisteditor.index(INSERT)
         rc = rcs.split('.')
         self.statusbar.setPosition((rc[0],rc[1]))
 
