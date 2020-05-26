@@ -8,7 +8,7 @@ Created on Tue May 26 13:27:41 2020
 import numpy as np
 from numpy.linalg import norm
 import logging
-from .FORTRAN.LINALG import ludcmp, lubksb
+from .FORTRAN.LU import ludcmp, lubksb
 
 j = np.complex('j')    
 

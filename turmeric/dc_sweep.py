@@ -54,7 +54,7 @@ specs = {'dc': {'tokens': ({
                       'type': str,
                       'needed': False,
                       'dest': 'sweep_type',
-                      'default': options.dc_lin_step
+                      'default': 'LIN'
                       }
                      )
            }
@@ -126,13 +126,8 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
         # silently calculate the op
         x = dc.op_analysis(circ, x0=x, guess=guess, verbose=0)
         if x is None:
-            if not options.dc_sweep_skip_allowed:
-                logging.info("Could't solve the circuit for sweep value:", start + index * step)
-                solved = False
-                break
-            else:
-                logging.info("Skipping sweep value:", start + index * step)
-                continue
+            logging.info("Skipping sweep value:", start + index * step)
+            continue
         solved = True
         sol.add_op(sweep_value, x)
 
