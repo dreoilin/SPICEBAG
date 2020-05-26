@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import ttk
 from .netlisteditor import NetlistEditor
 from .statusbar import Statusbar
+from .ConsoleFrame import ConsoleFrame
 
 class EditorFrame(ttk.Frame):
     def __init__(self, master, netFiledata=None):
@@ -11,7 +12,7 @@ class EditorFrame(ttk.Frame):
         paneH = ttk.PanedWindow(self,orient=HORIZONTAL)
         paneVL = ttk.PanedWindow(paneH,orient=VERTICAL)
         self.netlisteditor = NetlistEditor(paneVL,netFiledata)
-        self.console = Label(paneVL,text="CONSOLE")
+        self.console = ConsoleFrame(paneVL)#Label(paneVL,text="CONSOLE")
         self.plot = Label(paneH,text="PLOT OF RESULTS")
 
         paneH.grid(row=0,column=0,sticky=NSEW)
