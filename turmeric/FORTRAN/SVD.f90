@@ -232,26 +232,59 @@
     enddo
     return
 
-	contains
-	REAL(8) FUNCTION pythag(A,B)
-	    IMPLICIT NONE
-	! computes (a^2 + b^2)^(1/2) without under or overflow
-	    REAL(8), intent(in):: A
-	    REAL(8), intent(in) :: B
+    contains
+    REAL(8) FUNCTION pythag(A,B)
+    IMPLICIT NONE
+! computes (a^2 + b^2)^(1/2) without under or overflow
+    REAL(8), intent(in):: A
+    REAL(8), intent(in) :: B
 
-	    REAL(8) :: absa, absb
-	    absa= abs(A)
-	    absb=abs(B)
-	    if(absa.gt.absb)then
-		pythag=absa*sqrt(1.+(absb/absa)**2)
-	    else
-		if(absb.eq.0.)then
-		    pythag=0.
-		else
-		    pythag=absb*sqrt(1.+(absa/absb)**2)
-		endif
-	    endif
-	    return
-	    END FUNCTION pythag
+    REAL(8) :: absa, absb
+    absa= abs(A)
+    absb=abs(B)
+    if(absa.gt.absb)then
+        pythag=absa*sqrt(1.+(absb/absa)**2)
+    else
+        if(absb.eq.0.)then 
+            pythag=0.0
+	else
+	    pythag=absb*sqrt(1.+(absa/absb)**2)
+	endif
+    endif
+    return
+    END FUNCTION pythag
 
 end subroutine svdcmp
+
+subroutine svbksb(u, w, v, m, n, mp, np, b, x)
+    IMPLICIT NONE
+    INTEGER, intent(in) :: m, mp, n, np
+    REAL(8), intent(in) :: b(mp),u(mp,np), v(np,np), w(np)
+    REAL(8), intent(inout) :: x(np)
+!f2py intent(in, out) :: X
+    INTEGER :: NMAX
+    PARAMETER(NMAX=500)
+
+    INTEGER :: i, j, jj
+    REAL(8) :: s, tmp(NMAX)
+
+! calculate U.transpose B
+    do j=1,n
+        s=0.0
+        if(w(j).ne.0.)then
+            do i=1,m
+                s=s+u(i,j)*b(i)
+            enddo
+            s=s/w(j)
+        endif
+        tmp(j)=s
+    enddo
+    do j=1,n
+        s=0.0
+        do jj=1,n
+            s=s+v(j,jj)*tmp(jj)
+        enddo
+        x(j)=s
+    enddo
+    return
+END SUBROUTINE svbksb
