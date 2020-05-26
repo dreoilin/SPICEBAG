@@ -55,8 +55,6 @@ print_precision = np.get_printoptions()['precision']
 dc_max_nr_iter = 1000
 dc_use_guess = True
 dc_max_guess_effort = 250000
-dc_log_step = 'LOG'
-dc_lin_step = 'LIN'
 dc_sweep_skip_allowed = True
 
 ############################

@@ -10,7 +10,7 @@ import sys
 import logging
 
 # LU algorithms from /FORTRAN/
-from .FORTRAN.LINALG import ludcmp, lubksb
+from .FORTRAN.LU import ludcmp, lubksb
 from .FORTRAN.DC_SUBRS import gmin_mat
 
 from numpy.linalg import norm
