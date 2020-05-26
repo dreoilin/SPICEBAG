@@ -2,6 +2,7 @@ import numpy as np
 from scipy.linalg import lu
 #################
 import LINALG
+import SVD
 
 d = 3
 S = np.array(([3.0,6], [1, 2]))
