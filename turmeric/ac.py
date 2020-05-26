@@ -6,6 +6,7 @@ import numpy as np
 from . import options
 from . import results
 import logging
+from .complex_solve import solver
 
 specs = {'ac': {'tokens': ({
                            'label': 'type',
@@ -90,17 +91,8 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
         # evaluate the impedance at
         # the current frequency
         IMP = f * np.pi * 2 * j * D
-        try:
-            x = np.linalg.solve((M + IMP), ZAC)
-        except OverflowError:
-            logging.error(f"ac_analysis(): Numpy couldn't solve the \
-                          system at {f} Hz due to an overflow error")
-            raise ValueError
-        except np.linalg.LinAlgError as e:
-            if 'Singular matrix' in str(e):
-                logging.error(f"ac_analysis(): singular matrix detected \
-                              at {f} Hz")
-                raise ValueError
+        # solve using the complex solver
+        x = solver((M + IMP), ZAC)
         sol.add_line(f, x)
    
     return sol
