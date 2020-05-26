@@ -125,7 +125,6 @@ def parse_network(filename):
     circ += main_netlist_parser(circ, net_lines, models)
     # FIXME: surely models should be assigned through the constructor
     circ.models = models
-    #circ.generate_M0_and_ZDC0()
     circ.gen_matrices()
 
     return (circ, analyses)
