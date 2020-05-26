@@ -151,7 +151,7 @@ class Circuit(list):
         D0 = np.zeros(M0.shape)
         ZT0 = np.zeros(ZDC0.shape)
 
-        CD = [components.R, components.C, components.sources.G, components.sources.ISource]
+        CD = [components.R, components.C, components.sources.G, components.sources.I]
         [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time) for elem in self if type(elem) in CD]
         VD = [components.sources.V,components.sources.E,components.sources.H, components.L]
         for elem in self:
@@ -165,7 +165,7 @@ class Circuit(list):
         self.ZT0  = ZT0 
 
         # First, current defined, linear elements
-        # == CD = {R , C , G, ISource}
+        # == CD = {R , C , G, I}
         # Next, voltage defined elements
         # == VD = { V , E , H , L }
         # Finally F

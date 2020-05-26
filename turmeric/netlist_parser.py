@@ -139,7 +139,7 @@ def main_netlist_parser(circ, netlist_lines, models):
         'f': lambda line: parse_elem_cccs(line, circ),
         'g': lambda line: components.sources.G(line, circ),
         'h': lambda line: components.sources.H(line, circ),
-        'i': lambda line: parse_elem_isource(line, circ),
+        'i': lambda line: components.sources.I(line, circ),
         'l': lambda line: components.L(line, circ),
         'r': lambda line: components.R(line, circ),
         'v': lambda line: components.sources.V(line,circ)
@@ -160,75 +160,6 @@ def main_netlist_parser(circ, netlist_lines, models):
         raise NetlistParseError(msg)
 
     return elements
-
-
-def parse_elem_isource(line, circ):
-    line_elements = line.split()
-    if len(line_elements) < 3:
-        raise NetlistParseError("parse_elem_isource(): malformed line")
-
-    dc_value = None
-    iac = None
-    function = None
-
-    index = 3
-    while True:
-        if index == len(line_elements):
-            break
-        if line_elements[index][0] == '*':
-            break
-
-        (label, value) = parse_param_value_from_string(line_elements[index])
-
-        if label == 'type':
-            if value == 'idc':
-                param_number = 0
-            elif value == 'iac':
-                param_number = 0
-            elif value == 'pulse':
-                param_number = 7
-            elif value == 'exp':
-                param_number = 6
-            elif value == 'sin':
-                param_number = 5
-            elif value == 'sffm':
-                param_number = 5
-            elif value == 'am':
-                param_number = 5
-            else:
-                raise NetlistParseError("parse_elem_isource(): unknown signal type.")
-            if param_number and function is None:
-                function = parse_time_function(value,
-                                               line_elements[index + 1:
-                                                             index + param_number + 1],
-                                               "current")
-                index = index + param_number
-            elif function is not None:
-                raise NetlistParseError("parse_elem_isource(): only a time function can be defined.")
-        elif label == 'idc':
-            dc_value = convert_units(value)
-        elif label == 'iac':
-            iac = convert_units(value)
-        else:
-            raise NetlistParseError("parse_elem_isource(): unknown type "+label)
-        index = index + 1
-
-    if dc_value == None and function == None:
-        raise NetlistParseError("parse_elem_isource(): neither idc nor a time function are defined.")
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-
-    elem = components.sources.ISource(part_id=line_elements[0], n1=n1, n2=n2,
-                           dc_value=dc_value, ac_value=iac)
-
-    if function is not None:
-        elem.is_timedependent = True
-        elem._time_function = function
-
-    return [elem]
 
 
 def parse_elem_diode(line, circ, models=None):
@@ -316,49 +247,6 @@ def parse_elem_cccs(line, circ):
     return [elem]
 
 
-def parse_time_function(ftype, line_elements, stype):
-    
-    if not ftype in time_fun_specs:
-        raise NetlistParseError("Unknown time function: %s" % ftype)
-    prot_params = list(copy.deepcopy(time_fun_specs[ftype]['tokens']))
-
-    fun_params = {}
-    for i in range(len(line_elements)):
-        token = line_elements[i]
-        if token[0] == "*":
-            break
-        if is_valid_value_param_string(token):
-            (label, value) = token.split('=')
-        else:
-            label, value = None, token
-        assigned = False
-        for t in prot_params:
-            if (label is None and t['pos'] == i) or label == t['label']:
-                fun_params.update({t['dest']: convert(value, t['type'])})
-                assigned = True
-                break
-        if assigned:
-            prot_params.pop(prot_params.index(t))
-            continue
-        else:
-            raise NetlistParseError("Unknown .%s parameter: pos %d (%s=)%s" % \
-                                     (ftype.upper(), i, label, value))
-
-    missing = []
-    for t in prot_params:
-        if t['needed']:
-            missing.append(t['label'])
-    if len(missing):
-        raise NetlistParseError("%s: required parameters are missing: %s" % (ftype, " ".join(line_elements)))
-    # load defaults for unsupplied parameters
-    for t in prot_params:
-        fun_params.update({t['dest']: t['default']})
-
-    fun = time_functions[ftype](**fun_params)
-    fun._type = "V" * \
-        (stype.lower() == "voltage") + "I" * (stype.lower() == "current")
-    return fun
-
 
 def convert_units(string_value):
 
@@ -408,16 +296,6 @@ def convert_units(string_value):
     else:
         raise ValueError("Unknown multiplier %s" % multiplier)
     return numeric_value
-
-
-def parse_ics(directives):
-    ics = []
-    for line, line_n in directives:
-        if line[0] != '.':
-            continue
-        if line[:3] == '.ic':
-            ics += [parse_ic_directive(line)]
-    return ics
 
 
 def parse_analysis(directives):

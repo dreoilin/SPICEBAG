@@ -51,15 +51,6 @@ class C(CurrentDefinedComponent):
         """
         return f"C{self.part_id} {self.n1} {self.n2} {self.value}"
 
-    def g(self, v, time=0):
-        return 0
-
-    def i(self, v, time=0):
-        return 0
-
-    def d(self, v, time=0):
-        return self.value
-
     def get_op_info(self, ports_v):
         """Information regarding the Operating Point (OP)
 

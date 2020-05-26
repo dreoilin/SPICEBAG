@@ -95,7 +95,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
                     source_elem = circ[index]
                     break
             if elem_type == 'i':
-                if isinstance(circ[index], components.sources.ISource):
+                if isinstance(circ[index], components.sources.I):
                     source_elem = circ[index]
                     break
     if not source_elem:

@@ -21,13 +21,10 @@ class R(CurrentDefinedComponent):
         return rep
 
     def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
-        M0[self.n1, self.n1] += self.g()
-        M0[self.n1, self.n2] -= self.g()
-        M0[self.n2, self.n1] -= self.g()
-        M0[self.n2, self.n2] += self.g()
-
-    def g(self):
-        return 1./self.value
+        M0[self.n1, self.n1] += 1./self.value
+        M0[self.n1, self.n2] -= 1./self.value
+        M0[self.n2, self.n1] -= 1./self.value
+        M0[self.n2, self.n2] += 1./self.value
 
     def get_op_info(self, ports_v):
         """Information regarding the Operating Point (OP)
