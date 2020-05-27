@@ -118,12 +118,6 @@ class Circuit(list):
                     locked_nodes.append(port)
         return locked_nodes
 
-    # TODO: has_duplicate_elem only used in one place, put it there
-    def has_duplicate_elem(self):
-        
-        all_ids = tuple(map(lambda e: e.part_id, self))
-        return len(set(all_ids)) != len(all_ids)
-
     def find_vde_index(self, elem_or_id):
         
         if not isinstance(elem_or_id, str):

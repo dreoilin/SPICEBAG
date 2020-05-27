@@ -415,48 +415,6 @@ def check_step_and_points(step=None, points=None, period=None,
 
     return int(points), step
 
-def check_circuit(circ):
-    """Performs some easy sanity checks.
-
-    Checks performed:
-
-    * Has the circuit more than one node?
-    * Has the circuit a connection to ground?
-    * Has the circuit more than two elements?
-    * Are there no two elements with the same ``part_id``?
-
-    **Parameters:**
-
-    circ : circuit instance
-        The circuit to be checked.
-
-    **Returns:**
-
-    chk : boolean
-        The logical ``and()`` of the answer to the above questions.
-    msg : string
-        A message describing the error, if any.
-    """
-
-    if circ.get_nodes_number() < 2:
-        test_passed = False
-        reason = "the circuit has less than two nodes."
-    elif not 0 in circ.nodes_dict:
-        test_passed = False
-        reason = "the circuit has no ref. Quitting."
-    elif len(circ) < 2:
-        test_passed = False
-        reason = "the circuit has less than two elements."
-    elif circ.has_duplicate_elem():
-        test_passed = False
-        reason = "duplicate elements found (check the names!)"
-    else:
-        test_passed = True
-        reason = ""
-
-    return test_passed, reason
-
-
 def check_ground_paths(mna, circ, reduced_mna=True, verbose=3):
     """Checks that every node has a DC path to ground
 
