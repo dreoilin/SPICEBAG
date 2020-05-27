@@ -15,7 +15,6 @@ import logging
 
 from . import circuit
 from . import components
-from . import diode
 from . import printing
 
 # analyses syntax
@@ -49,9 +48,9 @@ def parse_models(lines):
                 break
             (label, value) = parse_param_value_from_string(tokens[index])
             model_parameters.update({label.upper(): value})
-        if model_type == "diode" or model_type == 'd':
+        if model_type == "D" or model_type == 'd':
             model_parameters.update({'name': model_label})
-            model_iter = diode.diode_model(**model_parameters)
+            model_iter = components.models.Shockley(**model_parameters)
         else:
             raise NetlistParseError("parse_models(): Unknown model (" +
                                     model_type + ") on line " + str(line_n) +
@@ -128,7 +127,7 @@ def main_netlist_parser(circ, netlist_lines, models):
     elements = []
     parse_function = {
         'c': lambda line: components.C(line, circ),
-        'd': lambda line: parse_elem_diode(line, circ, models),
+        'd': lambda line: components.D(line, circ, models),
         'e': lambda line: components.sources.E(line, circ),
         'f': lambda line: parse_elem_cccs(line, circ),
         'g': lambda line: components.sources.G(line, circ),
@@ -154,51 +153,6 @@ def main_netlist_parser(circ, netlist_lines, models):
         raise NetlistParseError(msg)
 
     return elements
-
-
-def parse_elem_diode(line, circ, models=None):
-    
-    Area = None
-    T = None
-    ic = None
-    off = False
-
-    line_elements = line.split()
-    if len(line_elements) < 4:
-        raise NetlistParseError("")
-
-    model_label = line_elements[3]
-
-    for index in range(4, len(line_elements)):
-        if line_elements[index][0] == '*':
-            break
-        param, value = parse_param_value_from_string(line_elements[index])
-
-        value = convert_units(value)
-        if param == "area":
-            Area = value
-        elif param == "t":
-            T = value
-        elif param == "ic":
-            ic = value
-        elif param == "off":
-            if not len(value):
-                off = True
-            else:
-                off = convert_boolean(value)
-        else:
-            raise NetlistParseError("parse_elem_diode(): unknown parameter " + param)
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-
-    if model_label not in models:
-        raise NetlistParseError("parse_elem_diode(): Unknown model id: " + model_label)
-    elem = diode.diode(part_id=line_elements[0], n1=n1, n2=n2, model=models[
-                       model_label], AREA=Area, ic=ic, off=off)
-    return [elem]
 
 
 def parse_elem_ccvs(line, circ):

@@ -13,7 +13,6 @@ import numpy as np
 import sys
 
 from . import components
-from . import diode
 
 from . import printing
 from . import utilities

@@ -17,7 +17,7 @@ from . import circuit
 from . import components
 from . import printing
 from . import options
-from . import constants
+from . import units
 from . import csvlib
 
 csvlib.SEPARATOR = "\t"
@@ -53,7 +53,6 @@ class solution(object):
         self.iea = options.iea
         self.ier = options.ier
         self.gmin = options.gmin
-        self.temp = constants.T
         self.filename = outfile
         self._init_file_done = False
 
@@ -175,14 +174,6 @@ class op_solution(solution, _mutable_data):
             self.units.update({varname: "V"})
 
         index = nv_1 - 1
-        for elem in circ:
-            if isinstance(elem, components.VoltageDefinedComponent):
-                index = index + 1
-                varname = ("I("+elem.part_id.upper()+")").upper()
-                self.variables += [varname]
-                self.results.update({varname: x[index, 0]})
-                self.errors.update({varname: error[index, 0]})
-                self.units.update({varname: "A"})
 
         self._op_keys, self._op_info, self.tot_power = self._get_elements_op(circ, x)
 
@@ -341,7 +332,6 @@ class op_solution(solution, _mutable_data):
         fp.write(self.timestamp+"\n")
         fp.write("Operating Point (OP) analysis\n\n")
         fp.write("Netlist: %s\nTitle: %s\n" % (self.netlist_file, self.netlist_title))
-        fp.write("At %.2f K\n" % (self.temp,))
         fp.write("Options:\n\tvea = %e\n\tver = %f\n\tiea = %e\n\tier = %f\n\tgmin = %e\n" \
                  % (self.vea, self.ver, self.iea, self.ier, self.gmin))
         fp.write("\nConvergence reached in %d iterations.\n" % (self.iterations,))
