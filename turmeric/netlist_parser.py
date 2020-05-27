@@ -23,17 +23,11 @@ from .dc import specs as dc_spec
 from .dc_sweep import specs as sweep_specs
 from .ac import specs as ac_spec
 from .transient import specs as tran_spec
-from .time_functions import time_fun_specs
-from .time_functions import sin, pulse, exp, sffm, am
 
 
 specs = {}
 for i in dc_spec, sweep_specs, ac_spec, tran_spec:
     specs.update(i)
-
-time_functions = {}
-for i in sin, pulse, exp, sffm, am:
-    time_functions.update({i.__name__:i})
 
 class NetlistParseError(Exception):
     """Netlist parsing exception."""
