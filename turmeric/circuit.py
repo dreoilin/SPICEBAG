@@ -37,7 +37,7 @@ class Circuit(list):
     def __init__(self, title, filename=None):
         self.title = title
         self.filename = filename
-        self.nodes_dict = {}  # {int_node:ext_node, int_node:ext_node}
+        self.nodes_dict = {}
         self.internal_nodes = 0
         self.models = {}
         self.gnd = '0'
@@ -164,11 +164,6 @@ class Circuit(list):
         self.D0   = D0
         self.ZT0  = ZT0 
 
-        # First, current defined, linear elements
-        # == CD = {R , C , G, ISource}
-        # Next, voltage defined elements
-        # == VD = { V , E , H , L }
-        # Finally F
 
 
 class NodeNotFoundError(Exception):

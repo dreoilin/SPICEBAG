@@ -52,7 +52,6 @@ print_precision = np.get_printoptions()['precision']
 ############################
 #      DC Analysis         #
 ############################
-dc_max_nr_iter = 1000
 dc_use_guess = True
 dc_max_guess_effort = 250000
 dc_sweep_skip_allowed = True

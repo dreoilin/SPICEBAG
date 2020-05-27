@@ -2,11 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import logging
 
 from . import options
 from . import results
-import logging
-from .complex_solve import solver
+from . import complex_solve
+
 
 specs = {'ac': {'tokens': ({
                            'label': 'type',
@@ -82,8 +83,8 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
                       non-linear circuits")
         raise ValueError
 
-    sol = results.ac_solution(circ, start=start, stop=stop, points=points,
-                              stype=sweep_type, op=x0, outfile=outfile)
+    sol = results.Solution(circ, outfile, sol_type='AC', extra_header='f')
+    
 
     j = np.complex('j')
     
@@ -92,7 +93,14 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
         # the current frequency
         IMP = f * np.pi * 2 * j * D
         # solve using the complex solver
-        x = solver((M + IMP), ZAC)
-        sol.add_line(f, x)
+        x = complex_solve.solver((M + IMP), ZAC)
+        # start row with frequency
+        row = [f]
+        # now append computations
+        row.extend(x.transpose().tolist()[0])
+        # write to file
+        sol.write_data(row)
    
-    return sol
+    sol.close()
+    
+    return sol.as_dict()
