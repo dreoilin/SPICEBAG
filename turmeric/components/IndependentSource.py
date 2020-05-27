@@ -35,7 +35,7 @@ class IndependentSource(Component):
             non_acdc_types = [t for t in params['type'] if t != 'vac' and t != 'vdc' and t != 'iac' and t != 'idc']
             timefn_type = non_acdc_types[0] if len(non_acdc_types) >0 else None
         else:
-            timefn_type = params['type']
+            timefn_type = params['type'] if params['type'] not in ['vdc','vac','idc','iac'] else None
         # Get rid of parsed parameters
         for p in ['vdc','vac','idc','iac','type']:
             params.pop(p,None)
