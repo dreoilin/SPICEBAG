@@ -6,6 +6,7 @@ from threading import Thread
 from tkinter import *
 from tkinter import ttk
 
+
 class ConsoleFrame(ttk.Frame):
     def __init__(self,master,envfilename='turmeric/gui/interactive_console.py'):
         super().__init__(master)
@@ -21,9 +22,18 @@ class ConsoleFrame(ttk.Frame):
         self.outBuf = queue.Queue()
         self.errBuf = queue.Queue()
 
-        self.line_start = 0
-        self.alive = True
+        self.line_idx = 0
 
+        # Insert cursor position on entry line
+        self.SCROLL_MARK = 'scroll_mark'
+        self.mark_set(self.SCROLL_MARK, END)
+        self.mark_gravity(self.mark, RIGHT)
+        # Start of user input (just after prompt)
+        self.LINE_START = 'line_start'
+        self.mark_set(self.line_start, INSERT)
+        self.mark_gravity(self.line_start, LEFT)
+
+        self.alive = True
         self.read_buf_size = 1024
         Thread(target=self.readStdout).start()
         Thread(target=self.readStderr).start()
@@ -59,10 +69,11 @@ class ConsoleFrame(ttk.Frame):
         if self.alive:
             self.after(10, self.pollOutputStreams)
 
-    def write(self, s):
-        self.tty.insert(END, s)
+    def write(self, text, editable=False):
+
+        self.tty.insert(END, text)
         self.tty.see(END)
-        self.line_start += len(s)
+        self.line_idx += len(text)
 
     def createUI(self):
         self.widgets = []
@@ -73,7 +84,7 @@ class ConsoleFrame(ttk.Frame):
         self.widgets.append(self.tty)
 
     def onReturn(self, e):
-        line = self.tty.get(1.0, END)[self.line_start:]
-        self.line_start += len(line)
+        line = self.tty.get(1.0, END)[self.line_idx:]
+        self.line_idx += len(line)
         self.python.stdin.write(line.encode())
         self.python.stdin.flush()
