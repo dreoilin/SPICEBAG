@@ -1,5 +1,5 @@
 from ... import units
-from ... import utilities
+from ...memoized import memoized
 from math import isinf, sqrt
 import numpy as np
 from scipy.optimize import newton
@@ -91,7 +91,7 @@ class Shockley(object):
         self.VT   = units.k * self.T / units.e
         self.material=material
 
-    @utilities.memoized
+    @memoized
     def get_i(self, vext, dev):
         if dev.T != self.T:
             self.set_temperature(dev.T)
@@ -123,7 +123,7 @@ class Shockley(object):
         self.RS = RSSAVE
         return ret
 
-    @utilities.memoized
+    @memoized
     def _safe_exp(self, x):
         return np.exp(x) if x < 70 else np.exp(70) + 10 * x
 
@@ -137,7 +137,7 @@ class Shockley(object):
         
         return k_inj*i_fwd+i_rec+i_rev
 
-    @utilities.memoized
+    @memoized
     def get_gm(self, op_index, ports_v, port_index, dev):
         if dev.T != self.T:
             self.set_temperature(dev.T)

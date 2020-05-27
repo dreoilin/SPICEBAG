@@ -15,7 +15,6 @@ import sys
 from . import components
 
 from . import printing
-from . import utilities
 
 class Circuit(list):
     def __init__(self, title, filename=None):
@@ -118,7 +117,7 @@ class Circuit(list):
                     vde_index += 1
         else:
             raise ValueError(("find_vde_index(): element %s was not found. This is a bug.") % (part_id,))
-        printing.print_info_line(("%s found at index %d" % (part_id,vde_index), 6),0)
+        logging.info(("%s found at index %d" % (part_id,vde_index), 6),0)
         return vde_index
 
     def gen_matrices(self, time=0):

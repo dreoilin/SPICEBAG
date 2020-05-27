@@ -1,6 +1,5 @@
 import numpy as np
 
-from .. import utilities
 from .. import options
 from .. import units
 

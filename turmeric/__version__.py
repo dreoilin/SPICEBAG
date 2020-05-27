@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Fri May  1 11:23:45 2020
-
-@author: cian
+Version 0.1:
+    Transient, op, ac analyses working from command line
+Version 0.2:
+    DC sweep added
 """
 
-__version__ = '0.1'
+__version__ = '0.2'
+
+

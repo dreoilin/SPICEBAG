@@ -1,5 +1,4 @@
 from .Component import Component
-from .. import utilities
 import numpy as np
 
 class VoltageDefinedComponent(Component):

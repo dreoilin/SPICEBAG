@@ -11,23 +11,11 @@ from . import dc
 from . import dc_sweep
 from . import transient
 from . import ac
-
-# parser
 from . import netlist_parser
-
-# misc
 from . import units
-from . import utilities
-
-# print result data
 from . import printing
 
 from .__version__ import __version__
-
-global _queue, _x0s, _print
-
-_print = False
-_x0s = {None: None}
 
 import logging
 
@@ -51,17 +39,6 @@ def run(circ, an_list=None):
         results.update({an_type: r})
         
     return results
-
-
-def new_x0(circ, icdict):
-    
-    return dc.build_x0_from_user_supplied_ic(circ, icdict)
-
-
-def icmodified_x0(circ, x0):
-    
-    return dc.modify_x0_for_ic(circ, x0)
-
 
 def set_temperature(T): # T in celsius
     units.T = units.Kelvin(float(T))

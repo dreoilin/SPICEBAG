@@ -2,7 +2,6 @@ from ..VoltageDefinedComponent import VoltageDefinedComponent
 from ..IndependentSource import IndependentSource
 from ..tokens import rex, Value, Label, Node, ParamDict
 import logging
-from ... import utilities
 
 class V(IndependentSource, VoltageDefinedComponent):
 
