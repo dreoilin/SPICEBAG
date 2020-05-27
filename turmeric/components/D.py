@@ -33,11 +33,6 @@ class D(Component):
         pass
 
     def set_temperature(self, T):
-        """Set the operating temperature IN KELVIN degrees
-        """
-        # this automatically makes the memoization cache obsolete. self
-        # is in fact passed as one of the arguments, hashed and stored:
-        # if it changes, the old cache will return misses.
         self.T = T
 
     def __repr__(self):
@@ -73,7 +68,7 @@ class D(Component):
 
         """
         v = ports_v[0]
-        i = self.model.get_i(self.model, v, self)
+        i = self.model.get_i(v, self)
         istamp = np.array((i, -i), dtype=np.float64)
         indices = ((self.n1 - 1*reduced, self.n2 - 1*reduced), (0, 0))
         if reduced:
@@ -84,7 +79,7 @@ class D(Component):
 
     def i(self, op_index, ports_v, time=0):  # with gmin added
         v = ports_v[0]
-        i = self.model.get_i(self.model, v, self)
+        i = self.model.get_i(v, self)
         return i
 
     def gstamp(self, ports_v, time=0, reduced=True):
@@ -99,7 +94,7 @@ class D(Component):
         """
         indices = ([self.n1 - 1]*2 + [self.n2 - 1]*2,
                    [self.n1 - 1, self.n2 - 1]*2)
-        gm = self.model.get_gm(self.model, 0, utilities.tuplinator(ports_v), 0, self)
+        gm = self.model.get_gm(0, ports_v, 0, self)
         if gm == 0:
             gm = options.gmin*2
         stamp = np.array(((gm, -gm),
@@ -126,5 +121,5 @@ class D(Component):
     def g(self, op_index, ports_v, port_index, time=0):
         if not port_index == 0:
             raise Exception("Attepted to evaluate a D's gm on an unknown port.")
-        gm = self.model.get_gm(self.model, op_index, utilities.tuplinator(ports_v), port_index, self)
+        gm = self.model.get_gm(self.model, op_index, ports_v, port_index, self)
         return gm

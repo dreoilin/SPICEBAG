@@ -18,21 +18,6 @@ from . import printing
 from . import utilities
 
 class Circuit(list):
-    """The circuit class.
-
-    **Parameters:**
-
-    title : string
-        The circuit title.
-
-    filename : string, optional
-
-        .. deprecated:: 0.09
-
-        If the circuit instance corresponds to a netlist file on disk,
-        set this to the netlist filename.
-
-    """
     def __init__(self, title, filename=None):
         self.title = title
         self.filename = filename

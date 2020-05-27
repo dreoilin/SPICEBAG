@@ -63,19 +63,15 @@ def icmodified_x0(circ, x0):
     return dc.modify_x0_for_ic(circ, x0)
 
 
-def set_temperature(T):
-    """Set the simulation temperature, in Celsius."""
-    T = float(T)
-    if T > 300:
-        printing.print_warning("The temperature will be set to %f \xB0 C.")
-    units.T = utilities.Celsius2Kelvin(T)
+def set_temperature(T): # T in celsius
+    units.T = units.Kelvin(float(T))
 
 analysis = {'op': dc.op_analysis, 'dc': dc_sweep.dc_analysis,
             'tran': transient.transient_analysis, 'ac': ac.ac_analysis,
             'temp': set_temperature}
 
 
-def main(filename, outfile="stdout"):
+def main(filename, outfile="out"):
     """
     filename : string
         The netlist filename.
@@ -109,28 +105,12 @@ def main(filename, outfile="stdout"):
         logging.exception(f"{e}: ioerror on netlist file {filename}")
         sys.exit()
 
-    # TODO: Verify check_circuit is used
-    #logging.info("Checking circuit for common mistakes...")
-    # utility check should be member method for circuit class
-    #(check, reason) = utilities.check_circuit(circ)
-    #if not check:
-    #    logging.error(reason)
-    #    sys.exit(3)
-    #logging.info("Finished")
-
-    
     logging.info("Parsed circuit:")
-    logging.info(repr(circ))
-    logging.info("Models:")
-    for m in circ.models:
-        circ.models[m].print_model()
+    logging.info(repr(circ) + '\n' + '\n'.join(repr(m) for m in circ.models.values()))
 
     results = {}
     for an in analyses:
-        logging.info(f"Analysis {an}:")
-        # print to logger
-        printing.print_analysis(an)
-        
+        logging.info(f"Analysis {an} running")
         results.update(run(circ, [an]))
 
     return results
