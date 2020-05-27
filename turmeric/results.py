@@ -50,7 +50,7 @@ class Solution(object):
     def close(self):
         self.file.close()
         
-    def as_dict(self):
+    def as_dict(self, v_type=float):
         
         with open(f"{self.filename}.csv", 'r') as csvfile:
             lines = csvfile.readlines()
@@ -60,7 +60,7 @@ class Solution(object):
         nrows = len(lines)
 
         linelist = [x.rstrip().split(',') for x in lines[1:nrows+1]]
-        data = {keyVal:[x[idx] for x in linelist if len(x)==len(headers)] for idx,keyVal in enumerate(headers)} 
+        data = {keyVal:np.array([v_type(x[idx]) for x in linelist if len(x)==len(headers)]) for idx,keyVal in enumerate(headers)} 
         
         return data
         

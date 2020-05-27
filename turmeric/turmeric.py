@@ -109,15 +109,6 @@ def main(filename, outfile="stdout"):
         logging.exception(f"{e}: ioerror on netlist file {filename}")
         sys.exit()
 
-    # TODO: Verify check_circuit is used
-    #logging.info("Checking circuit for common mistakes...")
-    # utility check should be member method for circuit class
-    #(check, reason) = utilities.check_circuit(circ)
-    #if not check:
-    #    logging.error(reason)
-    #    sys.exit(3)
-    #logging.info("Finished")
-
     
     logging.info("Parsed circuit:")
     logging.info(repr(circ))

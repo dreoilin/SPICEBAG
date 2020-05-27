@@ -77,14 +77,6 @@ def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
     else:
         solvers = slv.setup_solvers(Gmin=True)
 
-    if time is not None:
-        # get method would be nicer
-        circ.generate_ZAC(time)
-        # retrieve ZAC and add to DC component
-        ZAC = circ.ZAC
-    else:
-        ZAC = False
-
     # if there is no initial guess, we start with 0
     if x0 is not None:
         x =x0
@@ -100,9 +92,8 @@ def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
         while (solver.failed is not True) and (not converged):
             logging.info(f"Now solving with: {solver.name}")
             # 1. Operate on the matrices
-            M_, ZDC_ = solver.operate_on_M_and_ZDC(np.array(M),\
+            M_, Z = solver.operate_on_M_and_ZDC(np.array(M),\
                                     np.array(ZDC), np.array(Gmin))
-            Z = ZDC_ + ZAC * (bool(time))
             # 2. Try to solve with the current solver
             try:
                 (x, error, converged, n_iter)\
@@ -332,16 +323,16 @@ def get_td(dx, locked_nodes, n=-1):
     for (n1, n2) in locked_nodes:
         if n1 != 0:
             if n2 != 0:
-                if abs(dx[n1 - 1, 0] - dx[n2 - 1, 0]) > options.nl_voltages_lock_factor * constants.Vth():
-                    td_new = (options.nl_voltages_lock_factor * constants.Vth()) / abs(
+                if abs(dx[n1 - 1, 0] - dx[n2 - 1, 0]) > options.nl_voltages_lock_factor * units.Vth():
+                    td_new = (options.nl_voltages_lock_factor * units.Vth()) / abs(
                         dx[n1 - 1, 0] - dx[n2 - 1, 0])
             else:
-                if abs(dx[n1 - 1, 0]) > options.nl_voltages_lock_factor * constants.Vth():
-                    td_new = (options.nl_voltages_lock_factor * constants.Vth()) / abs(
+                if abs(dx[n1 - 1, 0]) > options.nl_voltages_lock_factor * units.Vth():
+                    td_new = (options.nl_voltages_lock_factor * units.Vth()) / abs(
                         dx[n1 - 1, 0])
         else:
-            if abs(dx[n2 - 1, 0]) > options.nl_voltages_lock_factor * constants.Vth():
-                td_new = (options.nl_voltages_lock_factor * constants.Vth()) / abs(
+            if abs(dx[n2 - 1, 0]) > options.nl_voltages_lock_factor * units.Vth():
+                td_new = (options.nl_voltages_lock_factor * units.Vth()) / abs(
                     dx[n2 - 1, 0])
         if td_new < td:
             td = td_new

@@ -103,4 +103,4 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
    
     sol.close()
     
-    return sol.as_dict()
+    return sol.as_dict(complex)

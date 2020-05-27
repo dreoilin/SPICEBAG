@@ -14,7 +14,7 @@ R1 3 0 300
 C1 3 0 4.7m
 .model D d
 .op
-* .tran tstop=50m tstep=.1n
+.tran tstop=50m tstep=10u
 .end
 
 * ref: google images

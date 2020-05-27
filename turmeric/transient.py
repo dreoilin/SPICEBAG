@@ -15,12 +15,8 @@ from .FORTRAN.DC_SUBRS import gmin_mat
 import logging
 from . import results
 
-# integration methods
-from . import trapezoidal
+# basic integration method
 from . import BEuler as BE
-
-
-TRAP = "TRAP"
 
 specs = {'tran':{'tokens':({
                           'label':'tstep',
@@ -73,11 +69,32 @@ specs = {'tran':{'tokens':({
                         )
                }
            }
+# CONFIG OPTIONS
+# - Integration Method
+config_integration = 'TRAP'
 
-def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_method, x0=None,
+
+def set_method(method='TRAP'):
+    
+    if method.upper() == 'TRAP':
+        from . import trapezoidal as diff_slv
+    #elif method.upper() == ''
+    else:
+        logging.warning("Integration scheme unsupported\n \
+                        Defaulting to trapezoidal...")
+        from . import trapezoidal as diff_slv
+    
+    
+def transient_analysis(circ, tstart, tstep, tstop, x0=None, method=None,
                        outfile="stdout", return_req_dict=None):   
-
-    ##########################################################################
+    
+    """
+    
+    """
+    
+    # setup integration method
+    set_method(config_integration)
+    
     # check params    
     if tstart > tstop:
         logging.critical("tstart > tstop")
@@ -87,14 +104,18 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
         raise ValueError("Bad t-value. Must be positive")
 
     locked_nodes = circ.get_locked_nodes()
-    ##########################################################################
+    
     # matrix gen
     logging.info("Getting and reducing MNA equations from circuit")
     # MNA GEN: if an OP has already been completed, these matrices are already available
-    M0, ZDC0 = circ.generate_M0_and_ZDC0(circ)
-    M = M0[1:, 1:]
-    ZDC = ZDC0[1:]
+    
+    M = circ.M0[1:, 1:]
+    ZDC = circ.ZDC0[1:]
     M_size = M.shape[0]
+    
+    logging.info("Getting and reducing dynamic matrix D0 from circuit")
+    # Once again, if Dynamic matrix has been generated for previous transient, we reuse
+    D = circ.D0[1:, 1:]
     
     # setup the initial values to start the iteration:
     NNODES = circ.get_nodes_number()
@@ -103,36 +124,24 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
     logging.info("Building Gmin matrix")
     Gmin_matrix = gmin_mat(options.gmin, M.shape[0], NNODES-1)
     
-    logging.info("Getting and reducing dynamic matrix D0 from circuit")
-    # Once again, if Dynamic matrix has been generated for previous transient, we reuse
-    D0 = circ.generate_D0(circ)
-    D = D0[1:, 1:]
-    ##########################################################################
-    
     # We need an initial estimate to begin the transient
     if x0 is None:
         logging.info("No initial solution provided... Not ideal")
         x0 = np.zeros((M_size, 1))
-        op =  results.op_solution(x=x0, error=x0, circ=circ, outfile=None)
     else:
         logging.info("Using provided x0")
-        if isinstance(x0, results.op_solution):
+        if isinstance(x0, dict):
             logging.info("Operating point solution provided")
-            op = x0
-            x0 = x0.asarray()
-        else:
-            logging.info("OP manually provided. Formatting OP")
-            op =  results.op_solution(x=x0, error=np.zeros((M_size, 1)), circ=circ, outfile=None)
-    
+            x0 = [value for value in x0.values()]
+            x0 = np.array(x0)
+     
     logging.info("Initial estimate is...")
-    logging.info(op.print_short())
-    ##########################################################################
+    
     # we store the system state and derivative at a point t inside a buffer
-    buf = []
-    buf[0] = (tstart, x0, None)
+    buf = [(tstart, x0, None)]
     
     # set up a solution object
-    sol = results.tran_solution(circ, tstart, tstop, op=x0, method=method, outfile=outfile)
+    sol = results.Solution(circ, outfile, sol_type='TRAN', extra_header='t')
     
     logging.info("Beginning transient")
     i = 0
@@ -144,11 +153,18 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
             # for the first iteration we need to use implicit euler
             C1, C0 = BE.get_coefs((buf[0][1]), tstep)
         else:
-            C1, C0 = trapezoidal.get_coefs(buf, tstep)
+            C1, C0 = diff_slv.get_coefs(buf, tstep)
+        
+        
+        
+        circ.gen_matrices(t)
+        # retrieve ZAC and add to DC component
+        ZT = circ.ZT0[1:]
+        
         
         x, error, solved, n_iter = dc.dc_solve(
                                                      M=(M + C1 * D),
-                                                     ZDC=(ZDC + np.dot(D, C0) ), circ=circ,
+                                                     ZDC=(ZDC + np.dot(D, C0) +ZT), circ=circ,
                                                      Gmin=Gmin_matrix, x0=x0,
                                                      time=(t + tstep),
                                                      locked_nodes=locked_nodes,
@@ -159,13 +175,15 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
             t += tstep          # update time step
             x0 = x              # update initial estimate
             i += 1              # increment
-            sol.add_line(t, x)  # write line to the solution
-            # now calculate the derivative
+            row = [t]
+            # now append computations
+            row.extend(x.transpose().tolist()[0])
+            # write to file
+            sol.write_data(row)
             dxdt = np.multiply(C1, x) + C0
             buf.append((t, x, dxdt))
-            if i > 1:
-                buf.pop(0)
-            
+            print(f"{t/tstop*100} %", flush=True)
+            buf.pop(0)
         else:
             logging.error("Can't converge with step "+str(tstep)+".")
             logging.error("Try setting --t-max-nr to a higher value or set step to a lower one.")
@@ -174,10 +192,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
 
     if solved:
         # return the solution object
-        ret_value = sol
-    else:
-        print("failed.")
-        ret_value =  None
-
-    return ret_value
+        return sol.as_dict(float)
+    
+    return None
 
