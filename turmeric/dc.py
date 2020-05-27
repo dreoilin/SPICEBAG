@@ -14,7 +14,7 @@ from .FORTRAN.DC_SUBRS import gmin_mat
 from numpy.linalg import norm
 import numpy as np    
 
-from . import constants
+from . import units
 from . import options
 from . import solvers as slv
 from . import results

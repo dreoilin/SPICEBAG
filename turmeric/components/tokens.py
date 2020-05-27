@@ -61,6 +61,21 @@ class Label(NetlistToken):
     def __re__(cls):
         return r"([^ ]+)"
 
+class Model(Label):
+    """
+    To use in net_objs, call classmethod with list of models as parameter
+    """
+    def __init__(self, val):
+        super().__init__(val)
+        if self.value.lower() not in [i.lower() for i in self.models.keys()]:
+            raise ValueError("Model {self.value} not found in this netlist.")
+        self.value = self.models[self.value]
+
+    @classmethod
+    def defined(cls, models):
+        cls.models = models
+        return cls
+
 class Node(NetlistToken):
     def __init__(self,val):
         super().__init__(val)
@@ -112,26 +127,61 @@ class Value(NetlistToken):
         return str(self.value / self.__order)+prefix
 
 class ParamDict(NetlistToken):
+    """
+    Place in net_objs to return a dictionary of parsed parameter=value pairs.
+
+    Use ParamDict.allowed_params method to construct a class in the parsed component's
+        net_objs list that will add the parsed parameters directly to the parsed component
+        as attributes.
+    This will still return the dictionary of parsed parameter=value pairs.
+    """
     def __init__(self, val):
         r = '([^ \n]+=[^ \n]+)'
-        m = re.findall(r,val)
+        m = re.findall(r,val) if val else None
         d = {}
-        for g in m:
-            p = KVParam(g)
-            if p.key in d:
-                if isinstance(d[p.key],list):
-                    d[p.key].append(p.value)
+        if m is not None:
+            for g in m:
+                p = KVParam(g)
+                if p.key.lower() in d:
+                    if isinstance(d[p.key.lower()],list):
+                        d[p.key.lower()].append(p.value)
+                    else:
+                        l = [d[p.key.lower()]]
+                        l.append(p.value)
+                        d[p.key.lower()] = l
                 else:
-                    l = [d[p.key]]
-                    l.append(p.value)
-                    d[p.key] = l
-            else:
-                d.update({p.key : p.value})
+                    d.update({p.key.lower() : p.value})
+        allowed = '_'+type(self).__name__+'__allowed_params'
+        component = '_'+type(self).__name__+'__component'
+        if hasattr(self, allowed) and hasattr(self, component):
+            for param, desc in getattr(self, allowed).items():
+                if param.lower() in d:
+                    setattr(getattr(self,component),param,desc['type'](d[param]))
+                elif desc['default'] is not None:
+                    setattr(getattr(self,component),param,desc['type'](desc['default']))
+                else:
+                    raise ValueError(f'Missing non-default parameter {param} for {self.name} component')
         super().__init__(d)
+
+    @classmethod
+    def allowed_params(cls, component, paramset, optional=False):
+        """
+        paramset of the form: { 'param_name' : { 'type' : type_function_to_set_value, 'default' : [None|value]}}
+        If a parameter is given a default, it will be treated as optional
+        
+        parameters will be added to component
+        """
+        cls.__component = component
+        cls.__allowed_params = paramset
+        cls.__optional = optional
+        return cls
 
     @classproperty
     def __re__(cls):
-        return r"((?:(?: *)[^ \n]+=[^ \n]+)+)"
+        r = r"((?:(?: *)[^ \n]+=[^ \n]+)+)"
+        if hasattr(cls, '_'+cls.__name__+'__optional'):
+            r = f'?{r}?' if getattr(cls, '_'+cls.__name__+'__optional') else ''
+        return r
 
 class KVParam(NetlistToken):
     def __init__(self, val):

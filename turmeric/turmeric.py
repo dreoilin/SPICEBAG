@@ -16,7 +16,7 @@ from . import ac
 from . import netlist_parser
 
 # misc
-from . import constants
+from . import units
 from . import utilities
 
 # print result data
@@ -68,7 +68,7 @@ def set_temperature(T):
     T = float(T)
     if T > 300:
         printing.print_warning("The temperature will be set to %f \xB0 C.")
-    constants.T = utilities.Celsius2Kelvin(T)
+    units.T = utilities.Celsius2Kelvin(T)
 
 analysis = {'op': dc.op_analysis, 'dc': dc_sweep.dc_analysis,
             'tran': transient.transient_analysis, 'ac': ac.ac_analysis,
