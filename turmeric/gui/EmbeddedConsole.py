@@ -6,6 +6,47 @@ from threading import Thread
 from tkinter import *
 from tkinter import ttk
 
+ansi_colour_codes =  {
+        'foreground':
+        {
+            '0;30': 'Black',
+            '0;31': 'Red',
+            '0;32': 'Green',
+            '0;33': 'Brown',
+            '0;34': 'Blue',
+            '0;35': 'Purple',
+            '0;36': 'Cyan',
+            '0;37': 'LightGray',
+            '1;30': 'DarkGray',
+            '1;31': 'DarkRed',
+            '1;32': 'SeaGreen',
+            '1;33': 'Yellow',
+            '1;34': 'LightBlue',
+            '1;35': 'MediumPurple',
+            '1;36': 'LightCyan',
+            '1;37': 'White'
+        },
+        'background':
+        {
+            '0;40': 'Black',
+            '0;41': 'Red',
+            '0;42': 'Green',
+            '0;43': 'Brown',
+            '0;44': 'Blue',
+            '0;45': 'Purple',
+            '0;46': 'Cyan',
+            '0;47': 'LightGray',
+            '1;40': 'DarkGray',
+            '1;41': 'DarkRed',
+            '1;42': 'SeaGreen',
+            '1;43': 'Yellow',
+            '1;44': 'LightBlue',
+            '1;45': 'MediumPurple',
+            '1;46': 'LightCyan',
+            '1;47': 'White'
+        },
+}
+
 
 class EmbeddedConsole(Text):
     def __init__(self,master,envfilename='turmeric/gui/interactive_console.py'):
@@ -14,10 +55,25 @@ class EmbeddedConsole(Text):
 
         self.pack(fill=BOTH,expand=True)
         self.bind('<Return>', self.onReturn)
-
+        
+        # Output text shouldn't be editable
         self.READONLY = 'readonly'
         self.tag_config(self.READONLY)
 
+        for code in ansi_colour_codes['foreground']:
+            self.tag_config(code, foreground=ansi_colour_codes['foreground'][code])
+        self.ansi_decompose = re.compile('\x01?\x1b\[(.*)m\x02?')
+        self.ansi_escape = re.compile(r'''
+            \x1B  # ESC
+            (?:   # 7-bit C1 Fe (except CSI)
+                [@-Z\\-_]
+            |     # or [ for CSI, followed by a control sequence
+                \[
+                    [0-?]*  # Parameter bytes
+                    [ -/]*  # Intermediate bytes
+                    [@-~]   # Final byte
+            )
+        ''', re.VERBOSE)
         # Insert cursor position on entry line
         self.SCROLL_MARK = 'scroll_mark'
         self.mark_set(self.SCROLL_MARK, END)
@@ -109,20 +165,31 @@ class EmbeddedConsole(Text):
         """
         if readonly:
             self.tag_add(self.READONLY, self.LINE_START, f"{self.LINE_START} lineend")
-            text = text + '\n'
-
+            text = '\n' + text
+        
+        # Split on colour code regex
+        #rex_segs = self.ansi_decompose.split(text)
+        raw = self.ansi_escape.sub('',text)
+        #import pdb;pdb.set_trace()
         self.START_MARK = 'start_mark' # Where text started being added
         self.mark_set(self.START_MARK, INSERT)
         self.mark_gravity(self.START_MARK, LEFT)
 
-        self.insert(END, text)
-
-        self.see(INSERT)
+        #self.insert(END, rex_segs.pop(0)) # First group is text output
+        self.insert(END, raw) # First group is text output
+        
+        #if rex_segs: # Any remaining segments have colour codes associated
+        #    colour_tags = self.ansi_decompose.findall(text)
+        #    for t in colour_tags:
+        #        i = rex_segs.index(t)
+        #        self.insert(END, rex_segs[i+1], t)
+        #        rex_segs.pop(i)
 
         if readonly:
             self.tag_add(self.READONLY, self.START_MARK, f"{INSERT}-1c")
             self.mark_set(self.LINE_START, INSERT)
 
+        self.see(INSERT)
         self.mark_unset(self.START_MARK)
 
     #################################
@@ -149,6 +216,7 @@ class EmbeddedConsoleFrame(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
         self.master = master
+        self.pack(fill=BOTH,expand=True)
 
         self.tty = EmbeddedConsole(self)
         # TODO: use grid layout
