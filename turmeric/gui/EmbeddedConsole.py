@@ -216,11 +216,14 @@ class EmbeddedConsoleFrame(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
         self.master = master
-        self.pack(fill=BOTH,expand=True)
+        self.grid(row=0,column=0,sticky=NSEW)
+        self.grid_columnconfigure(0,weight=1)
+        self.grid_rowconfigure(0,weight=1)
 
         self.tty = EmbeddedConsole(self)
-        # TODO: use grid layout
-        self.tty.pack(fill=BOTH,expand=True)
+        self.tty.grid_propagate(0)
+        self.tty.columnconfigure(0, weight=1)
+        self.tty.rowconfigure(0, weight=1)
 
     def destroy(self):
         self.tty.destroy()
