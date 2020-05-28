@@ -267,7 +267,7 @@ def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
         
         iters += 1
         # perform newton update and damp appropriately
-        x = x + get_td(dx, locked_nodes, n=iters) * dx
+        x = x + damper(n=iters) * dx
         
         # if the circuit is linear, we know it has converged upon solution after one iteration
         if not nl:
@@ -325,43 +325,22 @@ def _update_J_and_N(J, Tx, x, elem, time):
                     J[n2m1, dports[iindex][1] - 1] += g
 
 
-def get_td(dx, locked_nodes, n=-1):
+def damper(n=-1):
     
     """
     Provide a damping coefficient for the Raphson method
     
     Currently, method damps first 20 iterations
     
-    
-    
     """
-    return 1.0
-    if n < 10:
-        td = 1e-2
+    if settings.damp_initial and n < 10:
+        d = 1e-2
     elif n < 20:
-        td = 0.1
+        d = 0.1
     else:
-        td = 1
-    
-    td_new = 1
-    
-    for (n1, n2) in locked_nodes:
-        if n1 != 0:
-            if n2 != 0:
-                if abs(dx[n1 - 1, 0] - dx[n2 - 1, 0]) > settings.nl_voltages_lock_factor * units.Vth():
-                    td_new = (settings.nl_voltages_lock_factor * units.Vth()) / abs(
-                        dx[n1 - 1, 0] - dx[n2 - 1, 0])
-            else:
-                if abs(dx[n1 - 1, 0]) > settings.nl_voltages_lock_factor * units.Vth():
-                    td_new = (settings.nl_voltages_lock_factor * units.Vth()) / abs(
-                        dx[n1 - 1, 0])
-        else:
-            if abs(dx[n2 - 1, 0]) > settings.nl_voltages_lock_factor * units.Vth():
-                td_new = (settings.nl_voltages_lock_factor * units.Vth()) / abs(
-                    dx[n2 - 1, 0])
-        if td_new < td:
-            td = td_new
-    return td
+        d=1.0
+        
+    return d
 
 def convergence_check(x, dx, residuum, nv_minus_one, debug=False):
     """Perform a convergence check
