@@ -8,8 +8,6 @@ from turmeric import analyses
 
 
 
-specs = {}
-
 class NetlistParseError(Exception):
     """Netlist parsing exception."""
     pass
@@ -17,11 +15,10 @@ class NetlistParseError(Exception):
 
 def parse_models(lines):
     models = {}
-    for line, line_n in lines:
+    for line in lines:
         tokens = line.replace("(", "").replace(")", "").split()
         if len(tokens) < 3:
-            raise NetlistParseError("parse_models(): syntax error in model declaration on line " + str(line_n) +
-                                    ".\n\t" + line)
+            raise ValueError(f"parse_models(): syntax error in model declaration in line:\n\t{line}")
         model_label = tokens[2]
         model_type = tokens[1]
         model_parameters = {}
@@ -34,9 +31,7 @@ def parse_models(lines):
             model_parameters.update({'name': model_label})
             model_iter = components.models.Shockley(**model_parameters)
         else:
-            raise NetlistParseError("parse_models(): Unknown model (" +
-                                    model_type + ") on line " + str(line_n) +
-                                    ".\n\t" + line,)
+            raise ValueError("parse_models(): Unknown model `{model_type}' in line\n\t{line}")
         models.update({model_label: model_iter})
     return models
 
@@ -72,18 +67,19 @@ def digest_raw_netlist(filename):
                 elif tokens[0] == ".end":
                     break
                 elif tokens[0] == ".model":
-                    model_directives.append((line, i+1))
+                    model_directives.append(line)
                 else:
-                    directives.append((line, i+1))
+                    directives.append(line)
                 continue
-            net_lines.append((line, i + 1))
+            net_lines.append(line)
     models = parse_models(model_directives)
     directivesmap = {
-        ".ac" : lambda line : analyses.AC(line),
-        ".op" : lambda line : analyses.OP(line),
-        ".dc" : lambda line : analyses.DC(line)
+        ".ac"   : lambda line : analyses.AC(line),
+        ".op"   : lambda line : analyses.OP(line),
+        ".dc"   : lambda line : analyses.DC(line),
+        ".tran" : lambda line : analyses.TRAN(line)
     }
-    ans = [directivesmap[line[0].split()[0]](line[0]) for line in directives]
+    ans = [directivesmap[line.split()[0]](line) for line in directives]
     logging.info(f"Finished processing `{filename}'")
     return (title, ans, models, net_lines)
 
@@ -118,11 +114,11 @@ def main_netlist_parser(circ, netlist_lines, models):
         'r': lambda line: components.R(line, circ),
         'v': lambda line: components.sources.V(line,circ)
     }
-    for line, line_n in netlist_lines:
+    for line in netlist_lines:
         try:
             elements.append(constructor[line[0]](line))
         except KeyError:
-            raise logging.exception(f"Unknown element {line[0]}")
+            raise logging.exception(f"Unknown element {line[0]} in {line}")
     return elements
 
 def convert_units(string_value):
