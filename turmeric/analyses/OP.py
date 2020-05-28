@@ -111,7 +111,11 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
     
     """
     M   : the conductance matrix
-    ZDC : the DC source  
+    Z   : the source matrix
+    Gmin : minimim conductance to ground
+            Gmin of None disables Gmin and source stepping
+    MAXIT : Maximum number iterations for the newton method
+    locked_nodes : a list of nodes connected to non-linear (diode) elements
     
     
     This method operates on the MNA matrices using the implemented
@@ -145,7 +149,11 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
 
     # if there is no initial guess, we start with 0
     if x0 is not None:
-        x =x0
+        if isinstance(x0, np.ndarray):
+            x =x0
+        elif isinstance(x0, dict):
+            x0 = [value for value in x0.values()]
+            x0 = np.array(x0)
     else:
         x = np.zeros((M_size, 1))
 
@@ -197,15 +205,27 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
 def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
 
     """
+    M : conductance matrix
+    Z : source matrix
+    MAXIT : maximum number of iterations for the newton method
+            locked_nodes: list of nodes connected to non-linear elements
+    
+    Low level method to solve the system MNA equations
     
     This function solves the non-linear system:
         
         A x + N(x) = Z
     
-    if N(x) is zero, the method solves the linear system of equations
+    if N(x) is zero, the method solves the linear system of equations,
+    and returns immediately.
+    
+    If the system is non-linear, it is solved by means of a damped newton
+    iteration method.
+    
+    Damping is configurable in the turmeric config.json file
     
     """    
-
+    
     M_size = M.shape[0]
     N = np.zeros((M_size, 1))
     J = np.zeros((M_size, M_size))
@@ -217,9 +237,7 @@ def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
     else:
         # bad array from user / previous OP in case of transient
         if x.shape[0] != M_size:
-            raise ValueError("x0s size is different from expected: got "
-                             "%d-elements x0 with an MNA of size %d" %
-                             (x.shape[0], M_size))
+            raise ValueError
 
     converged = False
     iters = 0
@@ -233,20 +251,22 @@ def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
                 if elem.is_nonlinear:
                     _update_J_and_N(J, N, x, elem, time)
         
-        # solve for the system error
+        # compute the sum of node voltages and branch currents
+        # this is the 'error' -> should sum to 0
         error = M.dot(x) + Z + nl*N
-        
+        # now solve the system using LU decomposition
         LU, INDX, _, C = ludcmp(M + nl*J, M_size)
         if C == 1:
-            raise ValueError
+            # singularity
+            raise SingularityError
         
         dx = lubksb(LU, INDX,  -error)
         # check for overflow error
         if norm(dx) == np.nan:
-            raise SingularityError
+            raise OverflowError
         
         iters += 1
-        # perform newton update
+        # perform newton update and damp appropriately
         x = x + get_td(dx, locked_nodes, n=iters) * dx
         
         # if the circuit is linear, we know it has converged upon solution after one iteration

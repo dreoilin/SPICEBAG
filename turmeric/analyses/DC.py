@@ -132,7 +132,8 @@ class DC(Analysis):
                 logging.info("Operating point solution provided as simulation result")
                 x0 = [value for value in x0.values()]
                 x0 = np.array(x0)
-        
+                
+                
         logging.debug("Initial estimate is...")
         logging.debug(x0)
         
