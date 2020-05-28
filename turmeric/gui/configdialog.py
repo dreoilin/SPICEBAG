@@ -2,23 +2,51 @@ from tkinter import *
 from tkinter.dialog import Dialog
 import tkinter.ttk as ttk
 import json
+import re
+from abc import ABC, abstractmethod
 
-class VarDetails(ttk.Frame):
-    def __init__(self, master, name, desc):
-        super().__init__(master)
-        self.master = master
+class ValidatingEntry(Entry, ABC):
+    def __init__(self, master, value="", **kwargs):
+        super(ValidatingEntry, self).__init__(master, **kwargs)
+        self.__value = value
+        self.__variable = StringVar()
+        self.var = self.__variable
+        self.__variable.set(value)
+        self.__variable.trace("w", self.__callback)
+        self.config(textvariable=self.__variable)
 
-        self.nameVar = StringVar()
-        self.nameVar.set(name)
-        self.nameL = Label(self, textvariable=self.nameVar)
-        self.nameL.pack(side=LEFT,fill=X)
+    def __callback(self, *dummy):
+        value = self.__variable.get()
+        newval = self.validate(value)
+        if newval is None:
+            self.__variable.set(self.__value)
+        elif newval != value:
+            self.__value = newval
+            self.__varibale.set(self.newval)
+        else:
+            self.__value = value
 
-        self.descriptionVar = StringVar()
-        self.descriptionVar.set(desc['description'])
-        self.descriptionL = Label(self, textvariable=self.descriptionVar)
-        self.descriptionL.pack(side=LEFT, fill=X)
+    @abstractmethod
+    def validate(self, value):
+        pass
 
-        self.pack(expand=YES,fill=X)
+class FloatEntry(ValidatingEntry):
+    def validate(self, value):
+        try:
+            if value:
+                v = float(value)
+                return value
+        except ValueError:
+            return None
+
+class IntEntry(ValidatingEntry):
+    def validate(self, value):
+        try:
+            if value:
+                v = int(value)
+                return value
+        except ValueError:
+            return None
 
 class ScrollFrame(ttk.Frame):
     def __init__(self, master, config):
@@ -36,19 +64,93 @@ class ScrollFrame(ttk.Frame):
         self.frame.bind("<Configure>", self.onFrameConfigure)
 
         self.config = config
+        self.valueWidgets = {
+                'bool'  : self.boolWidget,
+                'float' : self.floatWidget,
+                'str'   : self.strWidget,
+                'int'   : self.intWidget,
+                'enum'  : self.enumWidget
+                }
+        self.typefns = {
+                'bool'  : bool,
+                'float' : float,
+                'str'   : str,
+                'int'   : int,
+                'enum'  : str
+                }
+
+        self.valueFieldWidth = 5
+
         self.populate()
 
     def populate(self):
+        self.columnconfigure(0,weight=1)
+        self.columnconfigure(1,weight=1)
+        self.columnconfigure(2,weight=1)
+        self.config_widgets = {}
         for i, kv in enumerate(self.config.items()):
             k, desc = kv
             Label(self.frame, text=k).grid(sticky=W, row=i, column=0)
-            Label(self.frame, text=str(desc['value'])).grid(sticky=W, row=i, column=1)
+            self.config_widgets[k] = self.valueWidgets[desc['type']](self.frame, desc)
+            self.config_widgets[k].grid(sticky=W, row=i, column=1)
             Label(self.frame, text=str(desc['description'])).grid(sticky=W, row=i, column=2)
-            #self.vars.insert(END, VarDetails(self.vars, k, desc))
+
+    def dump_config(self):
+        ret = {}
+        for k,v in self.config_widgets.items():
+            value = v.var.get()
+            typefn = self.typefns[self.config[k]['type']]
+            ret[k] = self.config[k]
+            try:
+                ret[k]['value'] = typefn(value)
+            except ValueError as e:
+                logging.exception(f'Invalid value {value} for settings variable {k}. Using previous value.')
+                ret[k]['value'] = self.config[k]['value']
+        return ret
 
     def onFrameConfigure(self, event):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+    
+    def boolWidget(self, master, desc):
+        value = desc['value']
+        var = IntVar()
+        w = ttk.Checkbutton(master, variable=var)
+        w.var = var
+        var.set(0)
+        if bool(value):
+            var.set(1)
+        else:
+            var.set(0)
+        return w
 
+    def floatWidget(self, master, desc):
+        value = desc['value']
+        w = FloatEntry(master, value, width=self.valueFieldWidth)
+        return w
+
+    def strWidget(self, master, desc):
+        value = desc['value']
+        var = StringVar()
+        w = Entry(master, bg="white", textvariable=var, width=self.valueFieldWidth)
+        w.var = var
+        return w
+    
+    def intWidget(self, master, desc):
+        value = desc['value']
+        w = IntEntry(master, value, width=self.valueFieldWidth)
+        return w
+
+    def enumWidget(self, master, desc):
+        try:
+            enum = set(desc['enum'])
+        except KeyError as e:
+            logging.exception(f'Enum setting does not have a specified enum')
+        var = StringVar()
+        var.set(desc['value'])
+        w = OptionMenu(master, var, *enum)
+        w.configure(width=self.valueFieldWidth)
+        w.var = var
+        return w
 
 
 class ConfigWindow(object):
@@ -101,7 +203,7 @@ class ConfigWindow(object):
         self.master.quit()
 
     def ok_command(self):
-        self.quit(self.config) # Return new config
+        self.quit(self.varsframe.dump_config()) # Return new config
 
     def cancel_command(self):
         self.quit() # Return None, to signify no change
