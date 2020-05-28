@@ -7,6 +7,8 @@
 import numpy as np
 
 from . import dc
+
+from . import settings
 from .FORTRAN.DC_SUBRS import gmin_mat
 from .ODEsolvers import BE
 
@@ -71,7 +73,8 @@ config_gmin = 1e-12
 config_MAX_ITER = 20
 config_hmin = 1e-20
 
-def transient_analysis(circ, tstart, tstep, tstop, x0=None, method=None,
+
+def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integration_scheme, x0=None,
                        outfile="stdout", return_req_dict=None):   
     
     """
@@ -98,6 +101,7 @@ def transient_analysis(circ, tstart, tstep, tstop, x0=None, method=None,
     x0 = format_estimate(x0, M_size)
     
     logging.info("Building Gmin matrix")
+
     Gmin_matrix = gmin_mat(config_gmin, M.shape[0], NNODES-1)
     sol = results.Solution(circ, outfile, sol_type='TRAN', extra_header='t')
     
@@ -118,12 +122,14 @@ def transient_analysis(circ, tstart, tstep, tstop, x0=None, method=None,
         circ.gen_matrices(t)
         ZT = circ.ZT0[1:]
         
+
         x, error, solved, n_iter = dc.dc_solve(M=(M + C1 * D),
                                                ZDC=(ZDC + np.dot(D, C0) +ZT), circ=circ,
                                                Gmin=Gmin_matrix, x0=x0,
                                                time=(t + tstep),
                                                locked_nodes=locked_nodes,
                                                MAXIT=config_MAX_ITER)
+
 
         if solved:
             t += tstep          # update time step

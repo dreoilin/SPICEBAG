@@ -11,8 +11,7 @@ import numpy as np
 
 # linear components
 from . import components
-from . import options
-from . import utilities
+from . import settings
 from . import results
 from . import dc
 

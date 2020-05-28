@@ -14,7 +14,7 @@ import os
 import tabulate as _tabulate
 import numpy as np
 
-from . import options
+from . import settings
 
 
 def open_utf8(filename):
@@ -124,8 +124,8 @@ def print_info_line(msg_relevance_tuple, verbose, print_nl=True):
     """
     msg, relevance = msg_relevance_tuple
     if verbose >= relevance:
-        with printoptions(precision=options.print_precision,
-                          suppress=options.print_suppress):
+        with printoptions(precision=settings.print_precision,
+                          suppress=settings.print_suppress):
             if print_nl:
                 print(msg)
             else:
@@ -179,9 +179,9 @@ def print_result_check(badvars, verbose=2):
     else:
         if verbose:
             print("Difference check within margins.")
-            print("(Voltage: er=" + str(options.ver) + ", ea=" + str(options.vea) + \
+            print("(Voltage: er=" + str(settings.ver) + ", ea=" + str(settings.vea) + \
                 ", Current: er=" + \
-                str(options.ier) + ", ea=" + str(options.iea) + ")")
+                str(settings.ier) + ", ea=" + str(settings.iea) + ")")
     return None
 
 

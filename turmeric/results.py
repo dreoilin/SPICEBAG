@@ -1,14 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed May 27 09:33:22 2020
-
-@author: cian
-"""
 import numpy as np
 import csv
 import logging
-from .components import VoltageDefinedComponent
+import re
+from turmeric.components import VoltageDefinedComponent
 
 class Solution(object):
     
@@ -19,7 +13,7 @@ class Solution(object):
             self.headers = []
         # set circuit title as filename if not specified
         if filename is None:
-            self.filename = f"{circ.title}.{sol_type}"
+            self.filename = re.sub(' ','_',f"{circ.title}.{sol_type}".strip())
         else:
             self.filename = filename
         # we have reduced MNA
@@ -34,6 +28,7 @@ class Solution(object):
                 self.headers.append(header)
         # setup file 
         self._setup_file()
+        logging.info(f'Using results file {self.filename}.csv')
             
     def _setup_file(self):
         self.file = open(f"{self.filename}.csv", 'w+')

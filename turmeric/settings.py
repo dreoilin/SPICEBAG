@@ -1,20 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Created on Fri May  1 11:23:45 2020
+Configuration settings for turmeric
 
-@author: cian
+These values can be overwritten by those in a config.json file in the root directory and that is the preferred place to specify settings
 """
-
-import numpy as np
-
-#: Encoding of the netlist files.
-encoding = 'utf8'
-
-cache_len = 67108864
-
-cli = False
-
 ############################
 #      Tolerances          #
 ############################
@@ -28,14 +16,11 @@ iea = 1e-9
 ier = 1e-3
 #: Minimum conductance to ground.
 gmin = 1e-12
-#: Should we show to the user results pertaining to nodes introduced by
-#: components or by the simulator?
-print_int_nodes = True
 
 ############################
 #      Newton Method       #
 ############################
-nr_damp_first_iters = False
+damp_initial = False
 nl_voltages_lock = True
 nl_voltages_lock_factor = 4
 
@@ -45,9 +30,6 @@ nl_voltages_lock_factor = 4
 use_standard_solve_method = True
 use_gmin_stepping = True
 use_source_stepping = True
-
-#: When printing out to the user, how many decimal digits to show at maximum.
-print_precision = np.get_printoptions()['precision']
 
 ############################
 #      DC Analysis         #
@@ -59,11 +41,10 @@ dc_sweep_skip_allowed = True
 ############################
 #       Transient          #
 ############################
-
-default_tran_method = "TRAP"
 hmin = 1e-20
-transient_max_nr_iter = 20
+transient_max_iterations = 20
 transient_prediction_as_x0 = True
+default_integration_scheme = "TRAP"
 
 
 # ac
