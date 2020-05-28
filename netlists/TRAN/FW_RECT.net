@@ -13,7 +13,7 @@ V1 1 2 type=sin VO=0 VA=20 FREQ=50 TD=0 THETA=0
 R1 3 0 300
 .model D d
 .op
-.tran tstop=10m tstep=5u
+.tran tstop=50m tstep=10u
 .end
 
 * ref: google images
