@@ -5,7 +5,6 @@ import numpy as np
 import scipy as sp
 
 # analyses
-from . import transient
 from . import netlist_parser
 from . import units
 
@@ -18,9 +17,7 @@ import logging
 def temp_directive(T): # T in celsius
     units.T = units.Kelvin(float(T))
 
-analysis = {'tran': transient.transient_analysis,
-            'temp': temp_directive}
-
+analysis = {'temp': temp_directive}
 
 def main(filename, outfile="out"):
     """
