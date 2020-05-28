@@ -58,6 +58,7 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
     if points < 2 and not start == stop:
         raise ValueError("ac_analysis(): AC analysis has number of points < 2 & start != stop")
     
+
     if sweep_type.upper() == SWEEP_LOG or sweep_type is None:
         fs = np.logspace(int(start), np.log(int(stop)), num=int(points), endpoint=True)
     elif sweep_type.upper() == SWEEP_LOG:
@@ -104,4 +105,4 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
    
     sol.close()
     
-    return sol.as_dict()
+    return sol.as_dict(complex)
