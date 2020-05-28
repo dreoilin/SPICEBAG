@@ -5,7 +5,6 @@ import numpy as np
 import scipy as sp
 
 # analyses
-from . import dc_sweep
 from . import transient
 from . import netlist_parser
 from . import units
@@ -16,32 +15,10 @@ from .__version__ import __version__
 
 import logging
 
-def run(circ, an_list=None):
-    results = {}
-
-    an_list = copy.deepcopy(an_list)
-    if type(an_list) == tuple:
-        an_list = list(an_list)
-    elif type(an_list) == dict:
-        an_list = [an_list] # run(mycircuit, op1)
-
-    while len(an_list):
-        an_item = an_list.pop(0)
-        an_type = an_item.pop('type')
-        if 'x0' in an_item and isinstance(an_item['x0'], str):
-            logging.warning("%s has x0 set to %s, unavailable. Using 'None'." %
-                                   (an_type.upper(), an_item['x0']))
-            an_item['x0'] = None
-        r = analysis[an_type](circ, **an_item)
-        results.update({an_type: r})
-        
-    return results
-
 def temp_directive(T): # T in celsius
     units.T = units.Kelvin(float(T))
 
-analysis = { 'dc': dc_sweep.dc_analysis,
-            'tran': transient.transient_analysis,
+analysis = {'tran': transient.transient_analysis,
             'temp': temp_directive}
 
 

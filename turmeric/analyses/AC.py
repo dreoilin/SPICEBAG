@@ -21,7 +21,7 @@ class AC(Analysis):
 
     def __repr__(self):
         """
-        .ac [type=LOG/LIN] nsteps=steps start=start stop=stop
+        .AC [type=LOG/LIN] nsteps=steps start=start stop=stop
         """
         return f".AC {f'type={self.type} ' if hasattr(self,'type') else ''}nsteps={self.nsteps} start={self.start} stop={self.stop}"
 
