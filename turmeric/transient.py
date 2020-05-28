@@ -103,7 +103,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integ
     logging.info("Building Gmin matrix")
 
     Gmin_matrix = gmin_mat(config_gmin, M.shape[0], NNODES-1)
-    sol = results.Solution(circ, outfile, sol_type='TRAN', extra_header='t')
+    sol = results.Solution(circ, None, sol_type='TRAN', extra_header='t')
     
     #       tpoint  x    dx
     buf = [(tstart, x0, None)]
