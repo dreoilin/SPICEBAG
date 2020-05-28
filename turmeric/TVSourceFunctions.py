@@ -135,8 +135,8 @@ class SIN(TVSourceFunction):
 tvsourcefunctions = {
         'am' : AM,
         'exp' : EXP,
-        'pulse' : PULSE
+        'pulse' : PULSE,
         'sffm' : SFFM,
-        'sin' : SIN,
+        'sin' : SIN
         }
 
