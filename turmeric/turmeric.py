@@ -81,6 +81,7 @@ def main(filename, outfile="out"):
         logging.exception(f"{e}: ioerror on netlist file {filename}")
         sys.exit()
 
+
     logging.info("Parsed circuit:")
     logging.info(repr(circ) + '\n' + '\n'.join(repr(m) for m in circ.models.values()))
 

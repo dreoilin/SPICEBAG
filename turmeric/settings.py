@@ -46,11 +46,7 @@ transient_max_iterations = 20
 transient_prediction_as_x0 = True
 default_integration_scheme = "TRAP"
 
-
-# ac
-ac_log_step = 'LOG'
-ac_lin_step = 'LIN'
-#: Maximum number of NR iterations for AC analyses.
-ac_max_nr_iter = 20
-#: Use degrees instead of rads in AC phase results.
-ac_phase_in_deg = False
+#############################
+#        Results            #
+#############################
+output_directory = 'results'
