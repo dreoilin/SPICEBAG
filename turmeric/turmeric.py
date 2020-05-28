@@ -74,9 +74,6 @@ def main(filename, outfile="out"):
     logging.info("==Tabulate %s" % (tabulate.__version__))
     
     load_config()
-    from turmeric.config import options as opt
-    import turmeric.options as opt2
-    print(f"vea = {opt2.vea}")
 
     logging.info(f"Parsing netlist file `{filename}'")
     try:

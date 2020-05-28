@@ -9,7 +9,7 @@ Created on Fri May  1 11:23:45 2020
 import numpy as np
 
 from . import dc
-from . import options
+from . import settings
 from .FORTRAN.DC_SUBRS import gmin_mat
 
 import logging
@@ -74,7 +74,7 @@ specs = {'tran':{'tokens':({
                }
            }
 
-def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_method, x0=None,
+def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integration_scheme, x0=None,
                        outfile="stdout", return_req_dict=None):   
 
     ##########################################################################
@@ -101,7 +101,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
     
     # good old gmin, take away a node : reduced
     logging.info("Building Gmin matrix")
-    Gmin_matrix = gmin_mat(options.gmin, M.shape[0], NNODES-1)
+    Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], NNODES-1)
     
     logging.info("Getting and reducing dynamic matrix D0 from circuit")
     # Once again, if Dynamic matrix has been generated for previous transient, we reuse
@@ -152,7 +152,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=options.default_tran_m
                                                      Gmin=Gmin_matrix, x0=x0,
                                                      time=(t + tstep),
                                                      locked_nodes=locked_nodes,
-                                                     MAXIT=options.transient_max_nr_iter
+                                                     MAXIT=settings.transient_max_iterations
                                                      )
 
         if solved:

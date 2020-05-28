@@ -15,30 +15,11 @@ from numpy.linalg import norm
 import numpy as np    
 
 from . import units
-from . import options
+from . import settings
 from . import solvers as slv
 from . import results
 
-specs = {'op': {
-    'tokens': ({
-               'label': 'guess',
-               'pos': None,
-               'type': bool,
-               'needed': False,
-               'dest': 'guess',
-               'default': options.dc_use_guess
-               },
-        {
-               'label': 'ic_label',
-               'pos': None,
-               'type': str,
-               'needed': False,
-               'dest': 'x0',
-               'default': None
-               }
-               )
-    }
-}
+specs = {'op': {'tokens' : {} }}
     
 
 def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
@@ -167,7 +148,7 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
 
     logging.debug("op_analysis(): constructing Gmin matrix")
     # take away a single node because we have reduced M
-    Gmin_matrix = gmin_mat(options.gmin, M.shape[0], circ.get_nodes_number()-1)
+    Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], circ.get_nodes_number()-1)
     
     logging.info("op_analysis(): solving with Gmin")
     # now solve
@@ -330,16 +311,16 @@ def get_td(dx, locked_nodes, n=-1):
     for (n1, n2) in locked_nodes:
         if n1 != 0:
             if n2 != 0:
-                if abs(dx[n1 - 1, 0] - dx[n2 - 1, 0]) > options.nl_voltages_lock_factor * constants.Vth():
-                    td_new = (options.nl_voltages_lock_factor * constants.Vth()) / abs(
+                if abs(dx[n1 - 1, 0] - dx[n2 - 1, 0]) > settings.nl_voltages_lock_factor * constants.Vth():
+                    td_new = (settings.nl_voltages_lock_factor * constants.Vth()) / abs(
                         dx[n1 - 1, 0] - dx[n2 - 1, 0])
             else:
-                if abs(dx[n1 - 1, 0]) > options.nl_voltages_lock_factor * constants.Vth():
-                    td_new = (options.nl_voltages_lock_factor * constants.Vth()) / abs(
+                if abs(dx[n1 - 1, 0]) > settings.nl_voltages_lock_factor * constants.Vth():
+                    td_new = (settings.nl_voltages_lock_factor * constants.Vth()) / abs(
                         dx[n1 - 1, 0])
         else:
-            if abs(dx[n2 - 1, 0]) > options.nl_voltages_lock_factor * constants.Vth():
-                td_new = (options.nl_voltages_lock_factor * constants.Vth()) / abs(
+            if abs(dx[n2 - 1, 0]) > settings.nl_voltages_lock_factor * constants.Vth():
+                td_new = (settings.nl_voltages_lock_factor * constants.Vth()) / abs(
                     dx[n2 - 1, 0])
         if td_new < td:
             td = td_new
@@ -376,8 +357,8 @@ def convergence_check(x, dx, residuum, nv_minus_one, debug=False):
         x = np.array(x)
         dx = np.array(dx)
         residuum = np.array(residuum)
-    vcheck, vresults = custom_convergence_check(x[:nv_minus_one, 0], dx[:nv_minus_one, 0], residuum[:nv_minus_one, 0], er=options.ver, ea=options.vea, eresiduum=options.iea)
-    icheck, iresults = custom_convergence_check(x[nv_minus_one:], dx[nv_minus_one:], residuum[nv_minus_one:], er=options.ier, ea=options.iea, eresiduum=options.vea)
+    vcheck, vresults = custom_convergence_check(x[:nv_minus_one, 0], dx[:nv_minus_one, 0], residuum[:nv_minus_one, 0], er=settings.ver, ea=settings.vea, eresiduum=settings.iea)
+    icheck, iresults = custom_convergence_check(x[nv_minus_one:], dx[nv_minus_one:], residuum[nv_minus_one:], er=settings.ier, ea=settings.iea, eresiduum=settings.vea)
     return vcheck and icheck, vresults + iresults
 
 def custom_convergence_check(x, dx, residuum, er, ea, eresiduum, debug=False):
