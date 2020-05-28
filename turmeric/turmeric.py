@@ -15,6 +15,8 @@ from . import netlist_parser
 from . import units
 from . import printing
 
+from turmeric.config import load_config
+
 from .__version__ import __version__
 
 import logging
@@ -71,6 +73,11 @@ def main(filename, outfile="out"):
     logging.info("==Scipy %s" % (sp.__version__))
     logging.info("==Tabulate %s" % (tabulate.__version__))
     
+    load_config()
+    from turmeric.config import options as opt
+    import turmeric.options as opt2
+    print(f"vea = {opt2.vea}")
+
     logging.info(f"Parsing netlist file `{filename}'")
     try:
         (circ, analyses) = netlist_parser.parse_network(filename)
