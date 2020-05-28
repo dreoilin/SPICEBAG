@@ -57,9 +57,9 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
     if points < 2 and not start == stop:
         raise ValueError("ac_analysis(): AC analysis has number of points < 2 & start != stop")
     
-    if sweep_type.upper() == options.ac_log_step or sweep_type is None:
+    if sweep_type.upper() == 'LOG' or sweep_type is None:
         fs = np.logspace(int(start), np.log(int(stop)), num=int(points), endpoint=True)
-    elif sweep_type.upper() == options.ac_lin_step:
+    elif sweep_type.upper() == 'LIN':
         fs = np.linspace(int(start), int(stop), num=int(points), endpoint=True)
     else:
         raise ValueError(f"ac_analysis(): unknown sweep type {sweep_type}")
