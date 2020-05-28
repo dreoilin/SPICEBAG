@@ -59,8 +59,7 @@ class ScrollFrame(ttk.Frame):
 
         self.scrollbar.pack(side=RIGHT, fill=Y)
         self.canvas.pack(side=LEFT, fill=BOTH, expand=True)
-        # create window?
-        self.canvas.create_window((4,4), window=self.frame, anchor="nw",tags="self.frame")
+        self.canvas.create_window((1,1), window=self.frame, anchor="nw",tags="self.frame")
         self.frame.bind("<Configure>", self.onFrameConfigure)
 
         self.config = config
@@ -80,6 +79,8 @@ class ScrollFrame(ttk.Frame):
                 }
 
         self.valueFieldWidth = 5
+        self.nameWrapLength = 150
+        self.descWrapLength = 250
 
         self.populate()
 
@@ -93,7 +94,7 @@ class ScrollFrame(ttk.Frame):
             Label(self.frame, text=k).grid(sticky=W, row=i, column=0)
             self.config_widgets[k] = self.valueWidgets[desc['type']](self.frame, desc)
             self.config_widgets[k].grid(sticky=W, row=i, column=1)
-            Label(self.frame, text=str(desc['description'])).grid(sticky=W, row=i, column=2)
+            Label(self.frame, text=str(desc['description']),wraplength=self.descWrapLength).grid(sticky=W, row=i, column=2)
 
     def dump_config(self):
         ret = {}
@@ -158,9 +159,9 @@ class ConfigWindow(object):
     # Code adapted from tkinter's FileDialog window
     # At https://github.com/python/cpython/blob/3.9/Lib/tkinter/filedialog.py
     def __init__(self, master, config_filename, geometry, title=None):
-        self.top = Toplevel(master)
+        self.top = Toplevel(master,padx=5,pady=5)
         self.master = master
-        
+        self.top.resizable(True,True)
         self.config_filename = config_filename
 
         self.top.title( title if title is not None else f'Editing configuration at {self.config_filename}')
@@ -209,7 +210,7 @@ class ConfigWindow(object):
     def cancel_command(self):
         self.quit() # Return None, to signify no change
 
-def configdialog(root, filename, geometry=(400,600,0,0), title=None):
+def configdialog(root, filename, geometry=(530,300,0,0), title=None):
     cw = ConfigWindow(root, filename, geometry, title)
     return cw.go()
 
