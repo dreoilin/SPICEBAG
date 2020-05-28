@@ -7,6 +7,10 @@ from tkinter import messagebox
 
 from .tabcontrols import TabEditor
 from .EditorFrame import EditorFrame
+from .configdialog import configdialog
+
+import turmeric.settings
+from turmeric.config import load_config, write_config
 
 UNTITLED = 'Untitled'
 
@@ -74,10 +78,11 @@ class Editor(Tk):
         self.bind('<Control-q>', lambda e: self.quit())
         menu_edit.add_command(label='Undo', accelerator='Ctl+Z', command= lambda : print('UNDO')) # TODO
         self.bind('<Control-z>', lambda e: print('UNDO'))
-        menu_edit.add_command(label='Redo', accelerator='Ct+^Z', command= lambda : print('REDO')) # TODO
+        menu_edit.add_command(label='Redo', accelerator='Ctl+^Z', command= lambda : print('REDO')) # TODO
         self.bind('<Control-Z>', lambda e: print('REDO'))
-        menu_edit.add_command(label='Preferences', command= lambda : print('PREFERENCES DIALOG')) # TODO
+        menu_edit.add_command(label='Configuration', command= self.open_configuration)
 
+        menu_edit.entryconfigure('Undo', state=DISABLED)
         menu_edit.entryconfigure('Redo', state=DISABLED)
         
         menu_help = Menu(self.menubar, name='help')
@@ -122,6 +127,12 @@ class Editor(Tk):
         if f is not None:
             self.save_file(event,filename=f)
             self.tabeditor.tab(self.tabeditor.select(), text=str(Path(f).relative_to(self.pwd)))
+
+    def open_configuration(self, event=None):
+        new_config = configdialog(turmeric.settings.config_filename)
+        if new_config is not None:
+            load_config(configdict=new_config)
+            write_config(configdict=new_config,configfile=str(new_config['config_filename']['value']))
 
 if __name__ == '__main__':
     ed = Editor()
