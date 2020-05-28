@@ -38,7 +38,7 @@ class D(Component):
         """
         D<label> n1 n2 <model_id> [<AREA=value> <T=value>]
         """
-        r = f"D{self.part_id} {self.n1} {self.n2} {self.model.name}"
+        r = f"D{self.part_id} {self.n1} {self.n2} {self.model.name} "
         r += ' '.join([f'{p}={getattr(self,p)}' for p in ['AREA','T']])
         return r
 

@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri May  1 11:23:45 2020
-
-@author: cian
-
-"""
-
 import logging
 
 from .FORTRAN.LU import ludcmp, lubksb
@@ -19,27 +11,7 @@ from . import settings
 from . import solvers as slv
 from . import results
 
-specs = {'op': {
-    'tokens': ({
-               'label': 'guess',
-               'pos': None,
-               'type': bool,
-               'needed': False,
-               'dest': 'guess',
-               'default': settings.dc_use_guess
-               },
-        {
-               'label': 'ic_label',
-               'pos': None,
-               'type': str,
-               'needed': False,
-               'dest': 'x0',
-               'default': None
-               }
-               )
-    }
-}
-    
+specs = {'op': {'tokens' : {} }}
 
 def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
              MAXIT=1000, locked_nodes=None):

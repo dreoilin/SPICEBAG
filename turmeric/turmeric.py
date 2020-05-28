@@ -1,10 +1,8 @@
 import copy
 import sys
 
-
 import numpy as np
 import scipy as sp
-import tabulate
 
 # analyses
 from . import dc
@@ -13,7 +11,6 @@ from . import transient
 from . import ac
 from . import netlist_parser
 from . import units
-from . import printing
 
 from turmeric.config import load_config
 
@@ -42,12 +39,12 @@ def run(circ, an_list=None):
         
     return results
 
-def set_temperature(T): # T in celsius
+def temp_directive(T): # T in celsius
     units.T = units.Kelvin(float(T))
 
 analysis = {'op': dc.op_analysis, 'dc': dc_sweep.dc_analysis,
             'tran': transient.transient_analysis, 'ac': ac.ac_analysis,
-            'temp': set_temperature}
+            'temp': temp_directive}
 
 
 def main(filename, outfile="out"):
@@ -71,12 +68,8 @@ def main(filename, outfile="out"):
     logging.info("==Python %s" % (sys.version.split('\n')[0],))
     logging.info("==Numpy %s" % (np.__version__))
     logging.info("==Scipy %s" % (sp.__version__))
-    logging.info("==Tabulate %s" % (tabulate.__version__))
     
     load_config()
-    from turmeric.config import settings as opt
-    import turmeric.settings as opt2
-    print(f"vea = {opt2.vea}")
 
     logging.info(f"Parsing netlist file `{filename}'")
     try:
