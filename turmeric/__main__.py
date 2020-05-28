@@ -13,7 +13,6 @@ from optparse import OptionParser
 from . import turmeric
 from . import options
 from . import transient
-from . import utilities
 from .__version__ import __version__
 
 def _cli():
@@ -116,12 +115,6 @@ def _cli():
     if not len(remaning_args) == 1:
         print("Usage: python -m turmeric [options] <filename>\npython -m turmeric -h for help")
         sys.exit(1)
-    #if remaning_args[0] == '-':
-    #    read_netlist_from_stdin = True
-    #else:
-    #    read_netlist_from_stdin = False
-    #if not read_netlist_from_stdin and not utilities.check_file(remaning_args[0]):
-    #    sys.exit(23)
 
     #options.transient_no_step_control = cli_options.no_step_control
     #options.dc_use_guess = cli_options.dc_guess

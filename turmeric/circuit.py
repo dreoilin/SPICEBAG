@@ -13,31 +13,14 @@ import numpy as np
 import sys
 
 from . import components
-from . import diode
 
 from . import printing
-from . import utilities
 
 class Circuit(list):
-    """The circuit class.
-
-    **Parameters:**
-
-    title : string
-        The circuit title.
-
-    filename : string, optional
-
-        .. deprecated:: 0.09
-
-        If the circuit instance corresponds to a netlist file on disk,
-        set this to the netlist filename.
-
-    """
     def __init__(self, title, filename=None):
         self.title = title
         self.filename = filename
-        self.nodes_dict = {}  # {int_node:ext_node, int_node:ext_node}
+        self.nodes_dict = {}
         self.internal_nodes = 0
         self.models = {}
         self.gnd = '0'
@@ -119,12 +102,6 @@ class Circuit(list):
                     locked_nodes.append(port)
         return locked_nodes
 
-    # TODO: has_duplicate_elem only used in one place, put it there
-    def has_duplicate_elem(self):
-        
-        all_ids = tuple(map(lambda e: e.part_id, self))
-        return len(set(all_ids)) != len(all_ids)
-
     def find_vde_index(self, elem_or_id):
         
         if not isinstance(elem_or_id, str):
@@ -140,10 +117,15 @@ class Circuit(list):
                     vde_index += 1
         else:
             raise ValueError(("find_vde_index(): element %s was not found. This is a bug.") % (part_id,))
-        printing.print_info_line(("%s found at index %d" % (part_id,vde_index), 6),0)
+        logging.info(("%s found at index %d" % (part_id,vde_index), 6),0)
         return vde_index
 
     def gen_matrices(self, time=0):
+        # First, current defined, linear elements
+        # == CD = {R , C , G, I}
+        # Next, voltage defined elements
+        # == VD = { V , E , H , L }
+        # Finally F
         n = self.get_nodes_number()
         M0 = np.zeros((n,n))
         ZDC0 = np.zeros((n, 1))
@@ -151,7 +133,7 @@ class Circuit(list):
         D0 = np.zeros(M0.shape)
         ZT0 = np.zeros(ZDC0.shape)
 
-        CD = [components.R, components.C, components.sources.G, components.sources.ISource]
+        CD = [components.R, components.C, components.sources.G, components.sources.I]
         [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time) for elem in self if type(elem) in CD]
         VD = [components.sources.V,components.sources.E,components.sources.H, components.L]
         for elem in self:
@@ -163,12 +145,6 @@ class Circuit(list):
         self.ZAC0 = ZAC0
         self.D0   = D0
         self.ZT0  = ZT0 
-
-        # First, current defined, linear elements
-        # == CD = {R , C , G, ISource}
-        # Next, voltage defined elements
-        # == VD = { V , E , H , L }
-        # Finally F
 
 
 class NodeNotFoundError(Exception):

@@ -11,23 +11,13 @@ from . import dc
 from . import dc_sweep
 from . import transient
 from . import ac
-
-# parser
 from . import netlist_parser
-
-# misc
-from . import constants
-from . import utilities
-
-# print result data
+from . import units
 from . import printing
 
+from turmeric.config import load_config
+
 from .__version__ import __version__
-
-global _queue, _x0s, _print
-
-_print = False
-_x0s = {None: None}
 
 import logging
 
@@ -52,30 +42,15 @@ def run(circ, an_list=None):
         
     return results
 
-
-def new_x0(circ, icdict):
-    
-    return dc.build_x0_from_user_supplied_ic(circ, icdict)
-
-
-def icmodified_x0(circ, x0):
-    
-    return dc.modify_x0_for_ic(circ, x0)
-
-
-def set_temperature(T):
-    """Set the simulation temperature, in Celsius."""
-    T = float(T)
-    if T > 300:
-        printing.print_warning("The temperature will be set to %f \xB0 C.")
-    constants.T = utilities.Celsius2Kelvin(T)
+def set_temperature(T): # T in celsius
+    units.T = units.Kelvin(float(T))
 
 analysis = {'op': dc.op_analysis, 'dc': dc_sweep.dc_analysis,
             'tran': transient.transient_analysis, 'ac': ac.ac_analysis,
             'temp': set_temperature}
 
 
-def main(filename, outfile="stdout"):
+def main(filename, outfile="out"):
     """
     filename : string
         The netlist filename.
@@ -98,6 +73,11 @@ def main(filename, outfile="stdout"):
     logging.info("==Scipy %s" % (sp.__version__))
     logging.info("==Tabulate %s" % (tabulate.__version__))
     
+    load_config()
+    from turmeric.config import options as opt
+    import turmeric.options as opt2
+    print(f"vea = {opt2.vea}")
+
     logging.info(f"Parsing netlist file `{filename}'")
     try:
         (circ, analyses) = netlist_parser.parse_network(filename)
@@ -109,28 +89,12 @@ def main(filename, outfile="stdout"):
         logging.exception(f"{e}: ioerror on netlist file {filename}")
         sys.exit()
 
-    # TODO: Verify check_circuit is used
-    #logging.info("Checking circuit for common mistakes...")
-    # utility check should be member method for circuit class
-    #(check, reason) = utilities.check_circuit(circ)
-    #if not check:
-    #    logging.error(reason)
-    #    sys.exit(3)
-    #logging.info("Finished")
-
-    
     logging.info("Parsed circuit:")
-    logging.info(repr(circ))
-    logging.info("Models:")
-    for m in circ.models:
-        circ.models[m].print_model()
+    logging.info(repr(circ) + '\n' + '\n'.join(repr(m) for m in circ.models.values()))
 
     results = {}
     for an in analyses:
-        logging.info(f"Analysis {an}:")
-        # print to logger
-        printing.print_analysis(an)
-        
+        logging.info(f"Analysis {an} running")
         results.update(run(circ, [an]))
 
     return results

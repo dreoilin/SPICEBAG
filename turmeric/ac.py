@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import logging
 
 from . import options
 from . import results
-import logging
+from . import complex_solve
+
 
 specs = {'ac': {'tokens': ({
                            'label': 'type',
@@ -81,8 +83,8 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
                       non-linear circuits")
         raise ValueError
 
-    sol = results.ac_solution(circ, start=start, stop=stop, points=points,
-                              stype=sweep_type, op=x0, outfile=outfile)
+    sol = results.Solution(circ, outfile, sol_type='AC', extra_header='f')
+    
 
     j = np.complex('j')
     
@@ -90,17 +92,15 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
         # evaluate the impedance at
         # the current frequency
         IMP = f * np.pi * 2 * j * D
-        try:
-            x = np.linalg.solve((M + IMP), ZAC)
-        except OverflowError:
-            logging.error(f"ac_analysis(): Numpy couldn't solve the \
-                          system at {f} Hz due to an overflow error")
-            raise ValueError
-        except np.linalg.LinAlgError as e:
-            if 'Singular matrix' in str(e):
-                logging.error(f"ac_analysis(): singular matrix detected \
-                              at {f} Hz")
-                raise ValueError
-        sol.add_line(f, x)
+        # solve using the complex solver
+        x = complex_solve.solver((M + IMP), ZAC)
+        # start row with frequency
+        row = [f]
+        # now append computations
+        row.extend(x.transpose().tolist()[0])
+        # write to file
+        sol.write_data(row)
    
-    return sol
+    sol.close()
+    
+    return sol.as_dict()

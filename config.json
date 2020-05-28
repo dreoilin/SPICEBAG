@@ -1,0 +1,127 @@
+{
+	"ac_lin_step":
+	{
+		"value" : "LIN",
+		"description" : ""
+	},
+	"ac_log_step":
+	{
+		"value" : "LOG",
+		"description" : ""
+	},
+	"ac_max_nr_iter":
+	{
+		"value" : 20,
+		"description" : "Maximum number of NR iterations for AC analyses"
+	},
+	"ac_phase_in_deg":
+	{
+		"value" : false,
+		"description" : "Use degrees instead of rads in AC phase results"
+	},
+	"cache_len":
+	{
+		"value" : 67108864,
+		"description" : ""
+	},
+	"cli":
+	{
+		"value" : false,
+		"description" : ""
+	},
+	"dc_max_guess_effort":
+	{
+		"value" : 250000,
+		"description" : ""
+	},
+	"dc_sweep_skip_allowed":
+	{
+		"value" : true,
+		"description" : ""
+	},
+	"dc_use_guess":
+	{
+		"value" : true,
+		"description" : ""
+	},
+	"default_tran_method":
+	{
+		"value" : "TRAP",
+		"description" : ""
+	},
+	"encoding":
+	{
+		"value" : "utf8",
+		"description" : ""
+	},
+	"gmin":
+	{
+		"value" : 1e-12,
+		"description" : "Minimum conductance to ground"
+	},
+	"hmin":
+	{
+		"value" : 1e-20,
+		"description" : ""
+	},
+	"iea":
+	{
+		"value" : 1e-09,
+		"description" : "Current absolute tolerance"
+	},
+	"ier":
+	{
+		"value" : 0.001,
+		"description" : "Current relative tolerance"
+	},
+	"nl_voltages_lock":
+	{
+		"value" : true,
+		"description" : ""
+	},
+	"nl_voltages_lock_factor":
+	{
+		"value" : 4,
+		"description" : ""
+	},
+	"nr_damp_first_iters":
+	{
+		"value" : false,
+		"description" : ""
+	},
+	"transient_max_nr_iter":
+	{
+		"value" : 20,
+		"description" : ""
+	},
+	"transient_prediction_as_x0":
+	{
+		"value" : true,
+		"description" : ""
+	},
+	"use_gmin_stepping":
+	{
+		"value" : true,
+		"description" : ""
+	},
+	"use_source_stepping":
+	{
+		"value" : true,
+		"description" : ""
+	},
+	"use_standard_solve_method":
+	{
+		"value" : true,
+		"description" : ""
+	},
+	"vea":
+	{
+		"value" : 1e-06,
+		"description" : "Voltage absolute tolerance"
+	},
+	"ver":
+	{
+		"value" : 0.001,
+		"description" : "Voltage relative tolerance"
+	}
+}
