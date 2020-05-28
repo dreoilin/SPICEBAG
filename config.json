@@ -4,6 +4,11 @@
 		"type": "bool",
 		"value": false
 	},
+	"config_filename": {
+		"description": "Path to configuration file.",
+		"type": "str",
+		"value": "config.json"
+	},
 	"dc_sweep_skip_allowed": {
 		"description": "",
 		"type": "bool",

@@ -54,3 +54,5 @@ ac_lin_step = 'LIN'
 ac_max_nr_iter = 20
 #: Use degrees instead of rads in AC phase results.
 ac_phase_in_deg = False
+
+config_filename = "config.json"

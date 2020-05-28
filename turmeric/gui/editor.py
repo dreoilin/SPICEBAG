@@ -74,8 +74,8 @@ class Editor(Tk):
         menu_file.add_command(label='Save As', underline = 5, command = lambda : print('Save As'), state='disabled') # TODO
         # There is a tkinter asksaveasfilename() dialog
         menu_file.add_separator()
-        menu_file.add_command(label='Quit', accelerator='Ctl+Q', underline = 0, command = self.quit) # TODO Wrap this in something to check no unsaved changes
-        self.bind('<Control-q>', lambda e: self.quit())
+        menu_file.add_command(label='Quit', accelerator='Ctl+Q', underline = 0, command = self.close) # TODO Wrap this in something to check no unsaved changes
+        self.bind('<Control-q>', lambda e: self.close())
         menu_edit.add_command(label='Undo', accelerator='Ctl+Z', command= lambda : print('UNDO')) # TODO
         self.bind('<Control-z>', lambda e: print('UNDO'))
         menu_edit.add_command(label='Redo', accelerator='Ctl+^Z', command= lambda : print('REDO')) # TODO
@@ -95,6 +95,10 @@ class Editor(Tk):
         self.menubar.add_cascade(menu=sysmenu)
 
         self.config(menu=self.menubar)
+
+    def close(self, e=None):
+        
+        self.quit()
 
     def new_editor_tab(self,e=None,filename=None):
         title = Path(filename).relative_to(self.pwd) if filename is not None else UNTITLED
@@ -129,7 +133,7 @@ class Editor(Tk):
             self.tabeditor.tab(self.tabeditor.select(), text=str(Path(f).relative_to(self.pwd)))
 
     def open_configuration(self, event=None):
-        new_config = configdialog(turmeric.settings.config_filename)
+        new_config = configdialog(self, turmeric.settings.config_filename)
         if new_config is not None:
             load_config(configdict=new_config)
             write_config(configdict=new_config,configfile=str(new_config['config_filename']['value']))

@@ -114,13 +114,13 @@ class ScrollFrame(ttk.Frame):
     def boolWidget(self, master, desc):
         value = desc['value']
         var = IntVar()
-        w = ttk.Checkbutton(master, variable=var)
-        w.var = var
         var.set(0)
         if bool(value):
             var.set(1)
         else:
             var.set(0)
+        w = ttk.Checkbutton(master, variable=var)
+        w.var = var
         return w
 
     def floatWidget(self, master, desc):
@@ -131,6 +131,7 @@ class ScrollFrame(ttk.Frame):
     def strWidget(self, master, desc):
         value = desc['value']
         var = StringVar()
+        var.set(value)
         w = Entry(master, bg="white", textvariable=var, width=self.valueFieldWidth)
         w.var = var
         return w

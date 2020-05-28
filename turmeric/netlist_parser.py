@@ -125,14 +125,13 @@ def main_netlist_parser(circ, netlist_lines, models):
         'r': lambda line: components.R(line, circ),
         'v': lambda line: components.sources.V(line,circ)
     }
-    try:
-        for line, line_n in netlist_lines:
-            try:
-                e = parse_function[line[0]](line)
-                # TODO: remove once all elements parsed via inheritance
-                elements.append(e if type(e) is not list else e[0])
-            except KeyError:
-                raise logging.exception(f"Unknown element {line[0]}")
+    for line, line_n in netlist_lines:
+        try:
+            e = parse_function[line[0]](line)
+            # TODO: remove once all elements parsed via inheritance
+            elements.append(e if type(e) is not list else e[0])
+        except KeyError:
+            raise logging.exception(f"Unknown element {line[0]}")
     return elements
 
 def convert_units(string_value):
