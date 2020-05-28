@@ -67,22 +67,17 @@ specs = {'tran':{'tokens':({
                }
            }
 # CONFIG OPTIONS
-# - Integration Method
-config_integration = 'TRAP'
-config_gmin = 1e-12
-config_MAX_ITER = 20
-config_hmin = 1e-20
 
 
-def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integration_scheme, x0=None,
-                       outfile="stdout", return_req_dict=None):   
+def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integration_scheme
+                       ,x0=None, outfile="stdout", return_req_dict=None):   
     
     """
     
     """
     
     # setup integration method
-    diff_slv = set_method(config_integration)
+    diff_slv = set_method(method)
     
     # check params    
     if tstart > tstop:
@@ -102,7 +97,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integ
     
     logging.info("Building Gmin matrix")
 
-    Gmin_matrix = gmin_mat(config_gmin, M.shape[0], NNODES-1)
+    Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], NNODES-1)
     sol = results.Solution(circ, None, sol_type='TRAN', extra_header='t')
     
     #       tpoint  x    dx
@@ -128,7 +123,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integ
                                                Gmin=Gmin_matrix, x0=x0,
                                                time=(t + tstep),
                                                locked_nodes=locked_nodes,
-                                               MAXIT=config_MAX_ITER)
+                                               MAXIT=settings.transient_max_iterations)
 
 
         if solved:
@@ -142,12 +137,9 @@ def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integ
             sol.write_data(row)
             dxdt = np.multiply(C1, x) + C0
             buf.append((t, x, dxdt))
-            #print(f"{t/tstop*100} %", flush=True)
+            print(f"{t/tstop*100} %", flush=True)
             if len(buf) > diff_slv.rsteps:
                 buf.pop(0)
-                
-            #
-            #
             
         else:
             logging.error("Can't converge with step "+str(tstep)+".")
@@ -177,7 +169,9 @@ def set_method(method='TRAP'):
     Returns:
         Integration scheme object
     """ 
-
+    if method is None:
+        from .ODEsolvers import TRAP as m
+        return m
     if method.upper() == 'TRAP':
         from .ODEsolvers import TRAP as m
     elif method.upper() == 'BDF2':
@@ -187,7 +181,7 @@ def set_method(method='TRAP'):
     else:
         logging.warning("Integration scheme unsupported\n \
                         Defaulting to trapezoidal...")
-        from .ODEsolvers import trapezoidal as m
+        from .ODEsolvers import TRAP as m
     
     return m
 
