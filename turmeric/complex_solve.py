@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 26 13:27:41 2020
 
-@author: cian
+Module to map a system of n complex equaitons to 2n linear equations
+
 """
 import numpy as np
 from numpy.linalg import norm

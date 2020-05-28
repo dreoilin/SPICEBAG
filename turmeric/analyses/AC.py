@@ -18,7 +18,7 @@ class AC(Analysis):
     AC Analysis Class:
     ~~~~~~~~~~~~~~~~~~
 
-    Provides a method for an AC analysis of a netlist for a 
+    Provides a class for an AC analysis of a netlist for a 
     specified range of frequencies.
     
     Currently, only linear circuits are supported

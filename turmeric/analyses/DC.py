@@ -93,15 +93,15 @@ class DC(Analysis):
             row.extend(x)
             sol.write_data(row)
             # only flag as solved if loop doesn't skip any values
-            solved = True
-
-            
+            solved = True            
         
         logging.info("dc_analysis(): Finished DC analysis")
         if not solved:
             logging.error("dc_analysis(): Couldn't solve for values in DC sweep")
+            sol.close()
             return None
         
+        sol.close()
         # ensure that DC source retains initial value
         self.src.dc_value = val_
         

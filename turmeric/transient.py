@@ -108,7 +108,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integ
         
 
         x, error, solved, n_iter = dc_solve(M=(M + C1 * D),
-                                               ZDC=(ZDC + np.dot(D, C0) +ZT), circ=circ,
+                                               Z=(ZDC + np.dot(D, C0) +ZT), circ=circ,
                                                Gmin=Gmin_matrix, x0=x0,
                                                time=(t + tstep),
                                                locked_nodes=locked_nodes,
