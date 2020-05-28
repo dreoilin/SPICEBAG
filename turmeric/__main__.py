@@ -11,17 +11,17 @@ import logging
 from optparse import OptionParser
 
 from . import turmeric
-from . import options
+from . import settings
 from . import transient
 from .__version__ import __version__
 
 def _cli():
-    usage = f"usage: \t%prog [options] <filename>\n\n"\
+    usage = f"usage: \t%prog [settings] <filename>\n\n"\
             f"filename - netlist of circuit to simulate.\n\n"\
             f"Welcome to Turmeric, version {__version__}\n"
     parser = OptionParser(usage, version="%prog " + __version__)
 
-    # general options
+    # general settings
     parser.add_option("-v", "--verbose", action="store_true",
             dest="verbose", default=False, help="Verbose output [Not implemented]")
     # TODO: Implement outputting of parsed circuit
@@ -48,77 +48,77 @@ def _cli():
     #                  " the step control in transient analysis.")
     #parser.add_option("", "--v-absolute-tolerance", action="store",
     #                  type="string", dest="vea", default=None, help="Voltage" +
-    #                  " absolute tolerance. Default: " + str(options.vea) + " V")
+    #                  " absolute tolerance. Default: " + str(settings.vea) + " V")
     #parser.add_option("", "--v-relative-tolerance", action="store",
     #                  type="string", dest="ver", default=None, help="Voltage " +
-    #                  "relative tolerance. Default: " + str(options.ver))
+    #                  "relative tolerance. Default: " + str(settings.ver))
     #parser.add_option("", "--i-absolute-tolerance", action="store",
     #                  type="string", dest="iea", default=None, help="Current " +
-    #                  "absolute tolerance. Default: " + str(options.iea) + " A")
+    #                  "absolute tolerance. Default: " + str(settings.iea) + " A")
     #parser.add_option("", "--i-relative-tolerance", action="store",
     #                  type="string", dest="ier", default=None, help="Current " +
-    #                  "relative tolerance. Default: " + str(options.ier))
+    #                  "relative tolerance. Default: " + str(settings.ier))
     #parser.add_option("", "--h-min", action="store", type="string",
     #                  dest="hmin", default=None, help="Minimum time step. " +
-    #                  "Default: " + str(options.hmin))
+    #                  "Default: " + str(settings.hmin))
     #parser.add_option("", "--dc-max-nr", action="store", type="string",
     #                  dest="dc_max_nr_iter", default=None, help="Maximum " +
     #                  "number of NR iterations for DC and OP analyses. " +
-    #                  "Default: " + str(options.dc_max_nr_iter))
+    #                  "Default: " + str(settings.dc_max_nr_iter))
     #parser.add_option("", "--t-max-nr", action="store", type="string",
-    #                  dest="transient_max_nr_iter", default=None,
+    #                  dest="transient_max_iterations", default=None,
     #                  help="Maximum number of NR iterations for each time " +
     #                  "step during transient analysis. Default: " +
-    #                  str(options.transient_max_nr_iter))
+    #                  str(settings.transient_max_iterations))
     #parser.add_option("", "--t-max-time", action="store", type="string",
     #                  dest="transient_max_time_iter", default=None,
     #                  help="Maximum number of time iterations during " +
     #                  "transient analysis. Setting it to 0 (zero) disables " +
     #                  "the limit. Default: " +
-    #                  str(options.transient_max_time_iter))
+    #                  str(settings.transient_max_time_iter))
     #parser.add_option("", "--gmin", action="store", type="string", dest="gmin",
     #                  default=None, help="The minimum conductance to ground. " +
     #                  "Inserted when requested. Default: " +
-    #                  str(options.gmin))
+    #                  str(settings.gmin))
     #parser.add_option("", "--cmin", action="store", type="string", dest="cmin",
     #                  default=None, help="The minimum capacitance to ground. " +
-    #                  "Default: " + str(options.cmin))
+    #                  "Default: " + str(settings.cmin))
 
     (cli_options, remaning_args) = parser.parse_args()
 
     verbose = int(cli_options.verbose)
     #if cli_options.method is not None:
-    #    options.default_tran_method = cli_options.method.upper()
+    #    settings.default_integration_scheme = cli_options.method.upper()
     #if cli_options.vea is not None:
-    #    options.vea = float(cli_options.vea)
+    #    settings.vea = float(cli_options.vea)
     #if cli_options.ver is not None:
-    #    options.ver = float(cli_options.ver)
+    #    settings.ver = float(cli_options.ver)
     #if cli_options.iea is not None:
-    #    options.iea = float(cli_options.iea)
+    #    settings.iea = float(cli_options.iea)
     #if cli_options.ier is not None:
-    #    options.ier = float(cli_options.ier)
+    #    settings.ier = float(cli_options.ier)
     #if cli_options.hmin is not None:
-    #    options.hmin = float(cli_options.hmin)
+    #    settings.hmin = float(cli_options.hmin)
     #if cli_options.dc_max_nr_iter is not None:
-    #    options.dc_max_nr_iter = int(float(cli_options.dc_max_nr_iter))
-    #if cli_options.transient_max_nr_iter is not None:
-    #    options.transient_max_nr_iter = int(
-    #        float(cli_options.transient_max_nr_iter))
+    #    settings.dc_max_nr_iter = int(float(cli_options.dc_max_nr_iter))
+    #if cli_options.transient_max_iterations is not None:
+    #    settings.transient_max_iterations = int(
+    #        float(cli_options.transient_max_iterations))
     #if cli_options.transient_max_time_iter is not None:
-    #    options.transient_max_time_iter = int(
+    #    settings.transient_max_time_iter = int(
     #        float(cli_options.transient_max_time_iter))
     #if cli_options.gmin is not None:
-    #    options.gmin = float(cli_options.gmin)
+    #    settings.gmin = float(cli_options.gmin)
     #if cli_options.cmin is not None:
-    #    options.cmin = float(cli_options.cmin)
+    #    settings.cmin = float(cli_options.cmin)
 
     if not len(remaning_args) == 1:
-        print("Usage: python -m turmeric [options] <filename>\npython -m turmeric -h for help")
+        print("Usage: python -m turmeric [settings] <filename>\npython -m turmeric -h for help")
         sys.exit(1)
 
-    #options.transient_no_step_control = cli_options.no_step_control
-    #options.dc_use_guess = cli_options.dc_guess
-    #options.cli = True
+    #settings.transient_no_step_control = cli_options.no_step_control
+    #settings.dc_use_guess = cli_options.dc_guess
+    #settings.cli = True
     #turmeric._print = cli_options.print_circuit
 
     # Set up logging

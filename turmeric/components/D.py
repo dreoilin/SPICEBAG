@@ -1,6 +1,6 @@
 import numpy as np
 
-from .. import options
+from .. import settings
 from .. import units
 
 from .Component import Component
@@ -38,7 +38,7 @@ class D(Component):
         """
         D<label> n1 n2 <model_id> [<AREA=value> <T=value>]
         """
-        r = f"D{self.part_id} {self.n1} {self.n2} {self.model.name}"
+        r = f"D{self.part_id} {self.n1} {self.n2} {self.model.name} "
         r += ' '.join([f'{p}={getattr(self,p)}' for p in ['AREA','T']])
         return r
 
@@ -95,7 +95,7 @@ class D(Component):
                    [self.n1 - 1, self.n2 - 1]*2)
         gm = self.model.get_gm(0, ports_v, 0, self)
         if gm == 0:
-            gm = options.gmin*2
+            gm = settings.gmin*2
         stamp = np.array(((gm, -gm),
                           (-gm, gm)), dtype=np.float64)
         if reduced:
