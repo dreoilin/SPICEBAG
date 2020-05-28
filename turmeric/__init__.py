@@ -1,4 +1,4 @@
-from .turmeric import run, set_temperature, main
+from .turmeric import run, main
 from .__version__ import __version__
 
-__all__ = ['run', 'set_temperature', 'main']
+__all__ = ['run', 'main']

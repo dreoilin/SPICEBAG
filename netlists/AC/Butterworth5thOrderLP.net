@@ -10,5 +10,5 @@ C1 0 3 1.618
 C2 0 4 1.618
 R2 0 5 1
 *.op
-.AC log 10 1 1Meg
+.AC type=log nsteps=10 start=1 stop=1Meg
 .END

@@ -8,7 +8,6 @@ import scipy as sp
 from . import dc
 from . import dc_sweep
 from . import transient
-from . import ac
 from . import netlist_parser
 from . import units
 
@@ -43,7 +42,7 @@ def temp_directive(T): # T in celsius
     units.T = units.Kelvin(float(T))
 
 analysis = {'op': dc.op_analysis, 'dc': dc_sweep.dc_analysis,
-            'tran': transient.transient_analysis, 'ac': ac.ac_analysis,
+            'tran': transient.transient_analysis,
             'temp': temp_directive}
 
 
@@ -88,7 +87,6 @@ def main(filename, outfile="out"):
     results = {}
     for an in analyses:
         logging.info(f"Analysis {an} running")
-        results.update(run(circ, [an]))
-
+        results.update(an.run(circ))
     return results
 

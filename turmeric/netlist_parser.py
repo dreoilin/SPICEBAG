@@ -2,18 +2,17 @@ import copy
 import os
 import logging
 
-from . import circuit
-from . import components
+from turmeric import circuit
+from turmeric import components
+from turmeric import analyses
 
-# analyses syntax
 from .dc import specs as dc_spec
 from .dc_sweep import specs as sweep_specs
-from .ac import specs as ac_spec
 from .transient import specs as tran_spec
 
 
 specs = {}
-for i in dc_spec, sweep_specs, ac_spec, tran_spec:
+for i in dc_spec, sweep_specs, tran_spec:
     specs.update(i)
 
 class NetlistParseError(Exception):
@@ -141,10 +140,12 @@ def digest_raw_netlist(filename):
                 continue
             net_lines.append((line, i + 1))
     models = parse_models(model_directives)
-    analyses = [parse_single_analysis(line[0]) for line in directives]
+    directivesmap = {
+        ".ac" : lambda line : analyses.AC(line)
+    }
+    ans = [directivesmap[line[0].split()[0]](line[0]) for line in directives]
     logging.info(f"Finished processing `{filename}'")
-    
-    return (title, analyses, models, net_lines)
+    return (title, ans, models, net_lines)
 
 def parse_network(filename):
     """Parse a SPICE-like netlist
@@ -167,26 +168,21 @@ def parse_network(filename):
 
 def main_netlist_parser(circ, netlist_lines, models):
     elements = []
-    parse_function = {
+    constructor = {
         'c': lambda line: components.C(line, circ),
         'd': lambda line: components.D(line, circ, models),
         'e': lambda line: components.sources.E(line, circ),
-        'f': lambda line: parse_elem_cccs(line, circ),
         'g': lambda line: components.sources.G(line, circ),
-        'h': lambda line: components.sources.H(line, circ),
         'i': lambda line: components.sources.I(line, circ),
         'l': lambda line: components.L(line, circ),
         'r': lambda line: components.R(line, circ),
         'v': lambda line: components.sources.V(line,circ)
     }
-    try:
-        for line, line_n in netlist_lines:
-            try:
-                e = parse_function[line[0]](line)
-                # TODO: remove once all elements parsed via inheritance
-                elements.append(e if type(e) is not list else e[0])
-            except KeyError:
-                raise logging.exception(f"Unknown element {line[0]}")
+    for line, line_n in netlist_lines:
+        try:
+            elements.append(constructor[line[0]](line))
+        except KeyError:
+            raise logging.exception(f"Unknown element {line[0]}")
     return elements
 
 def convert_units(string_value):
