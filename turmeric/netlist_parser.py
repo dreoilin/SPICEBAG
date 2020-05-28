@@ -6,13 +6,12 @@ from turmeric import circuit
 from turmeric import components
 from turmeric import analyses
 
-from .dc import specs as dc_spec
 from .dc_sweep import specs as sweep_specs
 from .transient import specs as tran_spec
 
 
 specs = {}
-for i in dc_spec, sweep_specs, tran_spec:
+for i in sweep_specs, tran_spec:
     specs.update(i)
 
 class NetlistParseError(Exception):
@@ -141,7 +140,8 @@ def digest_raw_netlist(filename):
             net_lines.append((line, i + 1))
     models = parse_models(model_directives)
     directivesmap = {
-        ".ac" : lambda line : analyses.AC(line)
+        ".ac" : lambda line : analyses.AC(line),
+        ".op" : lambda line : analyses.OP(line)
     }
     ans = [directivesmap[line[0].split()[0]](line[0]) for line in directives]
     logging.info(f"Finished processing `{filename}'")

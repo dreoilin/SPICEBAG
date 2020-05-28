@@ -176,7 +176,7 @@ class ParamDict(NetlistToken):
             obj.__allowed_params = paramset
             cls.__init__(obj, val)
 
-        r = r"((?:(?: *)[^ \n]+=[^ \n]+)+)"
+        r = r"((?:(?: *)[^ \n]+=(?:(?:\[.+\])+|[^ \n])+)+)"
         r = f'?{r}?' if optional else r
 
         return type(f"{type(parent).__name__.lower()}ParamDict", (ParamDict,) ,{

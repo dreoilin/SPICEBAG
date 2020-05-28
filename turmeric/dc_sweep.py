@@ -1,18 +1,11 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon May 25 18:07:33 2020
-
-@author: cian
-"""
 import logging
 import numpy as np
 
 # linear components
-from . import components
-from . import settings
-from . import results
-from . import dc
+from turmeric import components
+from turmeric import settings
+from turmeric import results
+from turmeric.analyses.OP import op_analysis
 
 specs = {'dc': {'tokens': ({
                       'label': 'source',
@@ -106,7 +99,7 @@ def dc_analysis(circ, start, stop, step, source, sweep_type='LINEAR', guess=True
         # regenerate the matrices with new sweep value
         _ = circ.gen_matrices()
         # now call an operating point analysis
-        x = dc.op_analysis(circ, x0=x, guess=guess, verbose=0)
+        x = op_analysis(circ, x0=x, guess=guess)
         if x is None:
             logging.warning("dc_analysis(): Coudn't compute \
                             operating point for {sweep_value}. \

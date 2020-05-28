@@ -1,26 +1,29 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri May  1 11:23:45 2020
-
-@author: cian
-
-"""
-
 import logging
 
-from .FORTRAN.LU import ludcmp, lubksb
-from .FORTRAN.DC_SUBRS import gmin_mat
+from turmeric.FORTRAN.LU import ludcmp, lubksb
+from turmeric.FORTRAN.DC_SUBRS import gmin_mat
 
 from numpy.linalg import norm
 import numpy as np    
 
-from . import units
-from . import settings
-from . import solvers as slv
-from . import results
+from turmeric import units
+from turmeric import settings
+from turmeric import solvers as slv
+from turmeric import results
+from turmeric.components.tokens import ParamDict, Value
+from turmeric.analyses.Analysis import Analysis
 
-specs = {'op': {'tokens' : {} }}
-    
+class OP(Analysis):
+    def __init__(self, line):
+        self.net_objs = [ParamDict.allowed_params(self, optional=True, paramset={
+            'x0' : { 'type' : lambda v: [float(val) for val in list(v)], 'default' : [] }})]
+        super().__init__(line)
+        if not len(self.x0) > 0:
+            self.x0 = None
+
+    def run(self, circ):
+        return op_analysis(circ, self.x0)
+
 
 def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
              MAXIT=1000, locked_nodes=None):
@@ -107,7 +110,7 @@ def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
     return (x, error, converged, iters)
 
 
-def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
+def op_analysis(circ, x0=None):
     
     """
     This function is the entry point for an operating point analysis
@@ -144,7 +147,7 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     (x_min, e_min, converged, iters_min) = dc_solve(M, ZDC,
                                               circ, Gmin=Gmin_matrix, x0=x0)
     
-    op = results.Solution(circ, outfile, sol_type='OP')
+    op = results.Solution(circ, sol_type='OP')
     # convergence specifies a solution, but using Gmin
     if converged:
         logging.info("op_analysis(): now attempting without Gmin:")

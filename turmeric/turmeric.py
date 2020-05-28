@@ -5,7 +5,6 @@ import numpy as np
 import scipy as sp
 
 # analyses
-from . import dc
 from . import dc_sweep
 from . import transient
 from . import netlist_parser
@@ -41,7 +40,7 @@ def run(circ, an_list=None):
 def temp_directive(T): # T in celsius
     units.T = units.Kelvin(float(T))
 
-analysis = {'op': dc.op_analysis, 'dc': dc_sweep.dc_analysis,
+analysis = { 'dc': dc_sweep.dc_analysis,
             'tran': transient.transient_analysis,
             'temp': temp_directive}
 
@@ -53,13 +52,7 @@ def main(filename, outfile="out"):
 
     outfile : string, optional
         The output file's base name to which a suffix corresponding to the analysis performed will be added.
-    - Alternate Current (AC): ``.ac``
-    - Direct Current (DC): ``.dc``
-    - Operating Point (OP): ``.opinfo``
-    - TRANsient (TRAN): ``.tran``
-
     **Returns:**
-
     res : dict
         A dictionary containing the computed results.
     """
@@ -76,11 +69,6 @@ def main(filename, outfile="out"):
     except FileNotFoundError as e:
         logging.exception(f"{e}: netlist file {filename} was not found")
         sys.exit()
-    except IOError as e:
-        # TODO: verify that parse_network can throw IOError
-        logging.exception(f"{e}: ioerror on netlist file {filename}")
-        sys.exit()
-
 
     logging.info("Parsed circuit:")
     logging.info(repr(circ) + '\n' + '\n'.join(repr(m) for m in circ.models.values()))

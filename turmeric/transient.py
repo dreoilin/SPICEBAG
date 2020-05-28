@@ -1,12 +1,6 @@
-"""
-
-
-
-"""
-
 import numpy as np
 
-from . import dc
+from turmeric.analyses.OP import dc_solve
 
 from . import settings
 from .FORTRAN.DC_SUBRS import gmin_mat
@@ -71,11 +65,6 @@ specs = {'tran':{'tokens':({
 
 def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integration_scheme
                        ,x0=None, outfile="stdout", return_req_dict=None):   
-    
-    """
-    
-    """
-    
     # setup integration method
     diff_slv = set_method('TRAP')
     
@@ -118,7 +107,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integ
         ZT = circ.ZT0[1:]
         
 
-        x, error, solved, n_iter = dc.dc_solve(M=(M + C1 * D),
+        x, error, solved, n_iter = dc_solve(M=(M + C1 * D),
                                                ZDC=(ZDC + np.dot(D, C0) +ZT), circ=circ,
                                                Gmin=Gmin_matrix, x0=x0,
                                                time=(t + tstep),

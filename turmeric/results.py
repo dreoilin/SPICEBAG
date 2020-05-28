@@ -15,11 +15,14 @@ class Solution(object):
             self.headers = [extra_header]
         else:
             self.headers = []
-        # set circuit title as filename if not specified
+
+        if not opdir.is_dir():
+            opdir.mkdir(exist_ok=True, parents=True)
         if filename is None:
-            self.filename = opdir / re.sub(' ','_',f"{circ.title}.{sol_type}".strip())
+        # set circuit title as filename if not specified
+            self.filepath = opdir / re.sub(' ','_',f"{circ.title}.{sol_type}".strip())
         else:
-            self.filename = opdir / filename
+            self.filepath = opdir / filename
         # we have reduced MNA
         NNODES = circ.get_nodes_number() -1
         for i in range(NNODES):
@@ -31,10 +34,10 @@ class Solution(object):
                 self.headers.append(header)
         # setup file 
         self._setup_file()
-        logging.info(f'Using results file {self.filename}')
+        logging.info(f'Using results file {self.filepath}')
             
     def _setup_file(self):
-        self.file = open(f"{self.filename}", 'w+')
+        self.file = self.filepath.open('w')
         self.writer = csv.writer(self.file, delimiter=',')
         self.writer.writerow(self.headers)
     
@@ -50,7 +53,7 @@ class Solution(object):
         
     def as_dict(self, v_type=float):
         
-        with open(f"{self.filename}", 'r') as csvfile:
+        with self.filepath.open('r') as csvfile:
             lines = csvfile.readlines()
         # set up dict keys
 

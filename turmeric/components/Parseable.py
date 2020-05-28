@@ -15,7 +15,7 @@ class Parseable(ABC):
             # FOR THIS TO WORK, EACH PARAMETER IN self.net_objs MUST EVALUATE TO EXACTLY ONE REGEX GROUP
             self.tokens = [n(g) for n,g in zip(self.net_objs,match.groups())]
         except AttributeError as e:
-            logging.exception(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{self.__re__}'")
+            logging.error(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{self.__re__}'")
 
     @property
     def __re__(self):

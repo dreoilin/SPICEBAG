@@ -70,7 +70,7 @@ class AC(Analysis):
             # the current frequency
             IMP = f * np.pi * 2 * j * D
             # solve using the complex solver
-            x = complex_solve.solver((M + IMP), ZAC)
+            x = complex_solve.solver((M + IMP), -ZAC)
             # start row with frequency
             row = [f]
             # now append computations
@@ -80,4 +80,4 @@ class AC(Analysis):
        
         sol.close()
         
-        return sol.as_dict()
+        return sol.as_dict(v_type=complex)
