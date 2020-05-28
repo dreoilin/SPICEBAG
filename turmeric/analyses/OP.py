@@ -14,6 +14,15 @@ from turmeric.components.tokens import ParamDict, Value
 from turmeric.analyses.Analysis import Analysis
 
 class OP(Analysis):
+    """
+    ~~~~~~~~~~~~~~~~~~
+    OP Analysis Class:
+    ~~~~~~~~~~~~~~~~~~
+
+    Provides a class for the OP analysis of a netlist.
+    
+    """
+    
     def __init__(self, line):
         self.net_objs = [ParamDict.allowed_params(self, optional=True, paramset={
             'x0' : { 'type' : lambda v: [float(val) for val in list(v)], 'default' : [] }})]
@@ -32,98 +41,16 @@ class OP(Analysis):
     def run(self, circ):
         return op_analysis(circ, self.x0)
 
-
-def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
-             MAXIT=1000, locked_nodes=None):
-    
-    """
-    This function reduces any impedance components into a single matrix
-    (this is the M matrix). DC, AC, and source contributions from capacitive
-    /inductive elements during a transient are reduced to the Z matrix
-    
-    The problem is reduced to:
-        
-        M + N = Z, where N is non-linear contributions
-    
-    M and ZDC are operated on by the solver objects, before being
-    passed to Raphson solve. There are three solvers:
-        
-        standard solving, Gmin stepping, source stepping
-        
-    The system is only considered solved if a solver is finished.
-    
-    """    
-    
-    M_size = M.shape[0]
-    NNODES = circ.get_nodes_number()
-    
-    if locked_nodes is None:
-        locked_nodes = circ.get_locked_nodes()
-    
-    if Gmin is None:
-        Gmin = 0
-        # without source stepping and gmin
-        solvers = slv.setup_solvers(Gmin=False)
-    else:
-        solvers = slv.setup_solvers(Gmin=True)
-
-    # if there is no initial guess, we start with 0
-    if x0 is not None:
-        x =x0
-    else:
-        x = np.zeros((M_size, 1))
-
-    logging.info("Solving...")
-    iters = 0
-    
-    converged = False
-    
-    for solver in solvers:
-        while (solver.failed is not True) and (not converged):
-            logging.info(f"Now solving with: {solver.name}")
-            # 1. Operate on the matrices
-            M_, Z = solver.operate_on_M_and_ZDC(np.array(M),\
-                                    np.array(ZDC), np.array(Gmin))
-            # 2. Try to solve with the current solver
-            try:
-                (x, error, converged, n_iter)\
-                    = raphson_solver(x, M_, circ, Z=Z, nv=NNODES, 
-                                    locked_nodes=locked_nodes,
-                                    time=time, MAXIT=MAXIT)
-                # increment iteration
-                iters += n_iter
-            except ValueError:
-                logging.warning("Singular matrix")
-                converged, error, x = False, None, None
-                solver.fail()
-            
-            except OverflowError:
-                logging.warning("Overflow error detected...")
-                converged, error, x = False, None, None
-                solver.fail()
-            
-            if not converged:
-                # make sure iterations haven't been exceeded
-                if iters == MAXIT - 1:
-                    logging.warning("Error: MAXIT exceeded (" + str(MAXIT) + ")")
-
-                if solver.finished:
-                    solver.fail()
-            else:
-                # check to see if stepping was completed...
-                # if not, we go again using previous solution
-                if not solver.finished:
-                    converged = False
-                    
-    return (x, error, converged, iters)
-
-
 def op_analysis(circ, x0=None):
     
     """
+    ~~~~~~~~~~~~~~~~~~
+    OP Analysis Method:
+    ~~~~~~~~~~~~~~~~~~
+    
     This function is the entry point for an operating point analysis
     The analysis sets up the MNA matrices using a circuit object and constructs
-    the Gmin matrix used in the dc solve homopothies
+    the Gmin matrix used in the dc solver
     
     A circuit solution is attempted twice:
         - Once with a Gmin matrix and
@@ -135,16 +62,17 @@ def op_analysis(circ, x0=None):
     
     If the circuit cannot be solved using any of the available solving methods,
     the special value None is returned
+    
+    x0 is the initial estimate provided by the user
+    
     """
     
-    logging.debug("op_analysis(): getting M0 and ZDC0 from circuit")
-    logging.debug("op_analysis(): Reducing M0 and ZDC0 matrices")
-    # unreduced MNA matrices computed by the circuit object
-    # now create reduce matrices (used for calculation purposes)
+    logging.debug("op_analysis(): getting and reducing M0 and ZDC0 from circuit")
+    
     M = circ.M0[1:, 1:]
     ZDC = circ.ZDC0[1:]
     
-    logging.info("Beginning operating point analysis")
+    logging.info("op_analysis(): Beginning operating point analysis")
 
     logging.debug("op_analysis(): constructing Gmin matrix")
     # take away a single node because we have reduced M
@@ -178,7 +106,95 @@ def op_analysis(circ, x0=None):
     return None
 
 
-def raphson_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
+def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
+             MAXIT=1000, locked_nodes=None):
+    
+    """
+    M   : the conductance matrix
+    ZDC : the DC source  
+    
+    
+    This method operates on the MNA matrices using the implemented
+    solving techniques before passing them to the low level raphson.
+    
+        At this point, the system has been reduced to:
+        
+        M + N = Z, where N is non-linear contributions
+    
+    M and ZDC are operated on by the solver objects, before being
+    passed to Raphson solve. 
+    
+        We currently have three solvers:
+        
+        - standard solving - Gmin stepping - source stepping
+        
+    """    
+    
+    M_size = M.shape[0]
+    NNODES = circ.get_nodes_number()
+    
+    if locked_nodes is None:
+        locked_nodes = circ.get_locked_nodes()
+    
+    if Gmin is None:
+        Gmin = 0
+        # without source stepping and gmin
+        solvers = slv.setup_solvers(Gmin=False)
+    else:
+        solvers = slv.setup_solvers(Gmin=True)
+
+    # if there is no initial guess, we start with 0
+    if x0 is not None:
+        x =x0
+    else:
+        x = np.zeros((M_size, 1))
+
+    logging.info("Solving...")
+    iters = 0
+    
+    converged = False
+    
+    for solver in solvers:
+        while (solver.failed is not True) and (not converged):
+            logging.info(f"Now solving with: {solver.name}")
+            # 1. Operate on the matrices
+            M_, Z_ = solver.operate_on_M_and_ZDC(np.array(M),\
+                                    np.array(Z), np.array(Gmin))
+            # 2. Try to solve with the current solver
+            try:
+                (x, error, converged, n_iter)\
+                    = MNA_solve(x, M_, circ, Z=Z_, nv=NNODES, 
+                                    locked_nodes=locked_nodes,
+                                    time=time, MAXIT=MAXIT)
+                # increment iteration
+                iters += n_iter
+            except SingularityError:
+                logging.warning("Singular matrix")
+                converged, error, x = False, None, None
+                solver.fail()
+            
+            except OverflowError:
+                logging.warning("Overflow error detected...")
+                converged, error, x = False, None, None
+                solver.fail()
+            
+            if not converged:
+                # make sure iterations haven't been exceeded
+                if iters == MAXIT - 1:
+                    logging.warning("Error: MAXIT exceeded (" + str(MAXIT) + ")")
+
+                if solver.finished:
+                    solver.fail()
+            else:
+                # check to see if stepping was completed...
+                # if not, we go again using previous solution
+                if not solver.finished:
+                    converged = False
+                    
+    return (x, error, converged, iters)
+
+
+def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
 
     """
     
@@ -216,7 +232,8 @@ def raphson_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
             for elem in circ:
                 if elem.is_nonlinear:
                     _update_J_and_N(J, N, x, elem, time)
-        # dot product is an intrinsic fortran routine
+        
+        # solve for the system error
         error = M.dot(x) + Z + nl*N
         
         LU, INDX, _, C = ludcmp(M + nl*J, M_size)
@@ -226,7 +243,7 @@ def raphson_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
         dx = lubksb(LU, INDX,  -error)
         # check for overflow error
         if norm(dx) == np.nan:
-            raise OverflowError
+            raise SingularityError
         
         iters += 1
         # perform newton update
@@ -421,3 +438,7 @@ def custom_convergence_check(x, dx, residuum, er, ea, eresiduum, debug=False):
         ret = True
 
     return ret, all_check_results
+
+
+class SingularityError(Exception):
+    pass

@@ -9,7 +9,22 @@ from turmeric.components.tokens import ParamDict, Value
 SWEEP_LOG = "LOG"
 SWEEP_LIN = "LIN"
 
+j = np.complex('j')
+
 class AC(Analysis):
+    
+    """
+    ~~~~~~~~~~~~~~~~~~
+    AC Analysis Class:
+    ~~~~~~~~~~~~~~~~~~
+
+    Provides a class for an AC analysis of a netlist for a 
+    specified range of frequencies.
+    
+    Currently, only linear circuits are supported
+    
+    """
+    
     def __init__(self, line):
         self.net_objs = [ParamDict.allowed_params(self,{
             'type'   : { 'type' : str   , 'default' : SWEEP_LOG }, # Should really be an enumeration of values, but grand for now
@@ -26,6 +41,33 @@ class AC(Analysis):
         return f".AC {f'type={self.type} ' if hasattr(self,'type') else ''}nsteps={self.nsteps} start={self.start} stop={self.stop}"
 
     def run(self, circ, sweep_type=None):
+        
+        """
+        ~~~~~~~~~~~~~~~~~~
+        AC Analysis Method:
+        ~~~~~~~~~~~~~~~~~~
+        
+        Mathematically, the problem definition is:
+                
+                D x j2piw + M = ZAC, where
+                
+                D : reduced dynamic matrix
+                w : variable frequency of the harmonic source
+                M : reduced conductance matrix
+                ZAC : source contribution
+                
+        The method solves this system of equations for a varying frequency.
+        
+        The linear system of complex valued components is passed to a mapping
+        module which reduces the n complex equations to 2n real valued linear
+        equations, and returns the n variable complex solution.
+        
+        RETURNS:
+            
+            sol : solution object as a dictionary to the main method
+        
+        """
+        
         # check step/start/stop parameters
         if self.start == 0:
             raise ValueError("ac_analysis(): AC analysis has start frequency = 0")
@@ -45,38 +87,24 @@ class AC(Analysis):
         logging.info(f"Start Freq. : {self.start} Hz\tStop Freq. : {self.stop} Hz\n \
                      Using {self.nsteps} points on a {self.type.lower()} axis")    
         
-        # get the MNA matrices from the circuit object
-        M0 = circ.M0
-        ZAC0 = circ.ZAC0
-        D0 = circ.D0
-            
-        # reduce the matrices
-        M = M0[1:, 1:]
-        ZAC = ZAC0[1:]
-        D = D0[1:, 1:]
-        
+        # get and reduce MNA equations
+        M = circ.M0[1:, 1:]
+        ZAC = circ.ZAC0[1:]
+        D = circ.D0[1:, 1:]
+        # nonlinear cicuits currently not implemented
         if circ.is_nonlinear():
-            logging.error("AC analysis does not currently support analysis of \
-                          non-linear circuits")
             raise ValueError
 
+        # set up the solution object
         sol = results.Solution(circ, sol_type='AC', extra_header='f')
         
-
-        j = np.complex('j')
-        
+        # solve for all specified frequencies
         for f in fs:
-            # evaluate the impedance at
-            # the current frequency
             IMP = f * np.pi * 2 * j * D
-            # solve using the complex solver
             x = complex_solve.solver((M + IMP), -ZAC)
-            # start row with frequency
-            row = [f]
-            # now append computations
-            row.extend(x.transpose().tolist()[0])
-            # write to file
-            sol.write_data(row)
+            data = [f]
+            data.extend(x.transpose().tolist()[0])
+            sol.write_data(data)
        
         sol.close()
         
