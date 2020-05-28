@@ -21,6 +21,14 @@ class OP(Analysis):
         if not len(self.x0) > 0:
             self.x0 = None
 
+    def __repr__(self):
+        """
+        .OP [x0=\[<Value>...\]]
+        """
+        r = f".OP"
+        r += ' x0=['+''.join(str(v) for v in self.x0) + ']' if self.x0 is not None else ''
+        return r
+
     def run(self, circ):
         return op_analysis(circ, self.x0)
 

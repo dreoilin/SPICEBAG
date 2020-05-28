@@ -3,4 +3,4 @@
 V1 1 0 type=vdc vdc=5
 R1 1 2 5k
 R2 2 0 10k
-.dc V1 10 20 2
+.dc src=V1 start=10 stop=20 step=2

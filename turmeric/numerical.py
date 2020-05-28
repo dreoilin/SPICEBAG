@@ -8,7 +8,7 @@ import logging
 def newtonRaphson(f, x0, df, args=(), tol=1e-10, MAXITERS=500):
     
     """
-    Single variable Newton Raphson funtion
+    Single variable Newton Raphson function
     
     Parameters:
         f  : callable, single variable function

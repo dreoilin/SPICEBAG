@@ -6,13 +6,9 @@ from turmeric import circuit
 from turmeric import components
 from turmeric import analyses
 
-from .dc_sweep import specs as sweep_specs
-from .transient import specs as tran_spec
 
 
 specs = {}
-for i in sweep_specs, tran_spec:
-    specs.update(i)
 
 class NetlistParseError(Exception):
     """Netlist parsing exception."""
@@ -43,63 +39,6 @@ def parse_models(lines):
                                     ".\n\t" + line,)
         models.update({model_label: model_iter})
     return models
-
-def parse_single_analysis(line):
-    
-    line_elements = line.split()
-    an_type = line_elements[0].replace(".", "").lower()
-    if not an_type in specs:
-        raise NetlistParseError("Unknown directive: %s" % an_type)
-    params = list(copy.deepcopy(specs[an_type]['tokens']))
-
-    an = {'type': an_type}
-    for i in range(len(line_elements[1:])):
-        token = line_elements[i + 1]
-        if token[0] == "*":
-            break
-        if is_valid_value_param_string(token):
-            (label, value) = token.split('=')
-        else:
-            label, value = None, token
-        assigned = False
-        for t in params:
-            if (label is None and t['pos'] == i) or label == t['label']:
-                an.update({t['dest']: convert(value, t['type'])})
-                assigned = True
-                break
-        if assigned:
-            params.pop(params.index(t))
-            continue
-        else:
-            raise NetlistParseError("Unknown .%s parameter: pos %d (%s=)%s" % \
-                                     (an_type.upper(), i, label, value))
-
-    missing = []
-    for t in params:
-        if t['needed']:
-            missing.append(t['label'])
-    if len(missing):
-        raise NetlistParseError("Required parameters are missing: %s" %
-                                (" ".join(line_elements)))
-
-    for t in params:
-        an.update({t['dest']: t['default']})
-
-    if an['type'] == 'tran':
-        uic = int(an.pop('uic'))
-        if uic == 0:
-            an['x0'] = None
-        elif uic == 1:
-            an['x0'] = 'op'
-        elif uic == 2:
-            an['x0'] = 'op+ic'
-        elif uic == 3:
-            pass  # already set by ic_label
-        else:
-            raise NetlistParseError("Unknown UIC value: %d" % uic)
-
-    return an
-
 
 def digest_raw_netlist(filename):
     logging.info(f"Processing netlist `{filename}'")
@@ -141,7 +80,8 @@ def digest_raw_netlist(filename):
     models = parse_models(model_directives)
     directivesmap = {
         ".ac" : lambda line : analyses.AC(line),
-        ".op" : lambda line : analyses.OP(line)
+        ".op" : lambda line : analyses.OP(line),
+        ".dc" : lambda line : analyses.DC(line)
     }
     ans = [directivesmap[line[0].split()[0]](line[0]) for line in directives]
     logging.info(f"Finished processing `{filename}'")
