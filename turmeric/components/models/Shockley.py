@@ -153,8 +153,7 @@ class Shockley(object):
         return dev.AREA * gm
 
     def __repr__(self):
-        r = ".model D {self.name} IS={self.IS} N={self.N} ISR={self.ISR} NR={self.NR} RS={self.RS} CJ0={self.CJ0} M={self.M} VJ={self.VJ} FC={self.FC} CP={self.CP} TT={self.TT} BV={self.BV} IBV={self.IBV} KF={self.KF} AF={self.AF} FFE={self.FFE} TEMP={self.TEMP} XTI={self.XTI} EG={self.EG} TBV={self.TBV} TRS={self.TRS} TTT1={self.TTT1} TTT2={self.TTT2} TM1={self.TM1} TM2={self.TM2}"
-        return r
+        return f".model D {self.name} IS={self.IS} N={self.N} ISR={self.ISR} NR={self.NR} RS={self.RS} CJ0={self.CJ0} M={self.M} VJ={self.VJ} FC={self.FC} CP={self.CP} TT={self.TT} BV={self.BV} IBV={self.IBV} KF={self.KF} AF={self.AF} FFE={self.FFE} TEMP={self.TEMP} XTI={self.XTI} EG={self.EG} TBV={self.TBV} TRS={self.TRS} TTT1={self.TTT1} TTT2={self.TTT2} TM1={self.TM1} TM2={self.TM2}"
 
     def set_temperature(self, T):
         T = float(T)
