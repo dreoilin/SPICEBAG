@@ -1,21 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri May  1 11:23:45 2020
-
-@author: cian
-
-"""
-
-import sys
-import math
 import copy
 import os
 import logging
 
 from . import circuit
 from . import components
-from . import printing
 
 # analyses syntax
 from .dc import specs as dc_spec
@@ -144,57 +132,8 @@ def main_netlist_parser(circ, netlist_lines, models):
                 # TODO: remove once all elements parsed via inheritance
                 elements.append(e if type(e) is not list else e[0])
             except KeyError:
-                raise NetlistParseError(f"Cannot parse {line[0]} element")
-    except NetlistParseError as npe:
-        (msg,) = npe.args
-        if len(msg):
-            printing.print_general_error(msg)
-        printing.print_parse_error(line_n, line)
-        raise NetlistParseError(msg)
-
+                raise logging.exception(f"Unknown element {line[0]}")
     return elements
-
-
-def parse_elem_ccvs(line, circ):
-    
-    line_elements = line.split()
-    if len(line_elements) < 5 or (len(line_elements) > 5 and not
-                                  line_elements[5][0] == "*"):
-        raise NetlistParseError("")
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-
-    elem = components.sources.H(part_id=line_elements[0], n1=n1, n2=n2,
-                            source_id=line_elements[3],
-                            value=convert_units(line_elements[4]))
-
-    return [elem]
-
-
-def parse_elem_cccs(line, circ):
-    
-
-    line_elements = line.split()
-    if len(line_elements) < 5 or (len(line_elements) > 5
-       and not line_elements[5][0] == "*"):
-        raise NetlistParseError("")
-
-    ext_n1 = line_elements[1]
-    ext_n2 = line_elements[2]
-    source_id = line_elements[3]
-    n1 = circ.add_node(ext_n1)
-    n2 = circ.add_node(ext_n2)
-
-    elem = components.sources.FISource(part_id=line_elements[0], n1=n1, n2=n2,
-                            source_id=source_id,
-                            value=convert_units(line_elements[4]))
-
-    return [elem]
-
-
 
 def convert_units(string_value):
 
@@ -376,28 +315,6 @@ def convert_boolean(value):
 
     return return_value
 
-
-def parse_ic_directive(line):
-    """Parses an ic directive and assembles a dictionary accordingly.
-    """
-    line_elements = line.split()
-    ic_dict = {}
-    name = None
-    for token in line_elements[1:]:
-        if token[0] == "*":
-            break
-
-        (label, value) = parse_param_value_from_string(token)
-        if label == "name" and name is None:
-            name = value
-            continue
-        # check if node actually exists, raise error
-        ic_dict.update({label: convert_units(value)})
-
-    if name is None:
-        raise NetlistParseError("The 'name' parameter is missing")
-
-    return {name: ic_dict}
 
 
 def parse_include_directive(line, wd):

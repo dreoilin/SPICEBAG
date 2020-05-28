@@ -1,20 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri May  1 11:23:45 2020
-
-@author: cian
-
-
-"""
-
-import math
 import numpy as np
-import sys
 
 from . import components
-
-from . import printing
 
 class Circuit(list):
     def __init__(self, title, filename=None):
