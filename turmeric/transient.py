@@ -77,7 +77,7 @@ def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integ
     """
     
     # setup integration method
-    diff_slv = set_method(method)
+    diff_slv = set_method('TRAP')
     
     # check params    
     if tstart > tstop:
@@ -212,6 +212,7 @@ def get_reduced_system(circ):
     return (M, ZDC, D)
 
 def format_estimate(x0, dim):
+    
     """
     Auxiliary function to format the estimate provided by the DC operating point
     simulation

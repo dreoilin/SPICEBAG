@@ -1,8 +1,11 @@
 from ... import units
+from ...numerical import newtonRaphson
 from ...memoized import memoized
 from math import isinf, sqrt
 import numpy as np
-from scipy.optimize import newton
+from ... import settings
+
+Tref = 300
 
 DEFAULT_AF   = 1. 
 DEFAULT_AREA = 1.0
@@ -42,7 +45,7 @@ class Material:
         return (self.Eg_0 - self.alpha * T ** 2 / (self.beta + T))  # eV
     
     def ni(self, T=DEFAULT_T):
-        return self.n_i_0 * (T / Tref)**(3/2) * math.exp(self.Eg(Tref) / (2 * Vth(Tref)) - self.Eg(T) / (2 * Vth(T)))
+        return self.n_i_0 * (T / Tref)**(3/2) * np.exp(self.Eg(Tref) / (2 * units.Vth(Tref)) - self.Eg(T) / (2 * units.Vth(T)))
 
 class silicon(Material):
     def __init__(self):
@@ -77,7 +80,7 @@ class Shockley(object):
         self.NR   = float(NR) if NR is not None else DEFAULT_NR
         self.RS   = float(RS) if RS is not None else DEFAULT_RS
         self.TBV  = float(TBV) if TBV is not None else DEFAULT_TBV
-        self.TEMP = float(TEMP) + ZERO_CELSIUS if TEMP is not None else DEFAULT_TEMP
+        self.TEMP = float(TEMP) + units.ZERO_CELSIUS if TEMP is not None else DEFAULT_TEMP
         self.TM1  = float(TM1) if TM1 is not None else DEFAULT_TM1
         self.TM2  = float(TM2) if TM2 is not None else DEFAULT_TM2
         self.TRS  = float(TRS) if TRS is not None else DEFAULT_TRS
@@ -100,7 +103,7 @@ class Shockley(object):
             dev.last_vd = vext
         else:
             vd = dev.last_vd if dev.last_vd is not None else 10*self.VT
-            vd = newton(self._obj_irs, vd, fprime=self._obj_irs_prime,
+            vd = newtonRaphson(self._obj_irs, vd, fprime=self._obj_irs_prime,
                         args=(vext, dev), tol=settings.vea, maxiter=500)
             i = self._get_i(vext-vd)
             dev.last_vd = vd
@@ -162,3 +165,7 @@ class Shockley(object):
         self.BV = self.BV - self.TBV*(T - self.T)
         self.RS = self.RS*(1 + self.TRS*(T - self.T))
         self.T = T
+
+
+
+    

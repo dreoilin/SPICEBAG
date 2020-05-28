@@ -6,7 +6,7 @@ and a method to compute the coefficients for said step
 
 """
 
-rsteps = 1
+rsteps = 2
 
 
 def get_coefs(buf, step):
@@ -29,6 +29,6 @@ def get_coefs(buf, step):
         raise ValueError('BDF2->get_coefs(): BDF2 requires state at current and previous timestep')
         
     C1 = step * (3/2)
-    C0 = -(2*step*buf[1][1] + 1/(2*step)*buf[0][1])
+    C0 = -((2/step)*buf[1][1] + 1/(2*step)*buf[0][1])
     
     return (C1, C0)
