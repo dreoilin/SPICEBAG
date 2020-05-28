@@ -101,7 +101,7 @@ class Shockley(object):
         else:
             vd = dev.last_vd if dev.last_vd is not None else 10*self.VT
             vd = newton(self._obj_irs, vd, fprime=self._obj_irs_prime,
-                        args=(vext, dev), tol=options.vea, maxiter=500)
+                        args=(vext, dev), tol=settings.vea, maxiter=500)
             i = self._get_i(vext-vd)
             dev.last_vd = vd
         return i
@@ -149,7 +149,7 @@ class Shockley(object):
             self._safe_exp(v / (self.NR * self.VT))
         
         if self.RS != 0.0:
-            gm = 1. / (self.RS + 1. / (gm + 1e-3*options.gmin))
+            gm = 1. / (self.RS + 1. / (gm + 1e-3*settings.gmin))
         return dev.AREA * gm
 
     def __repr__(self):

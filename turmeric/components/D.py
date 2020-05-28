@@ -1,6 +1,6 @@
 import numpy as np
 
-from .. import options
+from .. import settings
 from .. import units
 
 from .Component import Component
@@ -95,7 +95,7 @@ class D(Component):
                    [self.n1 - 1, self.n2 - 1]*2)
         gm = self.model.get_gm(0, ports_v, 0, self)
         if gm == 0:
-            gm = options.gmin*2
+            gm = settings.gmin*2
         stamp = np.array(((gm, -gm),
                           (-gm, gm)), dtype=np.float64)
         if reduced:

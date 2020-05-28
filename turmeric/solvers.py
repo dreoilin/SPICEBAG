@@ -7,7 +7,7 @@ Created on Tue May 19 12:49:45 2020
 """
 
 import logging
-from . import options
+from . import settings
 
 class Solver():
     """
@@ -75,7 +75,7 @@ class GminStepper(Solver):
         if s >= self._stop:
             self._finished = True
         # scale matrix by Gmin
-        G *= 1.0/options.gmin
+        G *= 1.0/settings.gmin
         # apply new gmin
         G *= 10 ** -s
         return (M + G, ZDC)
@@ -106,13 +106,13 @@ class SourceStepper(Solver):
 def setup_solvers(Gmin=False):
     
     solvers = []
-    if options.use_standard_solve_method:
+    if settings.use_standard_solve_method:
         standard = Standard()
         solvers.append(standard)
-    if options.use_gmin_stepping and Gmin:
+    if settings.use_gmin_stepping and Gmin:
         gmin_stepping = GminStepper()
         solvers.append(gmin_stepping)
-    if options.use_source_stepping and Gmin:
+    if settings.use_source_stepping and Gmin:
         source_stepping = SourceStepper()
         solvers.append(source_stepping)
     

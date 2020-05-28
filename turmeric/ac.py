@@ -4,10 +4,11 @@
 import numpy as np
 import logging
 
-from . import options
 from . import results
 from . import complex_solve
 
+SWEEP_LOG = "LOG"
+SWEEP_LIN = "LIN"
 
 specs = {'ac': {'tokens': ({
                            'label': 'type',
@@ -15,7 +16,7 @@ specs = {'ac': {'tokens': ({
                            'type': str,
                            'needed': False,
                            'dest': 'sweep_type',
-                           'default': options.ac_log_step
+                           'default': SWEEP_LOG
                            },
                           {
                            'label': 'nsteps',
@@ -57,9 +58,9 @@ def ac_analysis(circ, start, points, stop, sweep_type=None,
     if points < 2 and not start == stop:
         raise ValueError("ac_analysis(): AC analysis has number of points < 2 & start != stop")
     
-    if sweep_type.upper() == options.ac_log_step or sweep_type is None:
+    if sweep_type.upper() == SWEEP_LOG or sweep_type is None:
         fs = np.logspace(int(start), np.log(int(stop)), num=int(points), endpoint=True)
-    elif sweep_type.upper() == options.ac_lin_step:
+    elif sweep_type.upper() == SWEEP_LOG:
         fs = np.linspace(int(start), int(stop), num=int(points), endpoint=True)
     else:
         raise ValueError(f"ac_analysis(): unknown sweep type {sweep_type}")
