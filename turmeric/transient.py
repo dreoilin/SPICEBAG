@@ -145,6 +145,10 @@ def transient_analysis(circ, tstart, tstep, tstop, method=settings.default_integ
             #print(f"{t/tstop*100} %", flush=True)
             if len(buf) > diff_slv.rsteps:
                 buf.pop(0)
+                
+            #
+            #
+            
         else:
             logging.error("Can't converge with step "+str(tstep)+".")
             logging.info("Reduce step or increase max iterations")

@@ -22,13 +22,12 @@ class Solution(object):
             self.filename = opdir / filename
         # we have reduced MNA
         NNODES = circ.get_nodes_number() -1
-        
         for i in range(NNODES):
             header = f"V({str(circ.nodes_dict[i+1])})".upper()
             self.headers.append(header)
         for elem in circ:
             if isinstance(elem, VoltageDefinedComponent):
-                header=f"I({elem.part_id.upper()})"
+                header=f"I({elem.name.upper()}{elem.part_id})"
                 self.headers.append(header)
         # setup file 
         self._setup_file()

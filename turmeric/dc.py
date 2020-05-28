@@ -127,13 +127,11 @@ def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
     """
     
     logging.debug("op_analysis(): getting M0 and ZDC0 from circuit")
-    # unreduced MNA matrices computed by the circuit object
-    M0 = circ.M0
-    ZDC0 = circ.ZDC0
-    # now create reduce matrices (used for calculation purposes)
     logging.debug("op_analysis(): Reducing M0 and ZDC0 matrices")
-    M = M0[1:, 1:]
-    ZDC = ZDC0[1:]
+    # unreduced MNA matrices computed by the circuit object
+    # now create reduce matrices (used for calculation purposes)
+    M = circ.M0[1:, 1:]
+    ZDC = circ.ZDC0[1:]
     
     logging.info("Beginning operating point analysis")
 

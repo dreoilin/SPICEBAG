@@ -16,7 +16,7 @@ class Component(Parseable):
         pass
 
     def __str__(self):
-        return str(self.value)
+        return repr(self)
 
     @abstractmethod
     def stamp(self, M0, ZDC0, ZAC0, D0, ZT0, time):
