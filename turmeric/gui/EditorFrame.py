@@ -5,6 +5,8 @@ from turmeric.gui.statusbar import Statusbar
 from turmeric.gui.EmbeddedConsole import EmbeddedConsoleFrame
 from turmeric.gui.PlotView import PlotView
 from turmeric import runnet
+import subprocess
+import os
 
 class EditorFrame(ttk.Frame):
     def __init__(self, master, filepath=None):
@@ -32,14 +34,42 @@ class EditorFrame(ttk.Frame):
 
         self.netlisteditor.bind('<KeyRelease>', self.onKRelease)
         self.netlisteditor.bind('<ButtonRelease>', self.onBRelease)
+
+    def start_run_worker(self,filepath):
+        #cmd=["python","-u","-c",f"import turmeric.runnet as r\nr('{filepath}')\n"]
+        cmd=["python","-u","-c",f"import itertools, time\nfor i in itertools.count():\n\tprint(i)\n\ttime.sleep(0.5)\n"]
+        self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.tk.createfilehandler(self.proc.stdout, READABLE, self.read_output)
+        self._progressV = StringVar()
+        self.CancelButton = Button(self.statusbar, text="Stop running analysis",command=self.stop_worker).pack(side=LEFT)
+        Label(self.statusbar, textvariable=self._progressV).pack(side=LEFT,fill=BOTH,expand=Y)
+
+    def read_output(self, pipe, mask):
+        data = os.read(pipe.fileno(), 1 << 20)
+        if not data: 
+            # done
+            self.tk.deletefilehandler(self.proc.stdout)
+            self.after(5000, self.stop_worker)
+            return
+        print(f"GOT: {data}")
+        self._progressV.set(data.strip(b'\n').decode())
+
+    def stop_worker(self, stopping=[]):
+        if stopping:
+            return
+        stopping.append(True)
+
+        print("Stopping worker")
+        self.proc.terminate()
         
     def run_netlist(self):
-        res = runnet(self.netlisteditor.filepath)
-        self.console.tty.write(f'res=runnet({self.netlisteditor.filepath})',readonly=True,output=False)
-        self.console.tty.pass_variable(consoleVariable='res',value=res)
+        self.start_run_worker(self.netlisteditor.filepath)
+        #res = runnet(self.netlisteditor.filepath)
+        #self.console.tty.write(f'res=runnet({self.netlisteditor.filepath})',readonly=True,output=False)
+        #self.console.tty.pass_variable(consoleVariable='res',value=res)
 
-        self.printOP(res)
-        self.plot.populateVarSelect(res)
+        #self.printOP(res)
+        #self.plot.populateVarSelect(res)
         #self.plot.plot_data(noop[[k for k in noop][0]] if len(noop)>0 else None)
     
     def printOP(self, res):
