@@ -1,37 +1,132 @@
 import logging
 
-from .FORTRAN.LU import ludcmp, lubksb
-from .FORTRAN.DC_SUBRS import gmin_mat
+from turmeric.FORTRAN.LU import ludcmp, lubksb
+from turmeric.FORTRAN.DC_SUBRS import gmin_mat
 
 from numpy.linalg import norm
 import numpy as np    
 
-from . import units
-from . import settings
-from . import solvers as slv
-from . import results
+from turmeric import units
+from turmeric import settings
+from turmeric import solvers as slv
+from turmeric import results
+from turmeric.components.tokens import ParamDict, Value
+from turmeric.analyses.Analysis import Analysis
 
-specs = {'op': {'tokens' : {} }}
+class OP(Analysis):
+    """
+    ~~~~~~~~~~~~~~~~~~
+    OP Analysis Class:
+    ~~~~~~~~~~~~~~~~~~
 
-def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
+    Provides a class for the OP analysis of a netlist.
+    
+    """
+    
+    def __init__(self, line):
+        self.net_objs = [ParamDict.allowed_params(self, optional=True, paramset={
+            'x0' : { 'type' : lambda v: [float(val) for val in list(v)], 'default' : [] }})]
+        super().__init__(line)
+        if not len(self.x0) > 0:
+            self.x0 = None
+
+    def __repr__(self):
+        """
+        .OP [x0=\[<Value>...\]]
+        """
+        r = f".OP"
+        r += ' x0=['+''.join(str(v) for v in self.x0) + ']' if self.x0 is not None else ''
+        return r
+
+    def run(self, circ):
+        return op_analysis(circ, self.x0)
+
+def op_analysis(circ, x0=None):
+    
+    """
+    ~~~~~~~~~~~~~~~~~~
+    OP Analysis Method:
+    ~~~~~~~~~~~~~~~~~~
+    
+    This function is the entry point for an operating point analysis
+    The analysis sets up the MNA matrices using a circuit object and constructs
+    the Gmin matrix used in the dc solver
+    
+    A circuit solution is attempted twice:
+        - Once with a Gmin matrix and
+        - a second time without (to enhance results)
+        
+    If the analysis cannot find a solution without Gmin, the Gmin solution is
+    returned with a warning. In this case, a solution is heavily dependent on
+    the minimum conductance to ground.
+    
+    If the circuit cannot be solved using any of the available solving methods,
+    the special value None is returned
+    
+    x0 is the initial estimate provided by the user
+    
+    """
+    
+    logging.debug("op_analysis(): getting and reducing M0 and ZDC0 from circuit")
+    
+    M = circ.M0[1:, 1:]
+    ZDC = circ.ZDC0[1:]
+    
+    logging.info("op_analysis(): Beginning operating point analysis")
+
+    logging.debug("op_analysis(): constructing Gmin matrix")
+    # take away a single node because we have reduced M
+    Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], circ.get_nodes_number()-1)
+    
+    logging.info("op_analysis(): solving with Gmin")
+    # now solve
+    (x_min, e_min, converged, iters_min) = dc_solve(M, ZDC,
+                                              circ, Gmin=Gmin_matrix, x0=x0)
+    
+    op = results.Solution(circ, sol_type='OP')
+    # convergence specifies a solution, but using Gmin
+    if converged:
+        logging.info("op_analysis(): now attempting without Gmin:")
+        (x, e, solved, iters) = dc_solve(
+            M, ZDC, circ, Gmin=None, x0=x_min)
+        
+        if not solved:
+            logging.error("Can't solve without Gmin.")
+            logging.warning("Solution is highly dependent on Gmin")
+            logging.info("Displaying valid results. Couldn't solve \
+                         circuit without Gmin")    
+        
+        op.write_data(x.transpose().tolist()[0])
+        op.close()
+        
+        return op.as_dict()
+        
+    logging.critical(f"op_analysis(): No operating point found")
+    
+    return None
+
+def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
              MAXIT=1000, locked_nodes=None):
     
     """
-    This function reduces any impedance components into a single matrix
-    (this is the M matrix). DC, AC, and source contributions from capacitive
-    /inductive elements during a transient are reduced to the Z matrix
+    M   : the conductance matrix
+    ZDC : the DC source  
     
-    The problem is reduced to:
+    
+    This method operates on the MNA matrices using the implemented
+    solving techniques before passing them to the low level raphson.
+    
+        At this point, the system has been reduced to:
         
         M + N = Z, where N is non-linear contributions
     
     M and ZDC are operated on by the solver objects, before being
-    passed to Raphson solve. There are three solvers:
-        
-        standard solving, Gmin stepping, source stepping
-        
-    The system is only considered solved if a solver is finished.
+    passed to Raphson solve. 
     
+        We currently have three solvers:
+        
+        - standard solving - Gmin stepping - source stepping
+        
     """    
     
     M_size = M.shape[0]
@@ -46,14 +141,6 @@ def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
         solvers = slv.setup_solvers(Gmin=False)
     else:
         solvers = slv.setup_solvers(Gmin=True)
-
-    if time is not None:
-        # get method would be nicer
-        circ.generate_ZAC(time)
-        # retrieve ZAC and add to DC component
-        ZAC = circ.ZAC
-    else:
-        ZAC = False
 
     # if there is no initial guess, we start with 0
     if x0 is not None:
@@ -70,18 +157,17 @@ def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
         while (solver.failed is not True) and (not converged):
             logging.info(f"Now solving with: {solver.name}")
             # 1. Operate on the matrices
-            M_, ZDC_ = solver.operate_on_M_and_ZDC(np.array(M),\
-                                    np.array(ZDC), np.array(Gmin))
-            Z = ZDC_ + ZAC * (bool(time))
+            M_, Z_ = solver.operate_on_M_and_ZDC(np.array(M),\
+                                    np.array(Z), np.array(Gmin))
             # 2. Try to solve with the current solver
             try:
                 (x, error, converged, n_iter)\
-                    = raphson_solver(x, M_, circ, Z=Z, nv=NNODES, 
+                    = MNA_solve(x, M_, circ, Z=Z_, nv=NNODES, 
                                     locked_nodes=locked_nodes,
                                     time=time, MAXIT=MAXIT)
                 # increment iteration
                 iters += n_iter
-            except ValueError:
+            except SingularityError:
                 logging.warning("Singular matrix")
                 converged, error, x = False, None, None
                 solver.fail()
@@ -107,69 +193,7 @@ def dc_solve(M, ZDC, circ, Gmin=None, x0=None, time=None,
     return (x, error, converged, iters)
 
 
-def op_analysis(circ, x0=None, guess=True, outfile=None, verbose=3):
-    
-    """
-    This function is the entry point for an operating point analysis
-    The analysis sets up the MNA matrices using a circuit object and constructs
-    the Gmin matrix used in the dc solve homopothies
-    
-    A circuit solution is attempted twice:
-        - Once with a Gmin matrix and
-        - a second time without (to enhance results)
-        
-    If the analysis cannot find a solution without Gmin, the Gmin solution is
-    returned with a warning. In this case, a solution is heavily dependent on
-    the minimum conductance to ground.
-    
-    If the circuit cannot be solved using any of the available solving methods,
-    the special value None is returned
-    """
-    
-    logging.debug("op_analysis(): getting M0 and ZDC0 from circuit")
-    # unreduced MNA matrices computed by the circuit object
-    M0 = circ.M0
-    ZDC0 = circ.ZDC0
-    # now create reduce matrices (used for calculation purposes)
-    logging.debug("op_analysis(): Reducing M0 and ZDC0 matrices")
-    M = M0[1:, 1:]
-    ZDC = ZDC0[1:]
-    
-    logging.info("Beginning operating point analysis")
-
-    logging.debug("op_analysis(): constructing Gmin matrix")
-    # take away a single node because we have reduced M
-    Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], circ.get_nodes_number()-1)
-    
-    logging.info("op_analysis(): solving with Gmin")
-    # now solve
-    (x_min, e_min, converged, iters_min) = dc_solve(M, ZDC,
-                                              circ, Gmin=Gmin_matrix, x0=x0)
-    
-    op = results.Solution(circ, outfile, sol_type='OP')
-    # convergence specifies a solution, but using Gmin
-    if converged:
-        logging.info("op_analysis(): now attempting without Gmin:")
-        (x, e, solved, iters) = dc_solve(
-            M, ZDC, circ, Gmin=None, x0=x_min)
-        
-        if not solved:
-            logging.error("Can't solve without Gmin.")
-            logging.warning("Solution is highly dependent on Gmin")
-            logging.info("Displaying valid results. Couldn't solve \
-                         circuit without Gmin")    
-        
-        op.write_data(x.transpose().tolist()[0])
-        op.close()
-        
-        return op.as_dict()
-        
-    logging.critical(f"op_analysis(): No operating point found")
-    
-    return None
-
-
-def raphson_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
+def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
 
     """
     
@@ -207,7 +231,8 @@ def raphson_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
             for elem in circ:
                 if elem.is_nonlinear:
                     _update_J_and_N(J, N, x, elem, time)
-        # dot product is an intrinsic fortran routine
+        
+        # solve for the system error
         error = M.dot(x) + Z + nl*N
         
         LU, INDX, _, C = ludcmp(M + nl*J, M_size)
@@ -217,7 +242,7 @@ def raphson_solver(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
         dx = lubksb(LU, INDX,  -error)
         # check for overflow error
         if norm(dx) == np.nan:
-            raise OverflowError
+            raise SingularityError
         
         iters += 1
         # perform newton update
@@ -302,16 +327,16 @@ def get_td(dx, locked_nodes, n=-1):
     for (n1, n2) in locked_nodes:
         if n1 != 0:
             if n2 != 0:
-                if abs(dx[n1 - 1, 0] - dx[n2 - 1, 0]) > settings.nl_voltages_lock_factor * constants.Vth():
-                    td_new = (settings.nl_voltages_lock_factor * constants.Vth()) / abs(
+                if abs(dx[n1 - 1, 0] - dx[n2 - 1, 0]) > settings.nl_voltages_lock_factor * units.Vth():
+                    td_new = (settings.nl_voltages_lock_factor * units.Vth()) / abs(
                         dx[n1 - 1, 0] - dx[n2 - 1, 0])
             else:
-                if abs(dx[n1 - 1, 0]) > settings.nl_voltages_lock_factor * constants.Vth():
-                    td_new = (settings.nl_voltages_lock_factor * constants.Vth()) / abs(
+                if abs(dx[n1 - 1, 0]) > settings.nl_voltages_lock_factor * units.Vth():
+                    td_new = (settings.nl_voltages_lock_factor * units.Vth()) / abs(
                         dx[n1 - 1, 0])
         else:
-            if abs(dx[n2 - 1, 0]) > settings.nl_voltages_lock_factor * constants.Vth():
-                td_new = (settings.nl_voltages_lock_factor * constants.Vth()) / abs(
+            if abs(dx[n2 - 1, 0]) > settings.nl_voltages_lock_factor * units.Vth():
+                td_new = (settings.nl_voltages_lock_factor * units.Vth()) / abs(
                     dx[n2 - 1, 0])
         if td_new < td:
             td = td_new
@@ -412,3 +437,7 @@ def custom_convergence_check(x, dx, residuum, er, ea, eresiduum, debug=False):
         ret = True
 
     return ret, all_check_results
+
+
+class SingularityError(Exception):
+    pass

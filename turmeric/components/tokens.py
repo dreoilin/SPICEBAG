@@ -151,36 +151,42 @@ class ParamDict(NetlistToken):
                         d[p.key.lower()] = l
                 else:
                     d.update({p.key.lower() : p.value})
-        allowed = '_'+type(self).__name__+'__allowed_params'
-        component = '_'+type(self).__name__+'__component'
-        if hasattr(self, allowed) and hasattr(self, component):
-            for param, desc in getattr(self, allowed).items():
+        if hasattr(self, '_ParamDict__allowed_params') and hasattr(self, '_ParamDict__parent'):
+            for param, desc in self.__allowed_params.items():
                 if param.lower() in d:
-                    setattr(getattr(self,component),param,desc['type'](d[param]))
+                    setattr(self._ParamDict__parent,param,desc['type'](d[param]))
                 elif desc['default'] is not None:
-                    setattr(getattr(self,component),param,desc['type'](desc['default']))
+                    setattr(self._ParamDict__parent,param,desc['type'](desc['default']))
                 else:
-                    raise ValueError(f'Missing non-default parameter {param} for {self.name} component')
+                    raise ValueError(f'Missing non-default parameter {param} for {self._ParamDict__parent} component')
         super().__init__(d)
 
     @classmethod
-    def allowed_params(cls, component, paramset, optional=False):
+    def allowed_params(cls, parent, paramset, optional=False):
         """
         paramset of the form: { 'param_name' : { 'type' : type_function_to_set_value, 'default' : [None|value]}}
         If a parameter is given a default, it will be treated as optional
-        
-        parameters will be added to component
+  
+        component - object to which parsed parameters will be added.
+
+        optional - whole parameter list is optional. Bit of a hack, but sure look.
         """
-        cls.__component = component
-        cls.__allowed_params = paramset
-        cls.__optional = optional
-        return cls
+        def newInit(obj, val):
+            obj.__parent = parent
+            obj.__allowed_params = paramset
+            cls.__init__(obj, val)
+
+        r = r"((?:(?: *)[^ \n]+=(?:(?:\[.+\])+|[^ \n])+)+)"
+        r = f'?{r}?' if optional else r
+
+        return type(f"{type(parent).__name__.lower()}ParamDict", (ParamDict,) ,{
+            '__init__' : newInit,
+            '__re__' : r
+            })
 
     @classproperty
     def __re__(cls):
         r = r"((?:(?: *)[^ \n]+=[^ \n]+)+)"
-        if hasattr(cls, '_'+cls.__name__+'__optional'):
-            r = f'?{r}?' if getattr(cls, '_'+cls.__name__+'__optional') else ''
         return r
 
 class KVParam(NetlistToken):

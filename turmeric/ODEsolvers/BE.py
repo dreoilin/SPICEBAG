@@ -1,6 +1,8 @@
 """
 
-Backward Euler (BE) module
+Backward Euler (beuler) module
+
+Computes the coefficients for a backward euler step
 
 """
 

@@ -1,18 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri May  1 11:23:45 2020
-
-@author: cian
-"""
-
 import sys
 import logging
 from optparse import OptionParser
 
 from . import turmeric
 from . import settings
-from . import transient
 from .__version__ import __version__
 
 def _cli():
@@ -140,10 +131,6 @@ def _cli():
     logger.addHandler(lfh)
     logger.addHandler(sh)
 
-    #logging.config.fileConfig("logging.conf")
-    
-    # Program execution
-    # TODO: implement verbosity by passing verbose=verbose
     turmeric.main(filename=remaning_args[0], outfile=cli_options.outfile)
 
     sys.exit(0)

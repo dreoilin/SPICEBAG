@@ -9,13 +9,13 @@ class Parseable(ABC):
         self.name = type(self).__name__.lower()
         if not hasattr(self, '__re__'):
             self.__re__ = ''
-        self.__re__ = "^" + f"{self.name}" + '(?: +)'.join([rex(o) for o in self.net_objs])
+        self.__re__ = "^" + self.__re__ + f"{self.name}" + '(?: +)'.join([rex(o) for o in self.net_objs])
         match = re.search(self.__re__,line.strip().lower())
         try:
             # FOR THIS TO WORK, EACH PARAMETER IN self.net_objs MUST EVALUATE TO EXACTLY ONE REGEX GROUP
             self.tokens = [n(g) for n,g in zip(self.net_objs,match.groups())]
         except AttributeError as e:
-            logging.exception(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{self.__re__}'")
+            logging.error(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{self.__re__}'")
 
     @property
     def __re__(self):

@@ -2,19 +2,11 @@ import copy
 import os
 import logging
 
-from . import circuit
-from . import components
-
-# analyses syntax
-from .dc import specs as dc_spec
-from .dc_sweep import specs as sweep_specs
-from .ac import specs as ac_spec
-from .transient import specs as tran_spec
+from turmeric import circuit
+from turmeric import components
+from turmeric import analyses
 
 
-specs = {}
-for i in dc_spec, sweep_specs, ac_spec, tran_spec:
-    specs.update(i)
 
 class NetlistParseError(Exception):
     """Netlist parsing exception."""
@@ -23,11 +15,10 @@ class NetlistParseError(Exception):
 
 def parse_models(lines):
     models = {}
-    for line, line_n in lines:
+    for line in lines:
         tokens = line.replace("(", "").replace(")", "").split()
         if len(tokens) < 3:
-            raise NetlistParseError("parse_models(): syntax error in model declaration on line " + str(line_n) +
-                                    ".\n\t" + line)
+            raise ValueError(f"parse_models(): syntax error in model declaration in line:\n\t{line}")
         model_label = tokens[2]
         model_type = tokens[1]
         model_parameters = {}
@@ -40,12 +31,9 @@ def parse_models(lines):
             model_parameters.update({'name': model_label})
             model_iter = components.models.Shockley(**model_parameters)
         else:
-            raise NetlistParseError("parse_models(): Unknown model (" +
-                                    model_type + ") on line " + str(line_n) +
-                                    ".\n\t" + line,)
+            raise ValueError("parse_models(): Unknown model `{model_type}' in line\n\t{line}")
         models.update({model_label: model_iter})
     return models
-
 
 def digest_raw_netlist(filename):
     logging.info(f"Processing netlist `{filename}'")
@@ -79,18 +67,21 @@ def digest_raw_netlist(filename):
                 elif tokens[0] == ".end":
                     break
                 elif tokens[0] == ".model":
-                    model_directives.append((line, i+1))
+                    model_directives.append(line)
                 else:
-                    directives.append((line, i+1))
+                    directives.append(line)
                 continue
-            
-            net_lines.append((line, i + 1))
+            net_lines.append(line)
     models = parse_models(model_directives)
-    analyses = parse_analysis(directives)
+    directivesmap = {
+        ".ac"   : lambda line : analyses.AC(line),
+        ".op"   : lambda line : analyses.OP(line),
+        ".dc"   : lambda line : analyses.DC(line),
+        ".tran" : lambda line : analyses.TRAN(line)
+    }
+    ans = [directivesmap[line.split()[0]](line) for line in directives]
     logging.info(f"Finished processing `{filename}'")
-    
-    return (title, analyses, models, net_lines)
-
+    return (title, ans, models, net_lines)
 
 def parse_network(filename):
     """Parse a SPICE-like netlist
@@ -113,25 +104,21 @@ def parse_network(filename):
 
 def main_netlist_parser(circ, netlist_lines, models):
     elements = []
-    parse_function = {
+    constructor = {
         'c': lambda line: components.C(line, circ),
         'd': lambda line: components.D(line, circ, models),
         'e': lambda line: components.sources.E(line, circ),
-        'f': lambda line: parse_elem_cccs(line, circ),
         'g': lambda line: components.sources.G(line, circ),
-        'h': lambda line: components.sources.H(line, circ),
         'i': lambda line: components.sources.I(line, circ),
         'l': lambda line: components.L(line, circ),
         'r': lambda line: components.R(line, circ),
         'v': lambda line: components.sources.V(line,circ)
     }
-    for line, line_n in netlist_lines:
+    for line in netlist_lines:
         try:
-            e = parse_function[line[0]](line)
-            # TODO: remove once all elements parsed via inheritance
-            elements.append(e if type(e) is not list else e[0])
+            elements.append(constructor[line[0]](line))
         except KeyError:
-            raise logging.exception(f"Unknown element {line[0]}")
+            raise logging.exception(f"Unknown element {line[0]} in {line}")
     return elements
 
 def convert_units(string_value):
@@ -184,16 +171,6 @@ def convert_units(string_value):
     return numeric_value
 
 
-def parse_analysis(directives):
-    
-    an = []
-    for line, line_n in directives:
-        if line[0] != '.' or line[:3] == '.ic':
-            continue
-        line_elements = line.split()
-        an += [parse_single_analysis(line)]
-    return an
-
 
 def parse_temp_directive(line):
     
@@ -204,63 +181,6 @@ def parse_temp_directive(line):
         value = convert_units(token)
 
     return {"type": "temp", "temp": value}
-
-
-def parse_single_analysis(line):
-    
-    line_elements = line.split()
-    an_type = line_elements[0].replace(".", "").lower()
-    if not an_type in specs:
-        raise NetlistParseError("Unknown directive: %s" % an_type)
-    params = list(copy.deepcopy(specs[an_type]['tokens']))
-
-    an = {'type': an_type}
-    for i in range(len(line_elements[1:])):
-        token = line_elements[i + 1]
-        if token[0] == "*":
-            break
-        if is_valid_value_param_string(token):
-            (label, value) = token.split('=')
-        else:
-            label, value = None, token
-        assigned = False
-        for t in params:
-            if (label is None and t['pos'] == i) or label == t['label']:
-                an.update({t['dest']: convert(value, t['type'])})
-                assigned = True
-                break
-        if assigned:
-            params.pop(params.index(t))
-            continue
-        else:
-            raise NetlistParseError("Unknown .%s parameter: pos %d (%s=)%s" % \
-                                     (an_type.upper(), i, label, value))
-
-    missing = []
-    for t in params:
-        if t['needed']:
-            missing.append(t['label'])
-    if len(missing):
-        raise NetlistParseError("Required parameters are missing: %s" %
-                                (" ".join(line_elements)))
-
-    for t in params:
-        an.update({t['dest']: t['default']})
-
-    if an['type'] == 'tran':
-        uic = int(an.pop('uic'))
-        if uic == 0:
-            an['x0'] = None
-        elif uic == 1:
-            an['x0'] = 'op'
-        elif uic == 2:
-            an['x0'] = 'op+ic'
-        elif uic == 3:
-            pass  # already set by ic_label
-        else:
-            raise NetlistParseError("Unknown UIC value: %d" % uic)
-
-    return an
 
 
 def is_valid_value_param_string(astr):

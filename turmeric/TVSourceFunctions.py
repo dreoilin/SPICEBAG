@@ -133,6 +133,10 @@ class SIN(TVSourceFunction):
             return self.vo + self.va * math.exp((self.td - time)*self.theta) * math.sin(2*math.pi*self.freq*(time - self.td) + math.pi*self.phi/180.)
 
 tvsourcefunctions = {
+        'am' : AM,
+        'exp' : EXP,
+        'pulse' : PULSE,
+        'sffm' : SFFM,
         'sin' : SIN
         }
 

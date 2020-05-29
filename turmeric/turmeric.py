@@ -5,10 +5,6 @@ import numpy as np
 import scipy as sp
 
 # analyses
-from . import dc
-from . import dc_sweep
-from . import transient
-from . import ac
 from . import netlist_parser
 from . import units
 
@@ -18,34 +14,10 @@ from .__version__ import __version__
 
 import logging
 
-def run(circ, an_list=None):
-    results = {}
-
-    an_list = copy.deepcopy(an_list)
-    if type(an_list) == tuple:
-        an_list = list(an_list)
-    elif type(an_list) == dict:
-        an_list = [an_list] # run(mycircuit, op1)
-
-    while len(an_list):
-        an_item = an_list.pop(0)
-        an_type = an_item.pop('type')
-        if 'x0' in an_item and isinstance(an_item['x0'], str):
-            logging.warning("%s has x0 set to %s, unavailable. Using 'None'." %
-                                   (an_type.upper(), an_item['x0']))
-            an_item['x0'] = None
-        r = analysis[an_type](circ, **an_item)
-        results.update({an_type: r})
-        
-    return results
-
 def temp_directive(T): # T in celsius
     units.T = units.Kelvin(float(T))
 
-analysis = {'op': dc.op_analysis, 'dc': dc_sweep.dc_analysis,
-            'tran': transient.transient_analysis, 'ac': ac.ac_analysis,
-            'temp': temp_directive}
-
+analysis = {'temp': temp_directive}
 
 def main(filename, outfile="out"):
     """
@@ -54,13 +26,7 @@ def main(filename, outfile="out"):
 
     outfile : string, optional
         The output file's base name to which a suffix corresponding to the analysis performed will be added.
-    - Alternate Current (AC): ``.ac``
-    - Direct Current (DC): ``.dc``
-    - Operating Point (OP): ``.opinfo``
-    - TRANsient (TRAN): ``.tran``
-
     **Returns:**
-
     res : dict
         A dictionary containing the computed results.
     """
@@ -77,10 +43,6 @@ def main(filename, outfile="out"):
     except FileNotFoundError as e:
         logging.exception(f"{e}: netlist file {filename} was not found")
         sys.exit()
-    except IOError as e:
-        # TODO: verify that parse_network can throw IOError
-        logging.exception(f"{e}: ioerror on netlist file {filename}")
-        sys.exit()
 
     logging.info("Parsed circuit:")
     logging.info(repr(circ) + '\n' + '\n'.join(repr(m) for m in circ.models.values()))
@@ -88,7 +50,6 @@ def main(filename, outfile="out"):
     results = {}
     for an in analyses:
         logging.info(f"Analysis {an} running")
-        results.update(run(circ, [an]))
-
+        results.update(an.run(circ))
     return results
 
