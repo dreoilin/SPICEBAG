@@ -4,6 +4,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+import numpy as np
 
 class PlotView(Frame):
     def __init__(self, master):
@@ -37,7 +38,14 @@ class PlotView(Frame):
         analysis = self.analysisSelection.get()
         x = self.res[analysis][self.X]
         for y in [self.res[analysis][yi] for yi in self.Y]:
-            self.subplot.plot(x,y)
+            if analysis == 'AC':
+                x = np.absolute(x)
+                yabs = np.absolute(y)
+                yph  = np.angle(y)
+                self.subplot.plot(x,yabs,linestyle='solid')
+                self.subplot.plot(x,yph ,linestyle='dashed')
+            else:
+                self.subplot.plot(x,y)
 
     def populateVarSelect(self, res):
 

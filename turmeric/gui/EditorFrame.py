@@ -33,9 +33,6 @@ class EditorFrame(ttk.Frame):
         self.netlisteditor.bind('<KeyRelease>', self.onKRelease)
         self.netlisteditor.bind('<ButtonRelease>', self.onBRelease)
         
-        # TODO: take this out
-        self.run_netlist()
-
     def run_netlist(self):
         res = runnet(self.netlisteditor.filepath)
         self.console.tty.write(f'res=runnet({self.netlisteditor.filepath})',readonly=True,output=False)
