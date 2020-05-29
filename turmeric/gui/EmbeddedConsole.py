@@ -100,7 +100,7 @@ class EmbeddedConsole(Text):
             t.daemon = True
             t.start()
         for t in threads:
-            t.join(1)
+            t.join(0.01)
 
         self.pollOutputStreams()
 
