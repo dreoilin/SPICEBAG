@@ -102,11 +102,15 @@ class EmbeddedConsole(Text):
         self.pollOutputStreams()
 
     def _spawnConsole(self, envfilename):
-        consoleFile = pathlib.Path('.').resolve() / envfilename
-        console = subprocess.Popen(["python3",str(consoleFile)],
+        #consoleFile = pathlib.Path('.').resolve() / envfilename
+        console = subprocess.Popen(["ipython","--no-confirm-exit","--simple-prompt","--matplotlib=tk"],
                 stdin =subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE)
+        #console = subprocess.Popen(["python3",str(consoleFile)],
+        #        stdin =subprocess.PIPE,
+        #        stdout=subprocess.PIPE,
+        #        stderr=subprocess.PIPE)
         return console
 
     # Called when widget destroyed

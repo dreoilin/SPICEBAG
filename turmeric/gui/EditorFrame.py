@@ -65,7 +65,7 @@ if __name__ == '__main__':
     root = Tk()
     root.columnconfigure(0,weight=1)
     root.rowconfigure(0,weight=1)
-    ef = EditorFrame(root,'netlists/AC/Butterworth5thOrderLP.net')
+    ef = EditorFrame(root,'netlists/AC/bw5lp.net')
     root.bind('<Control-q>', lambda e: root.quit)
     root.bind('<Control-r>', lambda e: ef.run_netlist)
     root.mainloop()

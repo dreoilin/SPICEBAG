@@ -17,9 +17,9 @@ if __name__ == '__main__':
     c.InteractiveShellApp.exec_lines = [
             'from turmeric import runnet',
             'import pickle',
-            'from IPython import display',
-            '%gui tk',
-            '%matplotlib tk'
+            #'from IPython import display',
+            #'%gui tk',
+            #'%matplotlib tk'
             ]
     c.InteractiveShellApp.exec_files = [
 

@@ -17,7 +17,7 @@ class PlotView(Frame):
         self.plotContainer.pack(side=LEFT, fill=BOTH, expand=Y)
 
         self._fig = Figure(dpi=100)
-        self.subplot = self._fig.add_subplot(1,1,1)
+        self.subplot = self._fig.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self._fig, master=self.plotContainer)
         self.canvas.draw()
         self.canvas.mpl_connect("key_press_event", self.on_key_press)
@@ -25,6 +25,13 @@ class PlotView(Frame):
 
         self.toolbar = NavigationToolbar2Tk(self.canvas, self.plotContainer)
         self.toolbar.update()
+
+        self.plotfns = {
+                'LINEAR XY' : 'plot',
+                'SEMILOG X' : 'semilogx',
+                'SEMILOG Y' : 'semilogy',
+                'LOG XY'    : 'loglog'
+                }
 
     @property
     def figure(self):
@@ -34,7 +41,12 @@ class PlotView(Frame):
         print(f'{e.key} pressed')
         key_press_handler(e, self.canvas, self.toolbar)
 
+
     def plot(self):
+        self.clear()
+
+        plotfn = getattr(self.subplot, self.plotfns[self.axesVar.get()])
+
         analysis = self.analysisSelection.get()
         x = self.res[analysis][self.X]
         for y in [self.res[analysis][yi] for yi in self.Y]:
@@ -42,10 +54,17 @@ class PlotView(Frame):
                 x = np.absolute(x)
                 yabs = np.absolute(y)
                 yph  = np.angle(y)
-                self.subplot.plot(x,yabs,linestyle='solid')
-                self.subplot.plot(x,yph ,linestyle='dashed')
+                plotfn(x,yabs,linestyle='solid')
+                #plotfn(x,yph ,linestyle='dashed')
             else:
-                self.subplot.plot(x,y)
+                plotfn(x,y)
+        self.subplot.set_title(self.titleE.get())
+        self.subplot.set_xlabel(self.xaxisE.get())
+        self.subplot.set_ylabel(self.yaxisE.get())
+        self.canvas.draw()
+
+    def clear(self):
+        self.subplot.cla()
 
     def populateVarSelect(self, res):
 
@@ -80,13 +99,24 @@ class PlotView(Frame):
             self.setXB = Button(self.gridbox, text='Set X range', command=self.set_x_range)
             self.setYB = Button(self.gridbox, text='Set Y ranges', command=self.set_y_range)
 
-            self.axesEnum = ('LINEAR XY','SEMILOG X','SEMILOG Y','LOG XY')
+            axesEnum = tuple(self.plotfns.keys())
             self.axesVar = StringVar()
-            self.axesVar.set(self.axesEnum[0])
-            self.axesMenu = OptionMenu(self.gridbox, self.axesVar, *self.axesEnum)
+            self.axesVar.set(axesEnum[0])
+            self.axesMenu = OptionMenu(self.gridbox, self.axesVar, *axesEnum)
             self.axesL = Label(self.gridbox, text='Select axes scale:')
 
+            self.titleL = Label(self.gridbox, text='Plot title:')
+            self.titleE = Entry(self.gridbox)
+
+            self.xaxisL = Label(self.gridbox, text='X axis label:')
+            self.xaxisE = Entry(self.gridbox)
+
+            self.yaxisL = Label(self.gridbox, text='Y axis label:')
+            self.yaxisE = Entry(self.gridbox)
+
             self.plotB = Button(self.gridbox, text='Plot selection', command=self.plot)
+
+            #self.clearB = Button(self.gridbox, text='Clear plot', command=self.clear)
 
             self.gridbox.grid(row=0, column=0, sticky='nsew')
             self.gridbox.rowconfigure(1, weight=1)
@@ -100,7 +130,14 @@ class PlotView(Frame):
             self.setYB.grid(      row=3,column=1,sticky='ew')
             self.axesL.grid(      row=4,column=0,sticky='ew')
             self.axesMenu.grid(   row=4,column=1,sticky='ew')
-            self.plotB.grid(      row=5,column=0,sticky='ew', columnspan=2)
+            self.titleL.grid(     row=5,column=0,sticky='ew')
+            self.titleE.grid(     row=5,column=1,sticky='ew')
+            self.xaxisL.grid(     row=6,column=0,sticky='ew')
+            self.xaxisE.grid(     row=6,column=1,sticky='ew')
+            self.yaxisL.grid(     row=7,column=0,sticky='ew')
+            self.yaxisE.grid(     row=7,column=1,sticky='ew')
+            self.plotB.grid(      row=8,column=0,sticky='ew', columnspan=2)
+            #self.clearB.grid(     row=9,column=0,sticky='ew', columnspan=2)
         self.analysisSelection.set(analyses[0])
 
         if len(analyses) == 1:
@@ -140,9 +177,9 @@ if __name__=='__main__':
     root = Tk()
     root.wm_title("Matplotlib Tk embedding")
     frame = PlotView(root)
-    # For example
-    import numpy as np
-    t=np.arange(0,3,.01)
-    frame.fig.add_subplot(111).plot(t, 2*np.sin(2*np.pi*t))
+    frame.pack(side=TOP,fill=BOTH,expand=Y)
+    import turmeric
+    res = turmeric.runnet('netlists/AC/bw5lp.net')
+    root.after(500,lambda:frame.populateVarSelect(res))
     root.mainloop()
 
