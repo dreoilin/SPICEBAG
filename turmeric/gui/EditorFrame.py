@@ -1,17 +1,17 @@
 from tkinter import *
 from tkinter import ttk
-from .netlisteditor import NetlistEditor
-from .statusbar import Statusbar
-from .EmbeddedConsole import EmbeddedConsoleFrame
+from turmeric.gui.netlisteditor import NetlistEditor
+from turmeric.gui.statusbar import Statusbar
+from turmeric.gui.EmbeddedConsole import EmbeddedConsoleFrame
 
 class EditorFrame(ttk.Frame):
-    def __init__(self, master, netFiledata=None):
+    def __init__(self, master, filepath=None):
         super().__init__(master)
         self.grid(row=0, column=0, sticky=(N,S,E,W))
 
         paneH = ttk.PanedWindow(self,orient=HORIZONTAL)
         paneVL = ttk.PanedWindow(paneH,orient=VERTICAL)
-        self.netlisteditor = NetlistEditor(paneVL,netFiledata)
+        self.netlisteditor = NetlistEditor(paneVL,filepath)
         self.console = EmbeddedConsoleFrame(paneVL)#Label(paneVL,text="CONSOLE")
         self.plot = Label(paneH,text="PLOT OF RESULTS")
 
@@ -41,6 +41,11 @@ class EditorFrame(ttk.Frame):
         self.netlisteditor.bind('<KeyRelease>', self.onKRelease)
         self.netlisteditor.bind('<ButtonRelease>', self.onBRelease)
 
+    def run_netlist(self):
+        print(f"File to run: {self.netlisteditor.filepath}")
+        runcmd = f'res = turmeric.main("{self.netlisteditor.filepath}")'
+        self.console.tty.run_command(runcmd)
+
     def onBRelease(self,e):
         self.updateStatusbar(e)
 
@@ -56,7 +61,6 @@ if __name__ == '__main__':
     root = Tk()
     root.columnconfigure(0,weight=1)
     root.rowconfigure(0,weight=1)
-    with open('netlists/OP/diodemulti.net') as f:
-        ef = EditorFrame(root,f.read())
+    ef = EditorFrame(root,'netlists/OP/diodemulti.net')
     ef.bind('<Control-q>', lambda e: root.quit())
     root.mainloop()

@@ -56,7 +56,8 @@ class Editor(Tk):
         menu_edit = Menu(self.menubar)
         self.menubar.add_cascade(menu=menu_file, label='File', underline = 0)
         self.menubar.add_cascade(menu=menu_edit, label='Edit', underline = 0)
-        self.menubar.add_command(label='Run', underline = 0, command=lambda : messagebox.showwarning(message='THERE AINT NOTHIN RUNNABLE',icon='error',title='I CANNAE RUN NOTHING'))
+        self.menubar.add_command(label='Run', underline = 0, command=self.run)
+        self.bind('<Control-r>', self.run)
         menu_file.add_command(label='New', underline = 0, accelerator='Ctl N', command = self.new_editor_tab)
         self.bind('<Control-n>', self.new_editor_tab)
         menu_file.add_command(label='Open...', underline = 0, command=self.open_file)
@@ -100,12 +101,16 @@ class Editor(Tk):
         
         self.quit()
 
+    def run(self, e=None):
+        frame = self.tabeditor.currentFrame()
+        if isinstance(frame, EditorFrame):
+            frame.run_netlist()
+
     def new_editor_tab(self,e=None,filename=None):
-        title = Path(filename).relative_to(self.pwd) if filename is not None else UNTITLED
-        filedata = open(filename, 'r').read() if filename else None
-        frame = EditorFrame(self.tabeditor,filedata)
+        filepath = Path(filename).relative_to(self.pwd) if filename is not None else UNTITLED
+        frame = EditorFrame(self.tabeditor,filepath)
         self.editors.append(frame)
-        t = self.tabeditor.addtab(title,frame=frame)
+        t = self.tabeditor.addtab(filepath,frame=frame)
         frame.netlisteditor.focus_set()
         self.tabeditor.select(t)
 

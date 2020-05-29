@@ -95,8 +95,12 @@ class EmbeddedConsole(Text):
         self.errBuf = queue.Queue()
         self.alive = True
         self.read_buf_size = 1024
-        Thread(target=self.readStdout).start()
-        Thread(target=self.readStderr).start()
+        threads = [Thread(target=self.readStdout), Thread(target=self.readStderr)]
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join(1)
 
         self.pollOutputStreams()
 
@@ -154,18 +158,18 @@ class EmbeddedConsole(Text):
                 first = None
         return False
 
-    def __sendLine(self):
-        line = self.get(self.LINE_START, END)
+    def __sendLine(self,line=None):
+        line = self.get(self.LINE_START, END) if line is None else line
         self.python.stdin.write(line.encode())
         self.python.stdin.flush()
 
-    def write(self, text, readonly=True):
+    def write(self, text, readonly=True, output=True):
         """
         Write data to Text field
         """
         if readonly:
             self.tag_add(self.READONLY, self.LINE_START, f"{self.LINE_START} lineend")
-            text = '\n' + text
+            text = '\n' + text if output else text
         
         # Split on colour code regex
         #rex_segs = self.ansi_decompose.split(text)
@@ -211,6 +215,11 @@ class EmbeddedConsole(Text):
 
         if self.alive:
             self.after(10, self.pollOutputStreams)
+
+    def run_command(self, command):
+        command = command + '\n' if command[-1] != '\n' else command
+        self.write(command, readonly=True, output=False)
+        self.__sendLine(command)
 
 class EmbeddedConsoleFrame(ttk.Frame):
     def __init__(self, master):
