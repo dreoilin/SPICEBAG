@@ -75,7 +75,7 @@ class TRAN(Analysis):
             
 
             x, error, solved, n_iter = dc_solve(M=(M + C1 * D),
-                                                   ZDC=(ZDC + np.dot(D, C0) +ZT), circ=circ,
+                                                   Z=(ZDC + np.dot(D, C0) +ZT), circ=circ,
                                                    Gmin=Gmin_matrix, x0=self.x0,
                                                    time=(t + self.tstep),
                                                    locked_nodes=locked_nodes,

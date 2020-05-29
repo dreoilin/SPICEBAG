@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 
-Module to map a system of n complex equaitons to 2n linear equations
+Module to map a system of n equaitons with complex coefficients
+to 2n equations with real-valued coefficients
 
 """
 import numpy as np

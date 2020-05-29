@@ -77,7 +77,7 @@ class AC(Analysis):
             raise ValueError("ac_analysis(): AC analysis has number of points < 2 & start != stop")
         
         if self.type.upper() == SWEEP_LOG or self.type is None:
-            fs = np.logspace(int(self.start), np.log(int(self.stop)), num=int(self.nsteps), endpoint=True)
+            fs = np.logspace(int(self.start), np.log10(int(self.stop)), num=int(self.nsteps), endpoint=True)
         elif self.type.upper() == SWEEP_LOG:
             fs = np.linspace(int(self.start), int(self.stop), num=int(self.nsteps), endpoint=True)
         else:

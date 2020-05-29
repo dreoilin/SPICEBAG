@@ -18,5 +18,5 @@ C4 3 4 15.5n
 C5 4 0 23.3n
 R2 4 0 10k
 .op
-.AC LOG 10 100 10k
+.AC type=log nsteps=100 start=1 stop=50k
 .END
