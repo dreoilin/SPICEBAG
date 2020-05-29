@@ -11,6 +11,6 @@ R1 2 0 1k
 .model D d
 
 .op
-.tran tstop=0.1 tstep=1p
+.tran tstop=0.05 tstep=0.01m
 .end
 

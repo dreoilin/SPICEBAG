@@ -30,16 +30,6 @@
 		"type": "float",
 		"value": 0.001
 	},
-	"nl_voltages_lock": {
-		"description": "",
-		"type": "bool",
-		"value": true
-	},
-	"nl_voltages_lock_factor": {
-		"description": "",
-		"type": "int",
-		"value": 4
-	},
 	"damp_initial": {
 		"description": "Damp the initial 20 iterations of the Raphson method.",
 		"type": "bool",

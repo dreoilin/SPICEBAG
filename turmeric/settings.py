@@ -21,8 +21,6 @@ gmin = 1e-12
 #      Newton Method       #
 ############################
 damp_initial = False
-nl_voltages_lock = True
-nl_voltages_lock_factor = 4
 
 ############################
 #      Homopothies         #

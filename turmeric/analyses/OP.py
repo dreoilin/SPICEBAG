@@ -123,7 +123,7 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
     
         At this point, the system has been reduced to:
         
-        M + N = Z, where N is non-linear contributions
+        Mx + NL(x) + Z = 0, where N is non-linear contributions
     
     M and ZDC are operated on by the solver objects, before being
     passed to Raphson solve. 
@@ -149,11 +149,14 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
 
     # if there is no initial guess, we start with 0
     if x0 is not None:
+        if len(x0) != M_size:
+            logging.warning("Bad initial estimate")
+            x0 = np.zeros((M_size, 1)) 
         if isinstance(x0, np.ndarray):
             x =x0
         elif isinstance(x0, dict):
             x0 = [value for value in x0.values()]
-            x0 = np.array(x0)
+            x0 = np.array(x0)[np.newaxis].T
     else:
         x = np.zeros((M_size, 1))
 
@@ -171,7 +174,7 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
             # 2. Try to solve with the current solver
             try:
                 (x, error, converged, n_iter)\
-                    = MNA_solve(x, M_, circ, Z=Z_, nv=NNODES, 
+                    = MNA_solve(x, M_, circ, Z=Z_, NNODES=NNODES, 
                                     locked_nodes=locked_nodes,
                                     time=time, MAXIT=MAXIT)
                 # increment iteration
@@ -202,7 +205,7 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
     return (x, error, converged, iters)
 
 
-def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
+def MNA_solve(x, M, circ, Z, MAXIT, NNODES, locked_nodes, time=None):
 
     """
     M : conductance matrix
@@ -214,7 +217,7 @@ def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
     
     This function solves the non-linear system:
         
-        A x + N(x) = Z
+        A x + N(x) + Z = 0
     
     if N(x) is zero, the method solves the linear system of equations,
     and returns immediately.
@@ -276,8 +279,8 @@ def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
         # otherwise we need to check it
         else:
             # run the convergence check
-            converged, _= convergence_check(
-            x, dx, error, nv - 1, debug=True)
+            converged = has_converged(
+            x, dx, error, NNODES)
             if converged:
                 break
 
@@ -332,111 +335,42 @@ def damper(n=-1):
     
     Currently, method damps first 20 iterations
     
+    n : current iteration
+    
     """
-    if settings.damp_initial and n < 10:
+    
+    if not settings.damp_initial:
+        return 1.0
+    elif n < 10:
         d = 1e-2
     elif n < 20:
         d = 0.1
     else:
-        d=1.0
+        d = 1.0
         
     return d
 
-def convergence_check(x, dx, residuum, nv_minus_one, debug=False):
-    """Perform a convergence check
-
-    **Parameters:**
-
-    x : array-like
-        The results to be checked.
-    dx : array-like
-        The last increment from a Newton-Rhapson iteration, solving
-        ``F(x) = 0``.
-    residuum : array-like
-        The remaining error, ie ``F(x) = residdum``
-    nv_minus_one : int
-        Number of voltage variables in x. If ``nv_minus_one`` is equal to
-        ``n``, it means ``x[:n]`` are all voltage variables.
-    debug : boolean, optional
-        Whether extra information is needed for debug purposes. Defaults to
-        ``False``.
-
-    **Returns:**
-
-    chk : boolean
-        Whether the check was passed or not. ``True`` means 'convergence!'.
-    rbn : ndarray
-        The convergence check results by node, if ``debug`` was set to ``True``,
-        else ``None``.
+def has_converged(x, dx, e, NNODES):
+    
     """
-    if not hasattr(x, 'shape'):
-        x = np.array(x)
-        dx = np.array(dx)
-        residuum = np.array(residuum)
-    vcheck, vresults = custom_convergence_check(x[:nv_minus_one, 0], dx[:nv_minus_one, 0], residuum[:nv_minus_one, 0], er=settings.ver, ea=settings.vea, eresiduum=settings.iea)
-    icheck, iresults = custom_convergence_check(x[nv_minus_one:], dx[nv_minus_one:], residuum[nv_minus_one:], er=settings.ier, ea=settings.iea, eresiduum=settings.vea)
-    return vcheck and icheck, vresults + iresults
-
-def custom_convergence_check(x, dx, residuum, er, ea, eresiduum, debug=False):
-    """Perform a custom convergence check
-
-    **Parameters:**
-
-    x : array-like
-        The results to be checked.
-    dx : array-like
-        The last increment from a Newton-Rhapson iteration, solving
-        ``F(x) = 0``.
-    residuum : array-like
-        The remaining error, ie ``F(x) = residdum``
-    ea : float
-        The value to be employed for the absolute error.
-    er : float
-        The value for the relative error to be employed.
-    eresiduum : float
-        The maximum allowed error for the residuum (left over error).
-    debug : boolean, optional
-        Whether extra information is needed for debug purposes. Defaults to
-        ``False``.
-
-    **Returns:**
-
-    chk : boolean
-        Whether the check was passed or not. ``True`` means 'convergence!'.
-    rbn : ndarray
-        The convergence check results by node, if ``debug`` was set to ``True``,
-        else ``None``.
+    
     """
-    all_check_results = []
-    if not hasattr(x, 'shape'):
-        x = np.array(x)
-        dx = np.array(dx)
-        residuum = np.array(residuum)
-    if x.shape[0]:
-        if not debug:
-            ret = np.allclose(x, x + dx, rtol=er, atol=ea) and \
-                  np.allclose(residuum, np.zeros(residuum.shape),
-                              atol=eresiduum, rtol=0)
-        else:
-            for i in range(x.shape[0]):
-                if np.abs(dx[i, 0]) < er*np.abs(x[i, 0]) + ea and \
-                   np.abs(residuum[i, 0]) < eresiduum:
-                    all_check_results.append(True)
-                else:
-                    all_check_results.append(False)
-                if not all_check_results[-1]:
-                    break
-
-            ret = not (False in all_check_results)
-    else:
-        # We get here when there's no variable to be checked. This is because
-        # there aren't variables of this type.  Eg. the circuit has no voltage
-        # sources nor voltage defined elements. In this case, the actual check
-        # is done only by current_convergence_check, voltage_convergence_check
-        # always returns True.
-        ret = True
-
-    return ret, all_check_results
+    # MNA reduced
+    NNODES -= 1
+    # tolerance tuples are as follows:
+    # TOL = (REL, ABS)
+    vtol = (settings.ver, settings.vea)
+    itol = (settings.ier, settings.iea)
+    
+    xv, xi = x[:NNODES, 0], x[NNODES:]
+    dxv, dxi = dx[:NNODES, 0], dx[NNODES:]
+    ev, ei = e[:NNODES, 0], e[NNODES:]
+    #voltages
+    vcheck = np.allclose(xv, xv + dxv, rtol=vtol[0], atol=vtol[1]) and np.allclose(ev, np.zeros(ev.shape), atol=settings.iea)
+    #currents
+    icheck = np.allclose(xi, xi + dxi, rtol=itol[0], atol=itol[1]) and np.allclose(ei, np.zeros(ei.shape), atol=settings.vea)
+    
+    return (vcheck and icheck)
 
 
 class SingularityError(Exception):

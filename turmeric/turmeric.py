@@ -30,10 +30,10 @@ def main(filename, outfile="out"):
     res : dict
         A dictionary containing the computed results.
     """
-    logging.info("This is turmeric %s running with:" % __version__)
-    logging.info("==Python %s" % (sys.version.split('\n')[0],))
-    logging.info("==Numpy %s" % (np.__version__))
-    logging.info("==Scipy %s" % (sp.__version__))
+    logging.info(f"This is turmeric {__version__} running with:")
+    logging.info(f"==Python {sys.version.split()[0]}")
+    logging.info(f"==Numpy {np.__version__}")
+    logging.info(f"==Scipy {sp.__version__}")
     
     load_config()
 
