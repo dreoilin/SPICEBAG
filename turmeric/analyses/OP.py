@@ -6,11 +6,10 @@ from turmeric.FORTRAN.DC_SUBRS import gmin_mat
 from numpy.linalg import norm
 import numpy as np    
 
-from turmeric import units
 from turmeric import settings
 from turmeric import solvers as slv
 from turmeric import results
-from turmeric.components.tokens import ParamDict, Value
+from turmeric.components.tokens import ParamDict
 from turmeric.analyses.Analysis import Analysis
 
 class OP(Analysis):
@@ -250,9 +249,7 @@ def MNA_solve(x, M, circ, Z, MAXIT, NNODES, locked_nodes, time=None):
         if nl:
             J[:, :] = 0.0
             N[:, 0] = 0.0
-            for elem in circ:
-                if elem.is_nonlinear:
-                    _update_J_and_N(J, N, x, elem, time)
+            J, N = circ.update_J_and_N(J, N, x, time)
         
         # compute the sum of node voltages and branch currents
         # this is the 'error' -> should sum to 0
@@ -285,47 +282,6 @@ def MNA_solve(x, M, circ, Z, MAXIT, NNODES, locked_nodes, time=None):
                 break
 
     return (x, error, converged, iters)
-
-
-def _update_J_and_N(J, Tx, x, elem, time):
-    out_ports = elem.get_output_ports()
-    for index in range(len(out_ports)):
-        n1, n2 = out_ports[index]
-        n1m1, n2m1 = n1 - 1, n2 - 1
-        dports = elem.get_drive_ports(index)
-        v_dports = []
-        for port in dports:
-            v = 0.  # build v: remember we removed the 0 row and 0 col of mna -> -1
-            if port[0]:
-                v = v + x[port[0] - 1, 0]
-            if port[1]:
-                v = v - x[port[1] - 1, 0]
-            v_dports.append(v)
-        if hasattr(elem, 'gstamp') and hasattr(elem, 'istamp'):
-            iis, gs = elem.gstamp(v_dports, time)
-            J[iis] += gs.reshape(-1)
-            iis, i = elem.istamp(v_dports, time)
-            Tx[iis] += i.reshape(-1)
-            continue
-        if n1 or n2:
-            iel = elem.i(index, v_dports, time)
-        if n1:
-            Tx[n1m1, 0] = Tx[n1m1, 0] + iel
-        if n2:
-            Tx[n2m1, 0] = Tx[n2m1, 0] - iel
-        for iindex in range(len(dports)):
-            if n1 or n2:
-                g = elem.g(index, v_dports, iindex, time)
-            if n1:
-                if dports[iindex][0]:
-                    J[n1m1, dports[iindex][0] - 1] += g
-                if dports[iindex][1]:
-                    J[n1m1, dports[iindex][1] - 1] -= g
-            if n2:
-                if dports[iindex][0]:
-                    J[n2m1, dports[iindex][0] - 1] -= g
-                if dports[iindex][1]:
-                    J[n2m1, dports[iindex][1] - 1] += g
 
 
 def damper(n=-1):

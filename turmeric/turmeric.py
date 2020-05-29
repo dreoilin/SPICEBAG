@@ -4,7 +4,6 @@ import sys
 import numpy as np
 import scipy as sp
 
-# analyses
 from . import netlist_parser
 from . import units
 

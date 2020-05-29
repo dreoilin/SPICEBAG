@@ -67,7 +67,7 @@ class Model(Label):
     """
     def __init__(self, val):
         super().__init__(val)
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
         if self.value.lower() not in [i.lower() for i in self.__models.keys()]:
             raise ValueError("Model {self.value} not found in this netlist.")
         self.value = self.__models[self.value]
