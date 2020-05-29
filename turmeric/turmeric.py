@@ -44,7 +44,13 @@ def main(filename, outfile="out"):
     results = {}
     for a in analyses:
         logging.info(f"Analysis {a} running")
-        results.update(a.run(circ))
+        an, res = a.run(circ)
+        results[an] = res
+        # TODO: are more than one analysis of a single type a real use case?
+        #if an not in results:
+        #    results[an] = [res]
+        #else:
+        #    results[an].append(res)
     return results
 
 def runnet(filename):

@@ -21,6 +21,7 @@ class Editor(Tk):
         #self.attributes('-type','dialog')
         self.columnconfigure(0,weight=1)
         self.rowconfigure(0,weight=1)
+        self.wm_title("Turmeric Integrated Simulation Environment")
 
         self.read_config()
 
@@ -107,10 +108,11 @@ class Editor(Tk):
             frame.run_netlist()
 
     def new_editor_tab(self,e=None,filename=None):
-        filepath = Path(filename).relative_to(self.pwd) if filename is not None else UNTITLED
-        frame = EditorFrame(self.tabeditor,filepath)
+        filepath = Path(filename).relative_to(self.pwd) if filename is not None else None
+        title = filepath if filepath is not None else UNTITLED
+        frame = EditorFrame(self.tabeditor,filepath=filepath)
         self.editors.append(frame)
-        t = self.tabeditor.addtab(filepath,frame=frame)
+        t = self.tabeditor.addtab(title,frame=frame)
         frame.netlisteditor.focus_set()
         self.tabeditor.select(t)
 

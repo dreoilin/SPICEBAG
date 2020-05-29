@@ -11,6 +11,7 @@ opdir = Path(settings.output_directory)
 class Solution(object):
     
     def __init__(self, circ, filename=None, sol_type="", extra_header=None):
+        self.sol_type = sol_type
         if extra_header is not None:
             self.headers = [extra_header]
         else:
@@ -63,5 +64,5 @@ class Solution(object):
         linelist = [x.rstrip().split(',') for x in lines[1:nrows+1]]
         data = {keyVal:np.array([v_type(x[idx]) for x in linelist if len(x)==len(headers)]) for idx,keyVal in enumerate(headers)} 
         
-        return data
+        return (self.sol_type, data)
         

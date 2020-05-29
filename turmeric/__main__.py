@@ -27,7 +27,7 @@ def _cli():
     logger.setLevel(logging.DEBUG)
 
     sh = logging.StreamHandler()
-    if (verbose):
+    if (cli_options.verbose):
         sh.setLevel(logging.INFO)
     else:
         sh.setLevel(logging.WARNING)

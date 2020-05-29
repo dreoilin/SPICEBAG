@@ -1,7 +1,9 @@
 import os
 import pathlib
+import pickle
 import queue
 import subprocess
+import re
 from threading import Thread
 from tkinter import *
 from tkinter import ttk
@@ -47,9 +49,8 @@ ansi_colour_codes =  {
         },
 }
 
-
 class EmbeddedConsole(Text):
-    def __init__(self,master,envfilename='turmeric/gui/interactive_console.py'):
+    def __init__(self,master):
         super().__init__(master, wrap=WORD)
         self.master = master
 
@@ -85,11 +86,7 @@ class EmbeddedConsole(Text):
 
         self.__bindings()
 
-        consoleFile = pathlib.Path('.').resolve() / envfilename
-        self.python = subprocess.Popen(["python3",str(consoleFile)],
-                stdin =subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
+        self.python = self._spawnConsole(envfilename='turmeric/gui/interactive_console.py')
 
         self.outBuf = queue.Queue()
         self.errBuf = queue.Queue()
@@ -103,6 +100,14 @@ class EmbeddedConsole(Text):
             t.join(0.01)
 
         self.pollOutputStreams()
+
+    def _spawnConsole(self, envfilename):
+        consoleFile = pathlib.Path('.').resolve() / envfilename
+        console = subprocess.Popen(["python3",str(consoleFile)],
+                stdin =subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+        return console
 
     # Called when widget destroyed
     def destroy(self):
@@ -216,23 +221,32 @@ class EmbeddedConsole(Text):
         if self.alive:
             self.after(10, self.pollOutputStreams)
 
-    def run_command(self, command):
-        command = command + '\n' if command[-1] != '\n' else command
-        self.write(command, readonly=True, output=False)
-        self.__sendLine(command)
+    def pass_variable(self, consoleVariable, value):
+        #self.write(command, readonly=True, output=False)
+        #import IPython;IPython.embed()
+        #output, error = self.python.communicate(command.encode())
+        #returncode = self.python.returncode
+
+        # Send command to subprocess
+        #console = self._spawnConsole(envfilename='turmeric/gui/dumb_console.py')
+        #pickled = f'pickle.dumps({command})'
+        #out,err = console.communicate(pickled.encode())
+        # Send output of that subprocess to output queues of ipython subprocess
+        #import pdb; pdb.set_trace()
+        #out = out[1:-2]
+
+        objstr = pickle.dumps(value)
+        #self.outBuf.put(out)
+        #self.errBuf.put(err)
+        self.__sendLine(f'{consoleVariable} = pickle.loads({objstr})\n')
 
 class EmbeddedConsoleFrame(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
         self.master = master
-        self.grid(row=0,column=0,sticky=NSEW)
-        self.grid_columnconfigure(0,weight=1)
-        self.grid_rowconfigure(0,weight=1)
 
         self.tty = EmbeddedConsole(self)
-        self.tty.grid_propagate(0)
-        self.tty.columnconfigure(0, weight=1)
-        self.tty.rowconfigure(0, weight=1)
+        self.tty.pack(side=TOP, fill=BOTH, expand=True)
 
     def destroy(self):
         self.tty.destroy()
