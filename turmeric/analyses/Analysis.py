@@ -6,9 +6,5 @@ class Analysis(Directive, ABC):
         super().__init__(line)
 
     @abstractmethod
-    def __repr__(self):
-        pass
-    
-    @abstractmethod
     def run(self, circ):
         pass

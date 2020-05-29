@@ -7,38 +7,14 @@ from turmeric import components
 from turmeric import analyses
 
 
-
 class NetlistParseError(Exception):
     """Netlist parsing exception."""
     pass
 
 
-def parse_models(lines):
-    models = {}
-    for line in lines:
-        tokens = line.replace("(", "").replace(")", "").split()
-        if len(tokens) < 3:
-            raise ValueError(f"parse_models(): syntax error in model declaration in line:\n\t{line}")
-        model_label = tokens[2]
-        model_type = tokens[1]
-        model_parameters = {}
-        for index in range(3, len(tokens)):
-            if tokens[index][0] == "*":
-                break
-            (label, value) = parse_param_value_from_string(tokens[index])
-            model_parameters.update({label.upper(): value})
-        if model_type == "D" or model_type == 'd':
-            model_parameters.update({'name': model_label})
-            model_iter = components.models.Shockley(**model_parameters)
-        else:
-            raise ValueError("parse_models(): Unknown model `{model_type}' in line\n\t{line}")
-        models.update({model_label: model_iter})
-    return models
-
 def digest_raw_netlist(filename):
     logging.info(f"Processing netlist `{filename}'")
     directives = []
-    models = []
     model_directives = []
     net_lines = []
     title = ""
@@ -46,13 +22,13 @@ def digest_raw_netlist(filename):
     with open(filename, 'r') as f:
         for i, line in enumerate(f.readlines()):
             line = line.strip().lower()
-            
+ 
             if i == 0:
                 title = line[1:]
                 continue
             if line.isspace() or line == '' or line[0] == "*":
                 continue
-            
+ 
             # Directives, models statements, etc.
             if line[0] == ".":
                 tokens = line.split()
@@ -72,12 +48,15 @@ def digest_raw_netlist(filename):
                     directives.append(line)
                 continue
             net_lines.append(line)
-    models = parse_models(model_directives)
+    modelsmap = {
+            "d" : components.models.Shockley
+            }
+    models = {m.model_id : m for m in [modelsmap[line.split()[1]](line) for line in model_directives]}
     directivesmap = {
-        ".ac"   : lambda line : analyses.AC(line),
-        ".op"   : lambda line : analyses.OP(line),
-        ".dc"   : lambda line : analyses.DC(line),
-        ".tran" : lambda line : analyses.TRAN(line)
+        ".ac"   : analyses.AC,
+        ".op"   : analyses.OP,
+        ".dc"   : analyses.DC,
+        ".tran" : analyses.TRAN
     }
     ans = [directivesmap[line.split()[0]](line) for line in directives]
     logging.info(f"Finished processing `{filename}'")
@@ -121,119 +100,16 @@ def main_netlist_parser(circ, netlist_lines, models):
             raise logging.exception(f"Unknown element {line[0]} in {line}")
     return elements
 
-def convert_units(string_value):
-
-    if type(string_value) is float:
-        return string_value  # not actually a string!
-    if not len(string_value):
-        raise NetlistParseError("")
-
-    index = 0
-    string_value = string_value.strip().upper()
-    while(True):
-        if len(string_value) == index:
-            break
-        if not (string_value[index].isdigit() or string_value[index] == "." or
-                string_value[index] == "+" or string_value[index] == "-" or
-                string_value[index] == "E"):
-            break
-        index = index + 1
-    if index == 0:
-        # print string_value
-        raise ValueError("Unable to parse value: %s" % string_value)
-        # return 0
-    numeric_value = float(string_value[:index])
-    multiplier = string_value[index:]
-    if len(multiplier) == 0:
-        pass # return numeric_value
-    elif multiplier == "T":
-        numeric_value = numeric_value * 1e12
-    elif multiplier == "G":
-        numeric_value = numeric_value * 1e9
-    elif multiplier == "K":
-        numeric_value = numeric_value * 1e3
-    elif multiplier == "M":
-        numeric_value = numeric_value * 1e-3
-    elif multiplier == "U":
-        numeric_value = numeric_value * 1e-6
-    elif multiplier == "N":
-        numeric_value = numeric_value * 1e-9
-    elif multiplier == "P":
-        numeric_value = numeric_value * 1e-12
-    elif multiplier == "F":
-        numeric_value = numeric_value * 1e-15
-    elif multiplier == "MEG":
-        numeric_value = numeric_value * 1e6
-    elif multiplier == "MIL":
-        numeric_value = numeric_value * 25.4e-6
-    else:
-        raise ValueError("Unknown multiplier %s" % multiplier)
-    return numeric_value
-
-
-
 def parse_temp_directive(line):
     
+    from turmeric.components.tokens import Value
     line_elements = line.split()
     for token in line_elements[1:]:
         if token[0] == "*":
             break
-        value = convert_units(token)
+        value = float(Value(token))
 
     return {"type": "temp", "temp": value}
-
-
-def is_valid_value_param_string(astr):
-    
-    work_astr = astr.strip()
-    if work_astr.count("=") == 1:
-        ret_value = True
-    else:
-        ret_value = False
-    return ret_value
-
-
-def convert(astr, rtype, raise_exception=False):
-    
-    if rtype == float:
-        try:
-            ret = convert_units(astr)
-        except ValueError as msg:
-            if raise_exception:
-                raise ValueError(msg)
-            else:
-                ret = astr
-    elif rtype == str:
-        ret = astr
-    elif rtype == bool:
-        ret = convert_boolean(astr)
-    elif raise_exception:
-        raise ValueError("Unknown type %s" % rtype)
-    else:
-        ret = astr
-    return ret
-
-
-def parse_param_value_from_string(astr, rtype=float, raise_exception=False):
-    
-    if not is_valid_value_param_string(astr):
-        return (astr, "")
-    p, v = astr.strip().split("=")
-    v = convert(v, rtype, raise_exception=False)
-    return p, v
-
-
-def convert_boolean(value):
-    
-    if value == 'no' or value == 'false' or value == '0' or value == 0:
-        return_value = False
-    elif value == 'yes' or value == 'true' or value == '1' or value == 1:
-        return_value = True
-    else:
-        raise NetlistParseError("invalid boolean: " + value)
-
-    return return_value
-
 
 
 def parse_include_directive(line, wd):
