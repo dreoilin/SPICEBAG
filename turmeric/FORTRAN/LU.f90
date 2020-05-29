@@ -77,6 +77,9 @@
   END subroutine LUDCMP
 
  Subroutine LUBKSB(A,N,INDX,B)
+! computes the solution of the NxN LU decomposition
+! with RHS B using backward substitution
+ 
  implicit none
 
  INTEGER, intent(in) :: N
