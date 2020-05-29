@@ -1,18 +1,12 @@
-import copy
 import sys
-
 import numpy as np
 import scipy as sp
-
-# analyses
-from . import netlist_parser
-from . import units
-
-from turmeric.config import load_config
-
-from .__version__ import __version__
-
 import logging
+
+from turmeric import netlist_parser
+from turmeric import units
+from turmeric.config import load_config
+from turmeric.__version__ import __version__
 
 def temp_directive(T): # T in celsius
     units.T = units.Kelvin(float(T))
@@ -48,8 +42,14 @@ def main(filename, outfile="out"):
     logging.info(repr(circ) + '\n' + '\n'.join(repr(m) for m in circ.models.values()))
 
     results = {}
-    for an in analyses:
-        logging.info(f"Analysis {an} running")
-        results.update(an.run(circ))
+    for a in analyses:
+        logging.info(f"Analysis {a} running")
+        results.update(a.run(circ))
     return results
 
+def runnet(filename):
+    """
+    Entry point for gui
+    """
+    res = main(filename)
+    return res

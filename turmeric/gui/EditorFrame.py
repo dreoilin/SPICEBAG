@@ -43,7 +43,7 @@ class EditorFrame(ttk.Frame):
 
     def run_netlist(self):
         print(f"File to run: {self.netlisteditor.filepath}")
-        runcmd = f'res = turmeric.main("{self.netlisteditor.filepath}")'
+        runcmd = f'res = runnet("{self.netlisteditor.filepath}")'
         self.console.tty.run_command(runcmd)
 
     def onBRelease(self,e):

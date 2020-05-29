@@ -5,7 +5,7 @@ import IPython
 if __name__ == '__main__':
     c = Config()
     c.InteractiveShellApp.exec_lines = [
-            'import turmeric'
+            'from turmeric import runnet'
             ]
     c.InteractiveShellApp.exec_files = [
 
