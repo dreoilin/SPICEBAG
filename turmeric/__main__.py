@@ -39,7 +39,7 @@ def _cli():
     logger.addHandler(lfh)
     logger.addHandler(sh)
 
-    turmeric.main(filename=remaning_args[0], outfile=cli_options.outfile)
+    turmeric.main(filename=remaning_args[0])
 
     sys.exit(0)
 

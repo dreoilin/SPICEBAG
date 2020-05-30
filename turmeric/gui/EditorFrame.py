@@ -6,6 +6,7 @@ from turmeric.gui.EmbeddedConsole import EmbeddedConsoleFrame
 from turmeric.gui.PlotView import PlotView
 from turmeric import runnet
 import subprocess
+import turmeric.settings as settings
 import os
 
 class EditorFrame(ttk.Frame):
@@ -36,13 +37,24 @@ class EditorFrame(ttk.Frame):
         self.netlisteditor.bind('<ButtonRelease>', self.onBRelease)
 
     def start_run_worker(self,filepath):
-        #cmd=["python","-u","-c",f"import turmeric.runnet as r\nr('{filepath}')\n"]
-        cmd=["python","-u","-c",f"import itertools, time\nfor i in itertools.count():\n\tprint(i)\n\ttime.sleep(0.5)\n"]
+        #python -u -c 'from turmeric import runnet;runnet("netlists/TRAN/FW_RECT.net")'
+        cmd=["python","-u","-m",'turmeric',"-o",settings.log_prefix,filepath]
+        #cmd=["python","-u","-c",f"import itertools, time\nfor i in itertools.count():\n\tprint(i)\n\ttime.sleep(0.5)\n"]
         self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.add_worker_gui()
         self.tk.createfilehandler(self.proc.stdout, READABLE, self.read_output)
-        self._progressV = StringVar()
-        self.CancelButton = Button(self.statusbar, text="Stop running analysis",command=self.stop_worker).pack(side=LEFT)
-        Label(self.statusbar, textvariable=self._progressV).pack(side=LEFT,fill=BOTH,expand=Y)
+
+    def add_worker_gui(self):
+        if not hasattr(self,'CancelButton'):
+            self._progressV = StringVar()
+            self.CancelButton = Button(self.statusbar, text="Stop running analysis",command=self.stop_worker)
+            self.ProgressL = Label(self.statusbar, textvariable=self._progressV, font=("Courier",10))
+        self.CancelButton.pack(side=LEFT)
+        self.ProgressL.pack(side=LEFT,fill=BOTH,expand=Y)
+
+    def hide_worker_gui(self):
+        self.CancelButton.pack_forget()
+        self.ProgressL.pack_forget()
 
     def read_output(self, pipe, mask):
         data = os.read(pipe.fileno(), 1 << 20)
@@ -51,7 +63,7 @@ class EditorFrame(ttk.Frame):
             self.tk.deletefilehandler(self.proc.stdout)
             self.after(5000, self.stop_worker)
             return
-        print(f"GOT: {data}")
+        print(data.strip(b'\n').decode())
         self._progressV.set(data.strip(b'\n').decode())
 
     def stop_worker(self, stopping=[]):
@@ -59,8 +71,8 @@ class EditorFrame(ttk.Frame):
             return
         stopping.append(True)
 
-        print("Stopping worker")
         self.proc.terminate()
+        self.hide_worker_gui()
         
     def run_netlist(self):
         self.start_run_worker(self.netlisteditor.filepath)
@@ -95,7 +107,8 @@ if __name__ == '__main__':
     root = Tk()
     root.columnconfigure(0,weight=1)
     root.rowconfigure(0,weight=1)
-    ef = EditorFrame(root,'netlists/AC/bw5lp.net')
+    ef = EditorFrame(root,'netlists/TRAN/FW_RECT.net')
     root.bind('<Control-q>', lambda e: root.quit)
     root.bind('<Control-r>', lambda e: ef.run_netlist)
+    root.after(1000,ef.run_netlist)
     root.mainloop()

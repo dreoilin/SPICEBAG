@@ -59,42 +59,43 @@ class Editor(Tk):
         self.menubar.add_cascade(menu=menu_edit, label='Edit', underline = 0)
         self.menubar.add_command(label='Run', underline = 0, command=self.run)
         self.bind('<Control-r>', self.run)
-        menu_file.add_command(label='New', underline = 0, accelerator='Ctl N', command = self.new_editor_tab)
+        menu_file.add_command(label='New', underline = 0, accelerator='Ctl+N', command = self.new_editor_tab)
         self.bind('<Control-n>', self.new_editor_tab)
         menu_file.add_command(label='Open...', underline = 0, command=self.open_file)
         self.bind('<Control-o>', lambda e: self.open_file(e))
 
-        menu_file_openrecent = Menu(menu_file)
-        menu_file.add_cascade(menu = menu_file_openrecent, label='Open Recent', underline = 5) # TODO
-        recentfiles = ['filethefirsct.ckt', 'netlistyboi.net', 'nuddercirquite.ckt']
-        for f in recentfiles:
-            # This don't quite work but hey
-            menu_file_openrecent.add_command(label = f, command = lambda : print(f'OPEN {self}')) # TODO
-        
-        menu_file.add_command(label='Save', underline = 0, command = self.save_file, state='disabled') # Set `state` to 'normal' to enable
-        self.bind('<Control-s>', self.save_file) # TODO Respect disabled flag
-        menu_file.add_command(label='Save As', underline = 5, command = lambda : print('Save As'), state='disabled') # TODO
-        # There is a tkinter asksaveasfilename() dialog
+        menu_file.add_command(label='Save', underline = 0, command = self.save_file, accelerator='Ctl+S')
+        self.bind('<Control-s>', self.save_file)
+        menu_file.add_command(label='Save As', underline = 5, command = self.save_file_as, accelerator='Ctl+Alt+S')
+        self.bind('<Control-Alt-a>', self.save_file_as)
         menu_file.add_separator()
-        menu_file.add_command(label='Quit', accelerator='Ctl+Q', underline = 0, command = self.close) # TODO Wrap this in something to check no unsaved changes
+        menu_file.add_command(label='Quit', accelerator='Ctl+Q', underline = 0, command = self.close)
         self.bind('<Control-q>', lambda e: self.close())
-        menu_edit.add_command(label='Undo', accelerator='Ctl+Z', command= lambda : print('UNDO')) # TODO
-        self.bind('<Control-z>', lambda e: print('UNDO'))
-        menu_edit.add_command(label='Redo', accelerator='Ctl+^Z', command= lambda : print('REDO')) # TODO
-        self.bind('<Control-Z>', lambda e: print('REDO'))
+
+        # Some text edit commands inbuilt
+        menu_edit.add_command(label='Undo', accelerator='Ctl+Z', command=self.undo) 
+        menu_edit.add_command(label='Redo', accelerator='Ctl+^Z', command=self.redo)
+        menu_edit.add_separator()
+        menu_edit.add_command(label='Copy', accelerator='Ctl+C', command=self.copy)
+        #self.bind('<Control-c>', self.copy)
+        menu_edit.add_command(label='Cut', accelerator='Ctl+X', command=self.cut)
+        #self.bind('<Control-x>', self.cut)
+        menu_edit.add_command(label='Paste', accelerator='Ctl+V', command=self.paste)
+        #self.bind('<Control-v>', self.paste)
+        menu_edit.add_separator()
+        menu_edit.add_command(label='Select All', accelerator='Ctl+A', command=self.select_all)
+        self.bind('<Control-a>', self.select_all)
+        menu_edit.add_separator()
         menu_edit.add_command(label='Configuration', command= self.open_configuration)
 
-        menu_edit.entryconfigure('Undo', state=DISABLED)
-        menu_edit.entryconfigure('Redo', state=DISABLED)
-        
-        menu_help = Menu(self.menubar, name='help')
-        self.menubar.add_cascade(menu=menu_help, label='Help', underline=0)
-        menu_help.add_command(label = 'Online Help', underline = 7, command = lambda : print('OPEN URL OF ONLINE HELP'))
+        #menu_help = Menu(self.menubar, name='help')
+        #self.menubar.add_cascade(menu=menu_help, label='Help', underline=0)
+        #menu_help.add_command(label = 'Online Help', underline = 7, command = lambda : print('OPEN URL OF ONLINE HELP'))
 
         # Windows system menu
-        sysmenu = Menu(self.menubar, name='system')
-        sysmenu.add_command(label='Enter Narnia', underline = 5, command = lambda : print('COMMAND _enterNarnia NOT YET IMPLEMENTED'))
-        self.menubar.add_cascade(menu=sysmenu)
+        #sysmenu = Menu(self.menubar, name='system')
+        #sysmenu.add_command(label='Enter Narnia', underline = 5, command = lambda : print('COMMAND _enterNarnia NOT YET IMPLEMENTED'))
+        #self.menubar.add_cascade(menu=sysmenu)
 
         self.config(menu=self.menubar)
 
@@ -144,6 +145,47 @@ class Editor(Tk):
         if new_config is not None:
             load_config(configdict=new_config)
             write_config(configdict=new_config,configfile=str(new_config['config_filename']['value']))
+
+    # Text editing
+    def redo(self, e=None):
+        ed = self.tabeditor.currentFrame()
+        if ed:
+            ned = ed.netlisteditor
+            ned.edit_redo()
+
+    def undo(self, e=None):
+        ed = self.tabeditor.currentFrame()
+        if ed:
+            ned = ed.netlisteditor
+            ned.edit_undo()
+
+    def copy(self, e=None):
+        ed = self.tabeditor.currentFrame()
+        if ed:
+            ned = ed.netlisteditor
+            self.clipboard_clear()
+            self.clipboard_append(ned.get(SEL_FIRST,SEL_LAST))
+
+    def cut(self, e=None):
+        ed = self.tabeditor.currentFrame()
+        if ed:
+            ned = ed.netlisteditor
+            self.clipboard_clear()
+            self.clipboard_append(ned.get(SEL_FIRST,SEL_LAST))
+            ned.delete(SEL_FIRST, SEL_LAST)
+
+    def paste(self, e=None):
+        ed = self.tabeditor.currentFrame()
+        if ed:
+            ned = ed.netlisteditor
+            ned.insert(INSERT, self.clipboard_get())
+
+    def select_all(self, e=None):
+        ed = self.tabeditor.currentFrame()
+        if ed:
+            ned = ed.netlisteditor
+            ned.tag_add(SEL, '1.0', END)
+
 
 if __name__ == '__main__':
     ed = Editor()

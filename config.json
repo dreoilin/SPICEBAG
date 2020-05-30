@@ -9,6 +9,11 @@
 		"type": "str",
 		"value": "config.json"
 	},
+	"log_prefix" : {
+		"description": "Prefix to which .log will be appended for log files",
+		"type": "str",
+		"value": "turmeric"
+	},
 	"dc_sweep_skip_allowed": {
 		"description": "",
 		"type": "bool",

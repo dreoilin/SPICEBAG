@@ -3,7 +3,7 @@ from tkinter.scrolledtext import ScrolledText
 
 class NetlistEditor(ScrolledText):
     def __init__(self, master, filepath=None):
-        super().__init__(master)
+        super().__init__(master,undo=True)
         self.master = master
 
         self.filepath = filepath

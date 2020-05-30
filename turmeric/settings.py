@@ -59,3 +59,4 @@ config_filename = "config.json"
 #        Results            #
 #############################
 output_directory = 'results'
+log_prefix = 'turmeric'

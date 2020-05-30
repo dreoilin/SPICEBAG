@@ -38,7 +38,6 @@ class PlotView(Frame):
         return self._fig
 
     def on_key_press(self, e):
-        print(f'{e.key} pressed')
         key_press_handler(e, self.canvas, self.toolbar)
 
 

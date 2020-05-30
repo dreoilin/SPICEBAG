@@ -13,13 +13,11 @@ def temp_directive(T): # T in celsius
 
 analysis = {'temp': temp_directive}
 
-def main(filename, outfile="out"):
+def main(filename):
     """
     filename : string
         The netlist filename.
 
-    outfile : string, optional
-        The output file's base name to which a suffix corresponding to the analysis performed will be added.
     **Returns:**
     res : dict
         A dictionary containing the computed results.

@@ -7,7 +7,7 @@ from turmeric import settings
 from turmeric.FORTRAN.DC_SUBRS import gmin_mat
 from turmeric.ODEsolvers import BE, odesolvers
 from turmeric.analyses.OP import dc_solve
-from turmeric.analyses.Analysis import Analysis
+from turmeric.analyses.Analysis import Analysis, printProgressBar
 from turmeric.components.tokens import ParamDict, Value
 
 class TRAN(Analysis):
@@ -93,7 +93,8 @@ class TRAN(Analysis):
                 sol.write_data(row)
                 dxdt = np.multiply(C1, x) + C0
                 buf.append((t, x, dxdt))
-                print(f"{t/self.tstop*100} %", flush=True)
+                #if int(1000 * t/self.tstep) % 10 == 0:
+                printProgressBar(int(t/self.tstep),int(self.tstop/self.tstep),'Transient analysis')
                 if len(buf) > diff_slv.rsteps:
                     buf.pop(0)
                 
