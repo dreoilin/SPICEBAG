@@ -92,7 +92,7 @@ class AC(Analysis):
         ZAC = circ.ZAC0[1:]
         D = circ.D0[1:, 1:]
         # nonlinear cicuits currently not implemented
-        if circ.is_nonlinear():
+        if circ.is_nonlinear:
             raise ValueError
 
         # set up the solution object

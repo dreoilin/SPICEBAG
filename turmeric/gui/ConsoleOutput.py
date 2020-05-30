@@ -21,6 +21,7 @@ class ConsoleOutput(ttk.Frame):
         self.oTab.write(text)
 
     def writeError(self, text):
+        self.tabe.select(self.eTab)
         self.eTab.write(text)
 
 class ScrollFrame(Frame):

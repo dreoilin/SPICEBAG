@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from turmeric.Directive import Directive
 
+analyses_vtypes = {'AC' : complex ,'OP' : float,'DC' : float,'TRAN' : float}
+
 class Analysis(Directive, ABC):
     def __init__(self, line):
         super().__init__(line)

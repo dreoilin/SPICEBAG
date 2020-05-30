@@ -46,7 +46,7 @@ class Circuit(list):
             nodenum = 0 if nodename == self.gnd else self.nnodes + 1*(not (0 in self.nodes_dict))
             self.nodes_dict.update({nodename : nodenum })
             self.nodes_dict.update({nodenum  : nodename})
-            return int_node
+            return nodenum
 
     @property
     def nnodes(self):

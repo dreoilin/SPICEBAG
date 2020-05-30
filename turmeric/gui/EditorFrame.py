@@ -1,6 +1,8 @@
 from tkinter import *
 from tkinter import ttk, font
+from turmeric.analyses.Analysis import analyses_vtypes
 from turmeric.gui.netlisteditor import NetlistEditor
+from turmeric.results import Solution
 from turmeric.gui.statusbar import Statusbar
 from turmeric.gui.EmbeddedConsole import EmbeddedConsoleFrame
 from turmeric.gui.ConsoleOutput import ConsoleOutput
@@ -40,11 +42,11 @@ class EditorFrame(ttk.Frame):
 
         self.doneQueue = queue.Queue()
         self.worker_stopping = []
+        self.finishedError = True
 
     def start_run_worker(self,filepath):
         #python -u -c 'from turmeric import runnet;runnet("netlists/TRAN/FW_RECT.net")'
-        self.genprefix = str(Path(settings.output_directory) / settings.outprefix)
-        cmd=["python","-u","-m",'turmeric',"-o", self.genprefix, str(filepath)]
+        cmd=["python","-u","-m",'turmeric',"-o", settings.outprefix, str(filepath)]
         #print(' '.join(cmd))
         self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.add_worker_gui()
@@ -78,8 +80,7 @@ class EditorFrame(ttk.Frame):
             # done
             self.tk.deletefilehandler(self.proc.stdout)
             self.tk.deletefilehandler(self.proc.stderr)
-            if not len(self.worker_stopping) > 0:
-                self.console.writeOutput(f"Analysis complete, results are ready to be loaded from `{self.genprefix}' files")
+            self.load_results()
             self.after(5000, self.stop_worker)
             return
         s = data.strip(b'\n').decode()
@@ -98,21 +99,32 @@ class EditorFrame(ttk.Frame):
         
     def run_netlist(self):
         self.start_run_worker(self.netlisteditor.filepath)
-        #res = runnet(self.netlisteditor.filepath)
-        #self.console.tty.write(f'res=runnet({self.netlisteditor.filepath})',readonly=True,output=False)
-        #self.console.tty.pass_variable(consoleVariable='res',value=res)
 
-        #self.printOP(res)
-        #self.plot.populateVarSelect(res)
+    def load_results(self, fileprefix=settings.outprefix):
+        opfiles = Path(settings.output_directory) / fileprefix
+        sol_files = [Path(str(opfiles)+'.'+a) for a in analyses_vtypes.keys() if Path(str(opfiles)+'.'+a).exists()]
+        if not sol_files:
+            self.console.writeError(f"Failed to parse result data from files with prefix `{opfiles.resolve()}'")
+            return
+        self.console.writeOutput(f"Results being loaded from `{sol_files}'")
+        sols = [Solution(filename=f.name,sol_type=f.suffix[1:]) for f in sol_files]
+        
+        results = dict(sol.as_dict(v_type=analyses_vtypes[a]) for a, sol in zip([f.suffix[1:] for f in sol_files],sols))
+
+        if 'OP' in results:
+            self.printOP(results['OP'])
+        results.pop('OP', None)
+
+        self.plot.populateVarSelect(results)
+        # self.plot.defaultPlot()
         #self.plot.plot_data(noop[[k for k in noop][0]] if len(noop)>0 else None)
     
-    def printOP(self, res):
-        if 'OP' in res:
-            r = 'OP:\n|{:=<8}|{:=<8}|\n|{:^8}|{:^8}|\n|{:=<8}|{:=<8}|\n'.format('','','Quantity','Value','','')
-            for k,v in res['OP'].items():
-                r+= '|{:<8}|{:<8}|\n'.format(k,v[0])
-            r += '|{:=<8}|{:=<8}|\n'.format('','')
-            self.console.writeOutput(r)
+    def printOP(self, vals):
+        r = 'OP:\n|{:=<12}|{:=<12}|\n|{:^12}|{:^12}|\n|{:=<12}|{:=<12}|\n'.format('','','Quantity','Value','','')
+        for k,v in vals.items():
+            r+= f'| {k:<11}|{v[0]:> 12.6g}|\n'
+        r += '|{:=<12}|{:=<12}|\n'.format('','')
+        self.console.writeOutput(r)
 
     def onBRelease(self,e):
         self.updateStatusbar(e)

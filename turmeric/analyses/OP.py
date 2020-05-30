@@ -230,7 +230,7 @@ def MNA_solve(x, M, circ, Z, MAXIT, NNODES, locked_nodes, time=None):
     M_size = M.shape[0]
     N = np.zeros((M_size, 1))
     J = np.zeros((M_size, M_size))
-    nl = circ.is_nonlinear()
+    nl = circ.is_nonlinear
     
     # if no initial estimate is provided, use zeros
     if x is None:
