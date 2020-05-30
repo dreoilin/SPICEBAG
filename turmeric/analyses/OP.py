@@ -249,7 +249,7 @@ def MNA_solve(x, M, circ, Z, MAXIT, NNODES, locked_nodes, time=None):
         if nl:
             J[:, :] = 0.0
             N[:, 0] = 0.0
-            J, N = circ.update_J_and_N(J, N, x, time)
+            J, N = circ.generate_J_and_N(J, N, x, time)
         
         # compute the sum of node voltages and branch currents
         # this is the 'error' -> should sum to 0

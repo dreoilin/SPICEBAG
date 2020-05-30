@@ -7,5 +7,6 @@
 v1 1 0 type=vdc vdc=5
 R1 2 1 5000
 D1 2 0 D
-.model D d
+
+.model D d 
 .op

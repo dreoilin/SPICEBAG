@@ -11,6 +11,19 @@ from turmeric.analyses.Analysis import Analysis
 from turmeric.components.tokens import ParamDict, Value
 
 class TRAN(Analysis):
+    
+    """
+    ~~~~~~~~~~~~~~~~~~
+    TRAN Analysis Class:
+    ~~~~~~~~~~~~~~~~~~
+
+    Provides a class with methods for transient analysis of
+    a non-linear dynamic circuit
+    
+    Supports a user defined initial estimate to aid convergence
+    
+    """
+    
     def __init__(self, line):
         self.net_objs = [ParamDict.allowed_params(self, {
             'tstep'  : { 'type' : lambda v: float(Value(v)), 'default' : None },
@@ -32,7 +45,44 @@ class TRAN(Analysis):
         return r
     
     def run(self, circ):   
-        # setup integration method
+        
+        """
+        ~~~~~~~~~~~~~~~~~~
+        TRAN Analysis Method:
+        ~~~~~~~~~~~~~~~~~~
+        
+        This run method is called when performing a transient analysis
+        The method requires a circuit object
+        
+        The transient problem is as follows:
+            
+            D (dx/dt) + M x + ZT + ZDC + NL(x) = 0
+            
+            M: reduced MNA
+            ZT: transient source
+            ZDC: DC source
+            NL(x): Nonlinear contribution
+            x: solution vector
+            D(dx/dt): dynamic contribution
+            
+        This method is primarily concerned with generating the dynamic contribution
+        We do so by means of a companion model. Companion model for cap is a parallel
+        conducatnce and current source. From the companion model:
+        
+            D(dx/dt) = ZTRAN + GTRAN
+            ZTRAN = D . C0
+            GTRAN = D . C1
+            
+        C0 and C1 are the coefficients determined by the implicit integration
+        method. This simulator used trapezoidal integration. -> see TRAP.py
+            
+        Returns
+        -------
+        sol [dict]: dictionary of the solution to the main method
+        None [Nonetype]: special value None if transient could not be completed
+        """
+        
+        # setup specified integration method - currently only trapezoidal
         diff_slv = importlib.import_module(f'turmeric.ODEsolvers.{self.method}') if self.method in odesolvers else importlib.import_module(f'turmeric.ODEsolvers.TRAP')
         
         # check params    
@@ -43,20 +93,22 @@ class TRAN(Analysis):
         if self.tstep < 0 or self.tstart < 0 or self.tstop < 0:
             logging.critical("t-values are less than 0")
             raise ValueError("Bad t-value. Must be positive")
-
-        locked_nodes = circ.get_locked_nodes()
         
+        # list of the nodes attached to non-linear elements
+        locked_nodes = circ.get_locked_nodes()
+        # sets up the reduced MNA equations
         M, ZDC, D = self.get_reduced_system(circ)
         M_size = M.shape[0]
         NNODES = circ.get_nodes_number()
+        # formats and gets the provided x0
         self.x0 = self.format_estimate(self.x0, M_size)
         
         logging.info("Building Gmin matrix")
 
         Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], NNODES-1)
         sol = results.Solution(circ, None, sol_type='TRAN', extra_header='t')
-        
-        #       tpoint  x    dx
+        # buffer containing information at each timestep
+        #        tpoint         x       dx
         buf = [(self.tstart, self.x0, None)]
         
         logging.info("Beginning transient")
@@ -69,11 +121,14 @@ class TRAN(Analysis):
                 C1, C0 = BE.get_coefs((buf[i][1]), self.tstep)
             else:
                 C1, C0 = diff_slv.get_coefs(buf, self.tstep)
-
+            
+            # call circuit generation method to generate ZT
             circ.gen_matrices(t)
+            # reduce it
             ZT = circ.ZT0[1:]
             
-
+            # C1 * D is the effective conductance contribution of the dynamic elements
+            # C0 dot D is the effective source contribution of the companion model
             x, error, solved, n_iter = dc_solve(M=(M + C1 * D),
                                                    Z=(ZDC + np.dot(D, C0) +ZT), circ=circ,
                                                    Gmin=Gmin_matrix, x0=self.x0,
@@ -85,24 +140,28 @@ class TRAN(Analysis):
             if solved:
                 t += self.tstep          # update time step
                 self.x0 = x              # update initial estimate
-                i += 1              # increment
+                i += 1                   # increment
+                # create and write the solution vector
                 row = [t]
-                # now append computations
                 row.extend(x.transpose().tolist()[0])
-                # write to file
                 sol.write_data(row)
                 dxdt = np.multiply(C1, x) + C0
                 buf.append((t, x, dxdt))
+                # allows us to see how transient is progressing
                 print(f"{t/self.tstop*100} %", flush=True)
+                # don't want to store unnecessary values in memory, so if
+                # trap has enough values, we throw out the unnecessary ones
                 if len(buf) > diff_slv.rsteps:
                     buf.pop(0)
                 
             else:
-                logging.error("Can't converge with step "+str(self.tstep)+".")
+                # we have fixed step size so if it can't solve it has to abort
+                logging.error(f"Can't converge with step: {self.tstep}.")
                 logging.info("Reduce step or increase max iterations")
                 solved = False
                 break
-
+        # close the file pointer
+        sol.close()
         if solved:
             # return the solution object
             logging.info("Transient complete")
@@ -162,7 +221,7 @@ class TRAN(Analysis):
             if isinstance(x0, dict):
                 logging.info("Operating point solution provided as simulation result")
                 x0 = [value for value in x0.values()]
-                x0 = np.array(x0)
+                x0 = np.array(x0)[np.newaxis].T
         
         logging.debug("Initial estimate is...")
         logging.debug(x0)
