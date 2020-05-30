@@ -140,7 +140,7 @@ class Circuit(list):
         self.ZAC0 = ZAC0
         self.D0   = D0
         self.ZT0  = ZT0
-        
+ 
     def generate_J_and_N(self, J, N, x, time):
         
         """
