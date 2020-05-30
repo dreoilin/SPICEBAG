@@ -110,8 +110,7 @@ class Circuit(list):
         # First, current defined, linear elements
         # == CD = {R , C , G, I}
         # Next, voltage defined elements
-        # == VD = { V , E , H , L }
-        # Finally F
+        # == VD = { V , L }
         n = self.get_nodes_number()
         M0 = np.zeros((n,n))
         ZDC0 = np.zeros((n, 1))
@@ -121,7 +120,7 @@ class Circuit(list):
 
         CD = [components.R, components.C, components.sources.G, components.sources.I]
         [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time) for elem in self if type(elem) in CD]
-        VD = [components.sources.V,components.sources.E,components.sources.H, components.L]
+        VD = [components.sources.V, components.L]
         for elem in self:
             if type(elem) in VD:
                 (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time)
@@ -132,14 +131,3 @@ class Circuit(list):
         self.D0   = D0
         self.ZT0  = ZT0 
 
-
-class NodeNotFoundError(Exception):
-    pass
-
-
-class CircuitError(Exception):
-    pass
-
-
-class ModelError(Exception):
-    pass

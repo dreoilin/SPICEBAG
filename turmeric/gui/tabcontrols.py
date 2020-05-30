@@ -1,8 +1,6 @@
 from tkinter import *
 from tkinter import ttk
 
-from .statusbar import Statusbar
-
 class TabEditor(ttk.Notebook):
     def __init__(self,master):
         super().__init__(master)

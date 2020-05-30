@@ -3,6 +3,7 @@ from tkinter import ttk, font
 from turmeric.gui.netlisteditor import NetlistEditor
 from turmeric.gui.statusbar import Statusbar
 from turmeric.gui.EmbeddedConsole import EmbeddedConsoleFrame
+from turmeric.gui.ConsoleOutput import ConsoleOutput
 from turmeric.gui.PlotView import PlotView
 from turmeric import runnet
 import subprocess
@@ -20,13 +21,13 @@ class EditorFrame(ttk.Frame):
         self.netlisteditor = NetlistEditor(paneVL,filepath)
         self.netlisteditor.configure(font=font.Font(family="Courier", size=10))
         self.netlisteditor.pack(side=TOP,fill=BOTH,expand=True)
-        self.console = EmbeddedConsoleFrame(paneVL)
+        self.console = ConsoleOutput(paneVL)
         self.console.pack(side=TOP,fill=BOTH,expand=True)
         self.plot = PlotView(paneH)
 
         paneH.pack(side=TOP, fill=BOTH, expand=True)
         paneVL.add(self.netlisteditor, weight=3)
-        paneVL.add(self.console,weight=1)
+        paneVL.add(self.console, weight=1)
         paneH.add(paneVL, weight=1)
         paneH.add(self.plot,weight=1)
 
@@ -35,6 +36,7 @@ class EditorFrame(ttk.Frame):
 
         self.netlisteditor.bind('<KeyRelease>', self.onKRelease)
         self.netlisteditor.bind('<ButtonRelease>', self.onBRelease)
+        self.netlisteditor.focus_set()
 
     def start_run_worker(self,filepath):
         #python -u -c 'from turmeric import runnet;runnet("netlists/TRAN/FW_RECT.net")'
@@ -42,7 +44,8 @@ class EditorFrame(ttk.Frame):
         #cmd=["python","-u","-c",f"import itertools, time\nfor i in itertools.count():\n\tprint(i)\n\ttime.sleep(0.5)\n"]
         self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.add_worker_gui()
-        self.tk.createfilehandler(self.proc.stdout, READABLE, self.read_output)
+        self.tk.createfilehandler(self.proc.stdout, READABLE, lambda p,m: self.read_output(p,m,self.console.writeOutput))
+        self.tk.createfilehandler(self.proc.stderr, READABLE, lambda p,m: self.read_output(p,m,self.console.writeError))
 
     def add_worker_gui(self):
         if not hasattr(self,'CancelButton'):
@@ -56,15 +59,18 @@ class EditorFrame(ttk.Frame):
         self.CancelButton.pack_forget()
         self.ProgressL.pack_forget()
 
-    def read_output(self, pipe, mask):
+    def read_output(self, pipe, mask, printfn):
         data = os.read(pipe.fileno(), 1 << 20)
         if not data: 
             # done
             self.tk.deletefilehandler(self.proc.stdout)
             self.after(5000, self.stop_worker)
             return
-        print(data.strip(b'\n').decode())
-        self._progressV.set(data.strip(b'\n').decode())
+        s = data.strip(b'\n').decode()
+        if s.startswith('\r'):
+            self._progressV.set(s)
+        else:
+            printfn(s)
 
     def stop_worker(self, stopping=[]):
         if stopping:
@@ -90,7 +96,7 @@ class EditorFrame(ttk.Frame):
             for k,v in res['OP'].items():
                 r+= '|{:<8}|{:<8}|\n'.format(k,v[0])
             r += '|{:=<8}|{:=<8}|\n'.format('','')
-            self.console.tty.write(r,output=False, readonly=True)
+            self.console.writeOutput(r)
 
     def onBRelease(self,e):
         self.updateStatusbar(e)
@@ -107,7 +113,7 @@ if __name__ == '__main__':
     root = Tk()
     root.columnconfigure(0,weight=1)
     root.rowconfigure(0,weight=1)
-    ef = EditorFrame(root,'netlists/TRAN/FW_RECT.net')
+    ef = EditorFrame(root,'netlists/TRAN/FW_RECT_SMOOTHING.net')
     root.bind('<Control-q>', lambda e: root.quit)
     root.bind('<Control-r>', lambda e: ef.run_netlist)
     root.after(1000,ef.run_netlist)
