@@ -3,7 +3,6 @@
 * TOR, COD, JD
 * ******************
 * Netlist for a full wave rectifier
-* with smoothing capacitor
 * ******************
 D1 1 3 D
 D4 0 1 D
@@ -17,3 +16,4 @@ R1 3 0 300
 .end
 
 * ref: google images
+

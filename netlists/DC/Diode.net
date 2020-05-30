@@ -1,0 +1,9 @@
+* Diode and Resistor - DC Sweep test
+
+V1 1 0 type=vdc vdc=5
+R1 1 2 5k
+D1 2 0 D
+.model D d
+.dc src=V1 start=0 stop=5 step=0.1
+
+

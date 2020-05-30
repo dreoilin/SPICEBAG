@@ -7,7 +7,7 @@ all:
 	$(MAKE) -C $(FORTRAN)
 
 run: $(if $(FORTRANOBJS),$(FORTRANOBJS), $(FORTRANBASE))
-	python -m turmeric --outfile tmp netlists/OP/diodemulti.net
+	python -m turmeric.gui
 
 $(FORTRANBASE): 
 	$(MAKE) -C $(FORTRAN) 

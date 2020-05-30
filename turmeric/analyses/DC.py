@@ -79,7 +79,7 @@ class DC(Analysis):
             # regenerate the matrices with new sweep value
             _ = circ.gen_matrices()
             # now call an operating point analysis
-            x = op_analysis(circ, x0=x)
+            x = op_analysis(circ, x0=x)[1]
             if x is None:
                 logging.warning("dc_analysis(): Coudn't compute \
                                 operating point for {sweep_value}. \
@@ -92,8 +92,9 @@ class DC(Analysis):
             row = [sweep_value]
             row.extend(x)
             sol.write_data(row)
+            x=x[np.newaxis].T
             # only flag as solved if loop doesn't skip any values
-            solved = True            
+            solved = True
         
         logging.info("dc_analysis(): Finished DC analysis")
         if not solved:
