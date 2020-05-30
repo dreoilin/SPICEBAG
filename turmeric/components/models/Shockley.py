@@ -32,6 +32,11 @@ class Material:
         return self.n_i_0 * (T / Tref)**(3/2) * np.exp(self.Eg(Tref) / (2 * units.Vth(Tref)) - self.Eg(T) / (2 * units.Vth(T)))
 
 class silicon(Material):
+    """
+    
+    A small class holding the material properties of silicon
+    
+    """
     def __init__(self):
         self.esi = 104.5 * 10 ** -12  # F/m
         self.eox = 34.5 * 10 ** -12  # F/m
@@ -111,7 +116,6 @@ class Shockley(Model):
         i_rec= self.ISR* (self._safe_exp(v/(self.NR * self.VT)) - 1)
         # reverse saturation
         i_rev=-self.IS * (self._safe_exp(-(v+self.BV)/(self.VT)) - 1)
-        # injection coefficient
 
         return i_fwd+i_rec+i_rev
 

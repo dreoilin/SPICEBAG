@@ -11,6 +11,17 @@ DEFAULT_TEMP = 26.85
 DEFAULT_T    = units.Kelvin(celsius=DEFAULT_TEMP)
 
 class D(Component):
+    """
+    This component class describes the behaviour of a diode element in a circuit.
+    
+    The two important methods are:
+        
+        1. The istamp: This generates an effective current contribution of the
+        companion model
+        2. The g-stamp: computes the stamp for the differential cross-conductance
+        of the e
+    """
+    
     def __init__(self, line, circ, models):
         self.net_objs = [Label,Node,Node,Model.defined(models),ParamDict.allowed_params(self,{
             'AREA' : { 'type' : float, 'default' : DEFAULT_AREA },
@@ -52,20 +63,7 @@ class D(Component):
         return self.ports
 
     def istamp(self, ports_v, time=0, reduced=True):
-        """Get the current matrix
-
-        A matrix corresponding to the current flowing in the element
-        with the voltages applied as specified in the ``ports_v`` vector.
-
-        **Parameters:**
-
-        ports_v : list
-            A list in the form: [voltage_across_port0, voltage_across_port1, ...]
-        time: float
-            the simulation time at which the evaluation is performed.
-            It has no effect here. Set it to None during DC analysis.
-
-        """
+        
         v = ports_v[0]
         i = self.model.get_i(v, self)
         istamp = np.array((i, -i), dtype=np.float64)
@@ -82,15 +80,7 @@ class D(Component):
         return i
 
     def gstamp(self, ports_v, time=0, reduced=True):
-        """Returns the differential (trans)conductance wrt the port specified by port_index
-        when the element has the voltages specified in ports_v across its ports,
-        at (simulation) time.
-
-        ports_v: a list in the form: [voltage_across_port0, voltage_across_port1, ...]
-        port_index: an integer, 0 <= port_index < len(self.get_ports())
-        time: the simulation time at which the evaluation is performed. Set it to
-        None during DC analysis.
-        """
+        
         indices = ([self.n1 - 1]*2 + [self.n2 - 1]*2,
                    [self.n1 - 1, self.n2 - 1]*2)
         gm = self.model.get_gm(0, ports_v, 0, self)
