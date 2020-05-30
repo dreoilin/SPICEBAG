@@ -3,7 +3,7 @@ import numpy as np
 import scipy as sp
 import logging
 
-from turmeric import netlist_parser
+from turmeric import parser,settings
 from turmeric import units
 from turmeric.config import load_config
 from turmeric.__version__ import __version__
@@ -13,7 +13,7 @@ def temp_directive(T): # T in celsius
 
 analysis = {'temp': temp_directive}
 
-def main(filename):
+def main(filename,outprefix):
     """
     filename : string
         The netlist filename.
@@ -28,10 +28,11 @@ def main(filename):
     logging.info("==Scipy %s" % (sp.__version__))
     
     load_config()
+    settings.outprefix = outprefix
 
     logging.info(f"Parsing netlist file `{filename}'")
     try:
-        (circ, analyses) = netlist_parser.parse_network(filename)
+        (circ, analyses) = parser.parse_network(filename)
     except FileNotFoundError as e:
         logging.exception(f"{e}: netlist file {filename} was not found")
         sys.exit()
@@ -50,10 +51,3 @@ def main(filename):
         #else:
         #    results[an].append(res)
     return results
-
-def runnet(filename):
-    """
-    Entry point for gui
-    """
-    res = main(filename)
-    return res

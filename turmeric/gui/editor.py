@@ -66,7 +66,7 @@ class Editor(Tk):
 
         menu_file.add_command(label='Save', underline = 0, command = self.save_file, accelerator='Ctl+S')
         self.bind('<Control-s>', self.save_file)
-        menu_file.add_command(label='Save As', underline = 5, command = self.save_file_as, accelerator='Ctl+Alt+S')
+        menu_file.add_command(label='Save As...', underline = 5, command = self.save_file_as, accelerator='Ctl+Alt+S')
         self.bind('<Control-Alt-a>', self.save_file_as)
         menu_file.add_separator()
         menu_file.add_command(label='Quit', accelerator='Ctl+Q', underline = 0, command = self.close)

@@ -94,7 +94,7 @@ def parse_network(filename):
     circ = circuit.Circuit(title=title, filename=filename)
 
     # PARSE CIRCUIT
-    circ += main_netlist_parser(circ, net_lines, models)
+    circ += main_parser(circ, net_lines, models)
     # FIXME: surely models should be assigned through the constructor
     circ.models = models
     circ.gen_matrices()
@@ -102,7 +102,7 @@ def parse_network(filename):
     return (circ, analyses)
 
 
-def main_netlist_parser(circ, netlist_lines, models):
+def main_parser(circ, netlist_lines, models):
     elements = []
     constructor = {
         'c': lambda line: components.C(line, circ),

@@ -4,7 +4,7 @@ import numpy, codecs, json
 
 from .context import turmeric
 
-from turmeric import netlist_parser as np
+from turmeric import parser as np
 
 class FileTestCase(unittest.TestCase):
 

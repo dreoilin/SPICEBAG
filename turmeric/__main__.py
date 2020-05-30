@@ -2,8 +2,7 @@ import sys
 import logging
 from optparse import OptionParser
 
-from . import turmeric
-from . import settings
+from . import turmeric, settings
 from .__version__ import __version__
 
 def _cli():
@@ -14,8 +13,8 @@ def _cli():
 
     parser.add_option("-v", "--verbose", action="store_true",
             dest="verbose", default=False, help="Verbose output")
-    parser.add_option("-o", "--outfile", action="store", type="string",
-                      dest="outfile", default='out', help="Prefix to use for generated files. Defaults to `out'.")
+    parser.add_option("-o", "--outprefix", action="store", type="string",
+                      dest="outprefix", default=settings.outprefix, help=f"Prefix to use for generated files. Defaults to `{settings.outprefix}'.")
     (cli_options, remaning_args) = parser.parse_args()
 
     if not len(remaning_args) == 1:
@@ -33,13 +32,13 @@ def _cli():
         sh.setLevel(logging.WARNING)
     sh.setFormatter(formatter)
 
-    lfh = logging.FileHandler(f'{cli_options.outfile}.log',mode='w',encoding='utf8')
+    lfh = logging.FileHandler(f'{cli_options.outprefix}.log',mode='w',encoding='utf8')
     lfh.setLevel(logging.DEBUG)
     lfh.setFormatter(formatter)
     logger.addHandler(lfh)
     logger.addHandler(sh)
 
-    turmeric.main(filename=remaning_args[0])
+    turmeric.main(filename=remaning_args[0],outprefix=cli_options.outprefix)
 
     sys.exit(0)
 

@@ -5,8 +5,8 @@ from turmeric.gui.statusbar import Statusbar
 from turmeric.gui.EmbeddedConsole import EmbeddedConsoleFrame
 from turmeric.gui.ConsoleOutput import ConsoleOutput
 from turmeric.gui.PlotView import PlotView
-from turmeric import runnet
-import subprocess
+from pathlib import Path
+import subprocess, queue, threading
 import turmeric.settings as settings
 import os
 
@@ -38,14 +38,27 @@ class EditorFrame(ttk.Frame):
         self.netlisteditor.bind('<ButtonRelease>', self.onBRelease)
         self.netlisteditor.focus_set()
 
+        self.doneQueue = queue.Queue()
+        self.worker_stopping = []
+
     def start_run_worker(self,filepath):
         #python -u -c 'from turmeric import runnet;runnet("netlists/TRAN/FW_RECT.net")'
-        cmd=["python","-u","-m",'turmeric',"-o",settings.log_prefix,filepath]
-        #cmd=["python","-u","-c",f"import itertools, time\nfor i in itertools.count():\n\tprint(i)\n\ttime.sleep(0.5)\n"]
+        self.genprefix = str(Path(settings.output_directory) / settings.outprefix)
+        cmd=["python","-u","-m",'turmeric',"-o", self.genprefix, str(filepath)]
+        #print(' '.join(cmd))
         self.proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.add_worker_gui()
         self.tk.createfilehandler(self.proc.stdout, READABLE, lambda p,m: self.read_output(p,m,self.console.writeOutput))
         self.tk.createfilehandler(self.proc.stderr, READABLE, lambda p,m: self.read_output(p,m,self.console.writeError))
+
+        #def results_notifier():
+        #    while self.doneQueue.empty():
+        #        if self.worker_stopping:
+        #            return
+        #        self.doneQueue.get(block=False,timeout=None)
+        #        self.console.writeOutput(f'Analysis complete, results are ready to be loaded from file')
+
+        #threading.Thread(target=results_notifier, daemon=True).start()
 
     def add_worker_gui(self):
         if not hasattr(self,'CancelButton'):
@@ -64,6 +77,9 @@ class EditorFrame(ttk.Frame):
         if not data: 
             # done
             self.tk.deletefilehandler(self.proc.stdout)
+            self.tk.deletefilehandler(self.proc.stderr)
+            if not len(self.worker_stopping) > 0:
+                self.console.writeOutput(f"Analysis complete, results are ready to be loaded from `{self.genprefix}' files")
             self.after(5000, self.stop_worker)
             return
         s = data.strip(b'\n').decode()
@@ -72,10 +88,10 @@ class EditorFrame(ttk.Frame):
         else:
             printfn(s)
 
-    def stop_worker(self, stopping=[]):
-        if stopping:
+    def stop_worker(self):
+        if self.worker_stopping:
             return
-        stopping.append(True)
+        self.worker_stopping.append(True)
 
         self.proc.terminate()
         self.hide_worker_gui()
@@ -113,7 +129,7 @@ if __name__ == '__main__':
     root = Tk()
     root.columnconfigure(0,weight=1)
     root.rowconfigure(0,weight=1)
-    ef = EditorFrame(root,'netlists/TRAN/FW_RECT_SMOOTHING.net')
+    ef = EditorFrame(root,'netlists/TRAN/FW_RECT.net')
     root.bind('<Control-q>', lambda e: root.quit)
     root.bind('<Control-r>', lambda e: ef.run_netlist)
     root.after(1000,ef.run_netlist)

@@ -63,6 +63,8 @@ class TRAN(Analysis):
         
         i = 0
         t = self.tstart
+
+        printProgressBar(int((t-self.tstart)/self.tstep),int((self.tstop-self.tstart)/self.tstep),'Transient analysis')
         
         while t < self.tstop:
             if i < diff_slv.rsteps:
@@ -93,8 +95,9 @@ class TRAN(Analysis):
                 sol.write_data(row)
                 dxdt = np.multiply(C1, x) + C0
                 buf.append((t, x, dxdt))
-                #if int(1000 * t/self.tstep) % 10 == 0:
-                printProgressBar(int(t/self.tstep),int(self.tstop/self.tstep),'Transient analysis')
+                if i % 5 == 0:
+                    #print(f"CURRENT {int((t-self.tstart)/self.tstep)} OF {int((self.tstop-self.tstart)/self.tstep)}")
+                    printProgressBar(int((t-self.tstart)/self.tstep),int((self.tstop-self.tstart)/self.tstep),'Transient analysis')
                 if len(buf) > diff_slv.rsteps:
                     buf.pop(0)
                 
