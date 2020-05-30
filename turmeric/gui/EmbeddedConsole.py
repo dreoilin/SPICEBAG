@@ -1,7 +1,9 @@
 import os
 import pathlib
+import pickle
 import queue
 import subprocess
+import re
 from threading import Thread
 from tkinter import *
 from tkinter import ttk
@@ -47,9 +49,8 @@ ansi_colour_codes =  {
         },
 }
 
-
 class EmbeddedConsole(Text):
-    def __init__(self,master,envfilename='turmeric/gui/interactive_console.py'):
+    def __init__(self,master):
         super().__init__(master, wrap=WORD)
         self.master = master
 
@@ -85,20 +86,32 @@ class EmbeddedConsole(Text):
 
         self.__bindings()
 
-        consoleFile = pathlib.Path('.').resolve() / envfilename
-        self.python = subprocess.Popen(["python3",str(consoleFile)],
-                stdin =subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
+        self.python = self._spawnConsole(envfilename='turmeric/gui/interactive_console.py')
 
         self.outBuf = queue.Queue()
         self.errBuf = queue.Queue()
         self.alive = True
         self.read_buf_size = 1024
-        Thread(target=self.readStdout).start()
-        Thread(target=self.readStderr).start()
+        threads = [Thread(target=self.readStdout), Thread(target=self.readStderr)]
+        for t in threads:
+            t.daemon = True
+            t.start()
+        for t in threads:
+            t.join(0.01)
 
         self.pollOutputStreams()
+
+    def _spawnConsole(self, envfilename):
+        consoleFile = pathlib.Path('.').resolve() / envfilename
+        #console = subprocess.Popen(["ipython","--no-confirm-exit","--simple-prompt","--matplotlib=tk"],
+        #        stdin =subprocess.PIPE,
+        #        stdout=subprocess.PIPE,
+        #        stderr=subprocess.PIPE)
+        console = subprocess.Popen(["python3",str(consoleFile)],
+                stdin =subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+        return console
 
     # Called when widget destroyed
     def destroy(self):
@@ -154,18 +167,18 @@ class EmbeddedConsole(Text):
                 first = None
         return False
 
-    def __sendLine(self):
-        line = self.get(self.LINE_START, END)
+    def __sendLine(self,line=None):
+        line = self.get(self.LINE_START, END) if line is None else line
         self.python.stdin.write(line.encode())
         self.python.stdin.flush()
 
-    def write(self, text, readonly=True):
+    def write(self, text, readonly=True, output=True):
         """
         Write data to Text field
         """
         if readonly:
             self.tag_add(self.READONLY, self.LINE_START, f"{self.LINE_START} lineend")
-            text = '\n' + text
+            text = '\n' + text if output else text
         
         # Split on colour code regex
         #rex_segs = self.ansi_decompose.split(text)
@@ -212,18 +225,32 @@ class EmbeddedConsole(Text):
         if self.alive:
             self.after(10, self.pollOutputStreams)
 
+    def pass_variable(self, consoleVariable, value):
+        #self.write(command, readonly=True, output=False)
+        #import IPython;IPython.embed()
+        #output, error = self.python.communicate(command.encode())
+        #returncode = self.python.returncode
+
+        # Send command to subprocess
+        #console = self._spawnConsole(envfilename='turmeric/gui/dumb_console.py')
+        #pickled = f'pickle.dumps({command})'
+        #out,err = console.communicate(pickled.encode())
+        # Send output of that subprocess to output queues of ipython subprocess
+        #import pdb; pdb.set_trace()
+        #out = out[1:-2]
+
+        objstr = pickle.dumps(value)
+        #self.outBuf.put(out)
+        #self.errBuf.put(err)
+        self.__sendLine(f'{consoleVariable} = pickle.loads({objstr})\n')
+
 class EmbeddedConsoleFrame(ttk.Frame):
     def __init__(self, master):
         super().__init__(master)
         self.master = master
-        self.grid(row=0,column=0,sticky=NSEW)
-        self.grid_columnconfigure(0,weight=1)
-        self.grid_rowconfigure(0,weight=1)
 
         self.tty = EmbeddedConsole(self)
-        self.tty.grid_propagate(0)
-        self.tty.columnconfigure(0, weight=1)
-        self.tty.rowconfigure(0, weight=1)
+        self.tty.pack(side=TOP, fill=BOTH, expand=True)
 
     def destroy(self):
         self.tty.destroy()

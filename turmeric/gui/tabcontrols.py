@@ -1,8 +1,6 @@
 from tkinter import *
 from tkinter import ttk
 
-from .statusbar import Statusbar
-
 class TabEditor(ttk.Notebook):
     def __init__(self,master):
         super().__init__(master)
@@ -35,7 +33,8 @@ class TabEditor(ttk.Notebook):
         return frame
 
     def currentFrame(self):
-        return self.nametowidget(self.select())
+        f = self.nametowidget(self.select())
+        return f if f != '.' else None
 
     def onTabChange(self, e):
         #print(f"Tab changed, now {self.select()}")

@@ -7,7 +7,7 @@ from turmeric import settings
 from turmeric.FORTRAN.DC_SUBRS import gmin_mat
 from turmeric.ODEsolvers import BE, odesolvers
 from turmeric.analyses.OP import dc_solve
-from turmeric.analyses.Analysis import Analysis
+from turmeric.analyses.Analysis import Analysis, printProgressBar
 from turmeric.components.tokens import ParamDict, Value
 
 class TRAN(Analysis):
@@ -99,8 +99,9 @@ class TRAN(Analysis):
         # sets up the reduced MNA equations
         M, ZDC, D = self.get_reduced_system(circ)
         M_size = M.shape[0]
-        NNODES = circ.get_nodes_number()
-        # formats and gets the provided x0
+
+        NNODES = circ.nnodes
+
         self.x0 = self.format_estimate(self.x0, M_size)
         
         logging.info("Building Gmin matrix")
@@ -115,6 +116,8 @@ class TRAN(Analysis):
         
         i = 0
         t = self.tstart
+
+        printProgressBar(int((t-self.tstart)/self.tstep),int((self.tstop-self.tstart)/self.tstep),'Transient analysis')
         
         while t < self.tstop:
             if i < diff_slv.rsteps:
@@ -147,10 +150,10 @@ class TRAN(Analysis):
                 sol.write_data(row)
                 dxdt = np.multiply(C1, x) + C0
                 buf.append((t, x, dxdt))
-                # allows us to see how transient is progressing
-                print(f"{t/self.tstop*100} %", flush=True)
-                # don't want to store unnecessary values in memory, so if
-                # trap has enough values, we throw out the unnecessary ones
+
+                if i % 5 == 0:
+                    #print(f"CURRENT {int((t-self.tstart)/self.tstep)} OF {int((self.tstop-self.tstart)/self.tstep)}")
+                    printProgressBar(int((t-self.tstart)/self.tstep),int((self.tstop-self.tstart)/self.tstep),'Transient analysis')
                 if len(buf) > diff_slv.rsteps:
                     buf.pop(0)
                 

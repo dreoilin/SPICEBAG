@@ -19,7 +19,6 @@ class Circuit(list):
         self.title = title
         self.filename = filename
         self.nodes_dict = {}
-        self.internal_nodes = 0
         self.models = {}
         self.gnd = '0'
 
@@ -28,49 +27,34 @@ class Circuit(list):
         for elem in self:
             if hasattr(elem,'__str__'):
                 s += str(elem)
-            elif hasattr(elem,'__repr__'):
-                s += repr(elem)
             else:
-                s += elem.get_netlist_elem_line(self.nodes_dict) 
+                s += repr(elem)
             s += '\n'
         return s[:-1]
 
     def __repr__(self):
         s = "* " + self.title + "\n"
-        for elem in self:
-            if hasattr(elem,'__repr__'):
-                s += repr(elem)
-            else:
-                s += elem.get_netlist_elem_line(self.nodes_dict) + "\n"
-            s += '\n'
-        return s[:-1]
+        s += '\n'.join(repr(c) for c in self)
+        return s
 
 
-    def add_node(self, ext_name):
-        
-        # must be text (str unicode...)
-        if not isinstance(ext_name, str):
-            raise TypeError("The node %s should have been of text type" % ext_name)
-        # test: do we already have it in the dictionary?
-        if ext_name not in self.nodes_dict:
-            if ext_name == '0':
-                int_node = 0
-            else:
-                got_ref = 0 in self.nodes_dict
-                int_node = int(len(self.nodes_dict)/2) + 1*(not got_ref)
-            self.nodes_dict.update({int_node:ext_name})
-            self.nodes_dict.update({ext_name:int_node})
+    def add_node(self, nodename):
+        nodename = str(nodename)
+        if nodename in self.nodes_dict:
+            return self.nodes_dict[nodename]
         else:
-            int_node = self.nodes_dict[ext_name]
-        return int_node
+            nodenum = 0 if nodename == self.gnd else self.nnodes + 1*(not (0 in self.nodes_dict))
+            self.nodes_dict.update({nodename : nodenum })
+            self.nodes_dict.update({nodenum  : nodename})
+            return nodenum
 
-    # TODO: change to property
-    def get_nodes_number(self):
-        """Returns the number of nodes in the circuit"""
+    @property
+    def nnodes(self):
+        """Returns the number of nodes in this circuit"""
         return int(len(self.nodes_dict)/2)
 
 
-    # TODO: change to property
+    @property
     def is_nonlinear(self):
         
         for elem in self:
@@ -119,8 +103,12 @@ class Circuit(list):
         time : used in ZT generation, optional
 
         """
+        # First, current defined, linear elements
+        # == CD = {R , C , G, I}
+        # Next, voltage defined elements
+        # == VD = { V , L }
     
-        n = self.get_nodes_number()
+        n = self.nnodes
         M0 = np.zeros((n,n))
         ZDC0 = np.zeros((n, 1))
         ZAC0 = np.zeros(ZDC0.shape)
@@ -129,8 +117,7 @@ class Circuit(list):
         # current defined elements
         CD = [components.R, components.C, components.sources.G, components.sources.I]
         [elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time) for elem in self if type(elem) in CD]
-        # voltage defined elements
-        VD = [components.sources.V,components.sources.E,components.sources.H, components.L]
+        VD = [components.sources.V, components.L]
         for elem in self:
             if type(elem) in VD:
                 (M0, ZDC0, ZAC0, D0, ZT0) = elem.stamp(M0, ZDC0, ZAC0, D0, ZT0, time)
@@ -140,7 +127,7 @@ class Circuit(list):
         self.ZAC0 = ZAC0
         self.D0   = D0
         self.ZT0  = ZT0
-        
+ 
     def generate_J_and_N(self, J, N, x, time):
         
         """
@@ -193,13 +180,3 @@ class Circuit(list):
             
         return J, N
 
-class NodeNotFoundError(Exception):
-    pass
-
-
-class CircuitError(Exception):
-    pass
-
-
-class ModelError(Exception):
-    pass

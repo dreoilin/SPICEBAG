@@ -4,6 +4,16 @@
 		"type": "bool",
 		"value": false
 	},
+	"config_filename": {
+		"description": "Path to configuration file.",
+		"type": "str",
+		"value": "config.json"
+	},
+	"damp_initial": {
+		"description": "Damp the initial 20 iterations of the Raphson method.",
+		"type": "bool",
+		"value": false
+	},
 	"dc_sweep_skip_allowed": {
 		"description": "",
 		"type": "bool",
@@ -11,9 +21,10 @@
 	},
 	"default_integration_scheme": {
 		"description": "Controls which implicit integration method is used in the transient.",
-		"enum": ["TRAP","BDF2","ADAMSM"],
-		"type": "enum",
-		"value": "TRAP"
+		"enum": ["TRAP",
+			"BDF2",
+			"ADAMSM"], "type": "enum",
+			"value": "TRAP"
 	},
 	"gmin": {
 		"description": "Minimum conductance to ground",
@@ -30,10 +41,25 @@
 		"type": "float",
 		"value": 0.001
 	},
-	"damp_initial": {
-		"description": "Damp the initial 20 iterations of the Raphson method.",
+	"nl_voltages_lock": {
+		"description": "",
 		"type": "bool",
 		"value": true
+	},
+	"nl_voltages_lock_factor": {
+		"description": "",
+		"type": "int",
+		"value": 4
+	},
+	"outprefix":{
+		"description": "Prefix of generated output files",
+		"type":"str",
+		"value":"out"
+	},
+	"output_directory": {
+		"description": "Directory in which the output data files will be stored",
+		"type": "str",
+		"value": "results"
 	},
 	"transient_max_iterations": {
 		"description": "Maximum number of iterations per transient step.",

@@ -75,7 +75,7 @@ def op_analysis(circ, x0=None):
 
     logging.debug("op_analysis(): constructing Gmin matrix")
     # take away a single node because we have reduced M
-    Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], circ.get_nodes_number()-1)
+    Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], circ.nnodes-1)
     
     logging.info("op_analysis(): solving with Gmin")
     # now solve
@@ -103,7 +103,6 @@ def op_analysis(circ, x0=None):
     logging.critical(f"op_analysis(): No operating point found")
     
     return None
-
 
 def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
              MAXIT=1000, locked_nodes=None):
@@ -134,7 +133,7 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
     """    
     
     M_size = M.shape[0]
-    NNODES = circ.get_nodes_number()
+    NNODES = circ.nnodes
     
     if locked_nodes is None:
         locked_nodes = circ.get_locked_nodes()
@@ -231,7 +230,7 @@ def MNA_solve(x, M, circ, Z, MAXIT, NNODES, locked_nodes, time=None):
     M_size = M.shape[0]
     N = np.zeros((M_size, 1))
     J = np.zeros((M_size, M_size))
-    nl = circ.is_nonlinear()
+    nl = circ.is_nonlinear
     
     # if no initial estimate is provided, use zeros
     if x is None:

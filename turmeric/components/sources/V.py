@@ -19,7 +19,7 @@ class V(IndependentSource, VoltageDefinedComponent):
     def __repr__(self):
         rep = f"{self.name}{self.part_id} {self.n1} {self.n2} "
         rep += f"type=vdc vdc={self.dc_value} " if self.dc_value is not None else ''
-        # TODO: netlist_parser not working with complex ac values
+        # TODO: parser not working with complex ac values
         rep += f"vac={str(self.ac_value)} " if self.ac_value is not None else ''
         rep += f"{self._time_function}" if self.is_timedependent else '' 
         return rep

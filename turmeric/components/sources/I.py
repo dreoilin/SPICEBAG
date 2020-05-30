@@ -18,7 +18,7 @@ class I(IndependentSource, CurrentDefinedComponent):
     def __repr__(self):
         rep = f"{self.name}{self.part_id} {self.n1} {self.n2} "
         rep += f"type=idc idc={self.dc_value} " if self.dc_value is not None else ''
-        # TODO: netlist_parser not working with `arg=' from `self.arg_ac'
+        # TODO: parser not working with `arg=' from `self.arg_ac'
         rep += f"iac={repr(self.ac_value)} " if self.ac_value is not None else ''
         rep += f"{repr(self._time_function)}" if self.is_timedependent else '' 
         return rep
