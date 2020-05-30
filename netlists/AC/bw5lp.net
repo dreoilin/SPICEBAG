@@ -1,0 +1,14 @@
+* 5TH-ORDER LOW-PASS FILTER
+* designed with a cut-off frequency of 10kHz
+
+V1 1 0 type=vdc vdc=0 type=vac vac=1
+R1 1 2 1
+L1 2 3 9.84u
+L2 3 4 31.83u
+L3 4 5 9.84u
+C1 0 3 25.75u
+C2 0 4 25.75u
+R2 0 5 1
+.op
+.AC type=log nsteps=100 start=1 stop=20k
+.END
