@@ -154,12 +154,11 @@ class PlotView(Frame):
         x = [self.paramlb.get(i) for i in sel]
         if len(x) > 1:
             # Put this in infoLabel
-            print("Too many ranges selected for x")
+            self.master.master.console.writeError(f'Too many ranges selected for x: {x}')
             return
         self.X = x[0]
         for i in sel:
             self.paramlb.selection_clear(i)
-        print(self.X)
 
 
     def set_y_range(self, e=None):
@@ -170,7 +169,6 @@ class PlotView(Frame):
         self.Y=y
         for i in sel:
             self.paramlb.selection_clear(i)
-        print(self.Y)
 
 if __name__=='__main__':
     root = Tk()

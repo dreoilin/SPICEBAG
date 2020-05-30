@@ -18,11 +18,11 @@ class ConsoleOutput(ttk.Frame):
         self.eTab = self.tabe.addtab(text='stderr',frame=ScrollFrame(self))
 
     def writeOutput(self, text):
-        self.oTab.write(text)
+        self.oTab.writeline(text)
 
     def writeError(self, text):
         self.tabe.select(self.eTab)
-        self.eTab.write(text)
+        self.eTab.writeline(text)
 
 class ScrollFrame(Frame):
     def __init__(self, master, *args, **kwargs):
@@ -38,3 +38,6 @@ class ScrollFrame(Frame):
         self.txt.configure(state='normal')
         self.txt.insert('end', text)
         self.txt.configure(state='disabled')
+
+    def writeline(self, text):
+        self.write(text+'\n')
