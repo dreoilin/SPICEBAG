@@ -487,3 +487,4 @@ pdfcreator={pdflatex}]{hyperref}
 %% IMAGES %%
 %%%%%%%%%%%%
 \graphicspath{ {./img/} }
+{  }

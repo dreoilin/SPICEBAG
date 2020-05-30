@@ -1,13 +1,46 @@
+% i'm happy with this - add what you want - Cian
 \section{Introduction}
-Probably the most famous circuit simulator is SPICE (Simulation Program with Integrated Circuit Emphasis). SPICE1 was developed in University of California, Berkeley in 1973, and \\
 
-Our goal was simple: emulate some of the basic functionality of a SPICE simulator in a modern codebase. The source code for SPICE1, SPICE2, and SPICE3 is freely available online, but are difficult to understand for a modern audience unfamiliar with languages like FORTRAN or C. Furthermore, tasks like netlist parsing (which include large amounts of string processing) and waveform display are objectively more suited to a modern language like python. The f2py package makes interfacing between python and and pre-compiled FORTRAN modules exceptionally easy.\\
+SPICE (Simulation Program with Integrated Circuit Emphasis) is probably the most famous and influential circuit simulator of all time. SPICE1 was developed in University of California, Berkeley in 1973, and was written in FORTRAN. SPICE2, also written in FORTRAN, introduced many improvements over its predecessor, most notably variable step integration, dynamic memory allocation, and a systematic mathematical description of an analogue circuit: Modified Nodal Analysis (MNA). \\
 
-We decided to implement:
+Our goal was simple: emulate some of the functionality of a SPICE simulator in our own. Tasks like netlist parsing (which include large amounts of string processing), organisation of circuit elements, and plotting computed data are tasks arguably well suited to a language with high level of abstraction like python.\\
+
+A consideration in an interpreted language like python is the speed. A suggestion raised by Prof. Paul Curran was to use numpy's \texttt{f2py} package. The f2py package allows for easy interfacing between python and pre-compiled FORTRAN routines, enhancing computation speed.\\
+
+No concrete specification was set in place for this task, but we decided to set the non-linear transient simulation of MP2 as a benchmark for the minimum the simulator should be able to accomplish.\\
+
+The report is structured in HOW MANY sections. The codebase is large and for conciseness, excerpts are only included where necessary. We do however, make it clear what sections of the code are involved in the various operations explained in this report.\\
+
+\subsection{Notation}
+The use of notation throughout the report attempts to remain consistent with variable names and sign conventions used in the code. This sections introduces the notation used in the report.
+
+\begin{align*}
+    & \mathbf{A}: \qquad &&\text{refers to a square $n \times n$ matrix} \\
+    & \colvec{b}: \qquad &&\text{denotes a column vector}\\
+    & [0]: \qquad &&\text{denotes a square matrix of zeros}\\
+    & \colvec{0}: \qquad&& \text{denotes a column vector of zeros}
+\end{align*}
+
+\subsubsection*{MNA Notation}
+The notation used when describing the MNA equations is as follows:
+
+\begin{align*}
+    & \mathbf{M}: \qquad& &\text{the MNA matrix}\\
+    & \mathbf{D}: \qquad &&\text{the dynamic matrix}\\
+    & \mathbf{J}: \qquad& &\text{the Jacobian matrix}\\
+    & \colvec{Z}_{DC}: \qquad& &\text{the DC source contribution}\\
+    & \colvec{Z}_{AC}: \qquad& &\text{the AC source contribution}\\
+    & \colvec{Z}_{T}: \qquad &&\text{the transient source contribution}\\
+    & \colvec{x}: \qquad &&\text{the solution vector of node voltages and branch currents}\\
+    & \colvec{NL}\left( \colvec{x}\right): \qquad &&\text{the nonlinear effective source contribution}
+\end{align*}
+
+An unreduced MNA matrix will always be subscripted by a zero: \[ \mathbf{A}_0\]
+
+\subsection{Division of the Workload}
+Division of the workload was equal and this is to be considered a group submission. Division of tasks was approximately as follows:
 \begin{itemize}
-    \item \textbf{a parser} in python to parse a SPICE netlist and populate a ``network" object
-    \item \textbf{core numerical routines} in pre-compiled FORTRAN subroutines
-    \item \textbf{circuit element models} in python classes
+    \item \textbf{Cian} Fill in what you did here
+    \item \textbf{Tiarnach} Fill in what you did here
+    \item \textbf{James} Fill in what you did here
 \end{itemize}
-
-The report is structured in ########## sections. A #### and final section analyses the performance of the simulator. All programming, documentation, and accompanying presentation was developed as a team.
