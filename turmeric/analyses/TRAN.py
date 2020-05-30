@@ -48,7 +48,7 @@ class TRAN(Analysis):
         
         M, ZDC, D = self.get_reduced_system(circ)
         M_size = M.shape[0]
-        NNODES = circ.get_nodes_number()
+        NNODES = circ.nnodes
         self.x0 = self.format_estimate(self.x0, M_size)
         
         logging.info("Building Gmin matrix")

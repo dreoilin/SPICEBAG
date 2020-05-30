@@ -6,7 +6,8 @@ from .tokens import rex
 class Parseable(ABC):
 
     def __init__(self,line):
-        self.name = type(self).__name__.lower()
+        if not hasattr(self, 'name'):
+            self.name = type(self).__name__.lower()
         if not hasattr(self, '__re__'):
             self.__re__ = ''
         self.__re__ = "^" + self.__re__ + f"{self.name}" + '(?: +)'.join([rex(o) for o in self.net_objs])
@@ -15,7 +16,10 @@ class Parseable(ABC):
             # FOR THIS TO WORK, EACH PARAMETER IN self.net_objs MUST EVALUATE TO EXACTLY ONE REGEX GROUP
             self.tokens = [n(g) for n,g in zip(self.net_objs,match.groups())]
         except AttributeError as e:
-            logging.error(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{self.__re__}'")
+            if match:
+                logging.exception(f"Exception occurred during parsing of line:\n\t`{line}'\n\t using regex `{self.__re__}'")
+            else:
+                logging.error(f"Failed to parse element from line\n\t`{line}'\n\tusing the regex `{self.__re__}'")
 
     @property
     def __re__(self):

@@ -25,7 +25,7 @@ class Solution(object):
         else:
             self.filepath = opdir / filename
         # we have reduced MNA
-        NNODES = circ.get_nodes_number() -1
+        NNODES = circ.nnodes -1
         for i in range(NNODES):
             header = f"V({str(circ.nodes_dict[i+1])})".upper()
             self.headers.append(header)

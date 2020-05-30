@@ -67,13 +67,20 @@ class Model(Label):
     """
     def __init__(self, val):
         super().__init__(val)
-        if self.value.lower() not in [i.lower() for i in self.models.keys()]:
+        #import pdb;pdb.set_trace()
+        if self.value.lower() not in [i.lower() for i in self.__models.keys()]:
             raise ValueError("Model {self.value} not found in this netlist.")
-        self.value = self.models[self.value]
+        self.value = self.__models[self.value]
 
     @classmethod
     def defined(cls, models):
-        cls.models = models
+        def newInit(obj, val):
+            obj.__models = models
+            cls.__init__(obj, val)
+
+        return type(f"Model", (Model,) ,{
+            '__init__' : newInit
+            })
         return cls
 
 class Node(NetlistToken):
@@ -110,15 +117,18 @@ class Node(NetlistToken):
 
 class Value(NetlistToken):
     def __init__(self, val):
-        r = r"^(?: *)([\d\.\-\+]+)(meg|[fpnumkgt])?$"
+        r = r"^(?: *)(?:([\d\.\-\+]+)(meg|[fpnumkgt])?|(inf))$"
         m = re.search(r,val)
         g = m.groups()
-        self.__order = si[g[1]] if g[1] is not None else 1.0
-        super().__init__(float(g[0]) * self.__order)
+        if g[0] is not None:
+            self.__order = si[g[1]] if g[1] is not None else 1.0
+            super().__init__(float(g[0]) * self.__order)
+        else:
+            super().__init__(float(g[2]))
 
     @classproperty
     def __re__(cls):
-        return r"([\d\.\-\+]+(?:meg|[fpnumkgt])?)"
+        return r"((?:[\d\.\-\+]+(?:meg|[fpnumkgt])?|inf))"
 
     def __float__(self):
         return float(self.value)

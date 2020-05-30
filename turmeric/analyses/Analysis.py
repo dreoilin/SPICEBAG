@@ -7,10 +7,6 @@ class Analysis(Directive, ABC):
 
 
     @abstractmethod
-    def __repr__(self):
-        pass
-    
-    @abstractmethod
     def run(self, circ):
         pass
 

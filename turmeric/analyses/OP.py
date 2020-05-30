@@ -6,11 +6,10 @@ from turmeric.FORTRAN.DC_SUBRS import gmin_mat
 from numpy.linalg import norm
 import numpy as np    
 
-from turmeric import units
 from turmeric import settings
 from turmeric import solvers as slv
 from turmeric import results
-from turmeric.components.tokens import ParamDict, Value
+from turmeric.components.tokens import ParamDict
 from turmeric.analyses.Analysis import Analysis
 
 class OP(Analysis):
@@ -76,7 +75,7 @@ def op_analysis(circ, x0=None):
 
     logging.debug("op_analysis(): constructing Gmin matrix")
     # take away a single node because we have reduced M
-    Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], circ.get_nodes_number()-1)
+    Gmin_matrix = gmin_mat(settings.gmin, M.shape[0], circ.nnodes-1)
     
     logging.info("op_analysis(): solving with Gmin")
     # now solve
@@ -122,7 +121,7 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
     
         At this point, the system has been reduced to:
         
-        M + N = Z, where N is non-linear contributions
+        Mx + NL(x) + Z = 0, where N is non-linear contributions
     
     M and ZDC are operated on by the solver objects, before being
     passed to Raphson solve. 
@@ -134,7 +133,7 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
     """    
     
     M_size = M.shape[0]
-    NNODES = circ.get_nodes_number()
+    NNODES = circ.nnodes
     
     if locked_nodes is None:
         locked_nodes = circ.get_locked_nodes()
@@ -148,11 +147,14 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
 
     # if there is no initial guess, we start with 0
     if x0 is not None:
+        if len(x0) != M_size:
+            logging.warning("Bad initial estimate")
+            x0 = np.zeros((M_size, 1)) 
         if isinstance(x0, np.ndarray):
             x =x0
         elif isinstance(x0, dict):
             x0 = [value for value in x0.values()]
-            x0 = np.array(x0)
+            x0 = np.array(x0)[np.newaxis].T
     else:
         x = np.zeros((M_size, 1))
 
@@ -170,7 +172,7 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
             # 2. Try to solve with the current solver
             try:
                 (x, error, converged, n_iter)\
-                    = MNA_solve(x, M_, circ, Z=Z_, nv=NNODES, 
+                    = MNA_solve(x, M_, circ, Z=Z_, NNODES=NNODES, 
                                     locked_nodes=locked_nodes,
                                     time=time, MAXIT=MAXIT)
                 # increment iteration
@@ -201,7 +203,7 @@ def dc_solve(M, Z, circ, Gmin=None, x0=None, time=None,
     return (x, error, converged, iters)
 
 
-def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
+def MNA_solve(x, M, circ, Z, MAXIT, NNODES, locked_nodes, time=None):
 
     """
     M : conductance matrix
@@ -213,7 +215,7 @@ def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
     
     This function solves the non-linear system:
         
-        A x + N(x) = Z
+        A x + N(x) + Z = 0
     
     if N(x) is zero, the method solves the linear system of equations,
     and returns immediately.
@@ -246,9 +248,7 @@ def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
         if nl:
             J[:, :] = 0.0
             N[:, 0] = 0.0
-            for elem in circ:
-                if elem.is_nonlinear:
-                    _update_J_and_N(J, N, x, elem, time)
+            J, N = circ.generate_J_and_N(J, N, x, time)
         
         # compute the sum of node voltages and branch currents
         # this is the 'error' -> should sum to 0
@@ -275,53 +275,12 @@ def MNA_solve(x, M, circ, Z, MAXIT, nv, locked_nodes, time=None):
         # otherwise we need to check it
         else:
             # run the convergence check
-            converged, _= convergence_check(
-            x, dx, error, nv - 1, debug=True)
+            converged = has_converged(
+            x, dx, error, NNODES)
             if converged:
                 break
 
     return (x, error, converged, iters)
-
-
-def _update_J_and_N(J, Tx, x, elem, time):
-    out_ports = elem.get_output_ports()
-    for index in range(len(out_ports)):
-        n1, n2 = out_ports[index]
-        n1m1, n2m1 = n1 - 1, n2 - 1
-        dports = elem.get_drive_ports(index)
-        v_dports = []
-        for port in dports:
-            v = 0.  # build v: remember we removed the 0 row and 0 col of mna -> -1
-            if port[0]:
-                v = v + x[port[0] - 1, 0]
-            if port[1]:
-                v = v - x[port[1] - 1, 0]
-            v_dports.append(v)
-        if hasattr(elem, 'gstamp') and hasattr(elem, 'istamp'):
-            iis, gs = elem.gstamp(v_dports, time)
-            J[iis] += gs.reshape(-1)
-            iis, i = elem.istamp(v_dports, time)
-            Tx[iis] += i.reshape(-1)
-            continue
-        if n1 or n2:
-            iel = elem.i(index, v_dports, time)
-        if n1:
-            Tx[n1m1, 0] = Tx[n1m1, 0] + iel
-        if n2:
-            Tx[n2m1, 0] = Tx[n2m1, 0] - iel
-        for iindex in range(len(dports)):
-            if n1 or n2:
-                g = elem.g(index, v_dports, iindex, time)
-            if n1:
-                if dports[iindex][0]:
-                    J[n1m1, dports[iindex][0] - 1] += g
-                if dports[iindex][1]:
-                    J[n1m1, dports[iindex][1] - 1] -= g
-            if n2:
-                if dports[iindex][0]:
-                    J[n2m1, dports[iindex][0] - 1] -= g
-                if dports[iindex][1]:
-                    J[n2m1, dports[iindex][1] - 1] += g
 
 
 def damper(n=-1):
@@ -331,111 +290,42 @@ def damper(n=-1):
     
     Currently, method damps first 20 iterations
     
+    n : current iteration
+    
     """
-    if settings.damp_initial and n < 10:
+    
+    if not settings.damp_initial:
+        return 1.0
+    elif n < 10:
         d = 1e-2
     elif n < 20:
         d = 0.1
     else:
-        d=1.0
+        d = 1.0
         
     return d
 
-def convergence_check(x, dx, residuum, nv_minus_one, debug=False):
-    """Perform a convergence check
-
-    **Parameters:**
-
-    x : array-like
-        The results to be checked.
-    dx : array-like
-        The last increment from a Newton-Rhapson iteration, solving
-        ``F(x) = 0``.
-    residuum : array-like
-        The remaining error, ie ``F(x) = residdum``
-    nv_minus_one : int
-        Number of voltage variables in x. If ``nv_minus_one`` is equal to
-        ``n``, it means ``x[:n]`` are all voltage variables.
-    debug : boolean, optional
-        Whether extra information is needed for debug purposes. Defaults to
-        ``False``.
-
-    **Returns:**
-
-    chk : boolean
-        Whether the check was passed or not. ``True`` means 'convergence!'.
-    rbn : ndarray
-        The convergence check results by node, if ``debug`` was set to ``True``,
-        else ``None``.
+def has_converged(x, dx, e, NNODES):
+    
     """
-    if not hasattr(x, 'shape'):
-        x = np.array(x)
-        dx = np.array(dx)
-        residuum = np.array(residuum)
-    vcheck, vresults = custom_convergence_check(x[:nv_minus_one, 0], dx[:nv_minus_one, 0], residuum[:nv_minus_one, 0], er=settings.ver, ea=settings.vea, eresiduum=settings.iea)
-    icheck, iresults = custom_convergence_check(x[nv_minus_one:], dx[nv_minus_one:], residuum[nv_minus_one:], er=settings.ier, ea=settings.iea, eresiduum=settings.vea)
-    return vcheck and icheck, vresults + iresults
-
-def custom_convergence_check(x, dx, residuum, er, ea, eresiduum, debug=False):
-    """Perform a custom convergence check
-
-    **Parameters:**
-
-    x : array-like
-        The results to be checked.
-    dx : array-like
-        The last increment from a Newton-Rhapson iteration, solving
-        ``F(x) = 0``.
-    residuum : array-like
-        The remaining error, ie ``F(x) = residdum``
-    ea : float
-        The value to be employed for the absolute error.
-    er : float
-        The value for the relative error to be employed.
-    eresiduum : float
-        The maximum allowed error for the residuum (left over error).
-    debug : boolean, optional
-        Whether extra information is needed for debug purposes. Defaults to
-        ``False``.
-
-    **Returns:**
-
-    chk : boolean
-        Whether the check was passed or not. ``True`` means 'convergence!'.
-    rbn : ndarray
-        The convergence check results by node, if ``debug`` was set to ``True``,
-        else ``None``.
+    
     """
-    all_check_results = []
-    if not hasattr(x, 'shape'):
-        x = np.array(x)
-        dx = np.array(dx)
-        residuum = np.array(residuum)
-    if x.shape[0]:
-        if not debug:
-            ret = np.allclose(x, x + dx, rtol=er, atol=ea) and \
-                  np.allclose(residuum, np.zeros(residuum.shape),
-                              atol=eresiduum, rtol=0)
-        else:
-            for i in range(x.shape[0]):
-                if np.abs(dx[i, 0]) < er*np.abs(x[i, 0]) + ea and \
-                   np.abs(residuum[i, 0]) < eresiduum:
-                    all_check_results.append(True)
-                else:
-                    all_check_results.append(False)
-                if not all_check_results[-1]:
-                    break
-
-            ret = not (False in all_check_results)
-    else:
-        # We get here when there's no variable to be checked. This is because
-        # there aren't variables of this type.  Eg. the circuit has no voltage
-        # sources nor voltage defined elements. In this case, the actual check
-        # is done only by current_convergence_check, voltage_convergence_check
-        # always returns True.
-        ret = True
-
-    return ret, all_check_results
+    # MNA reduced
+    NNODES -= 1
+    # tolerance tuples are as follows:
+    # TOL = (REL, ABS)
+    vtol = (settings.ver, settings.vea)
+    itol = (settings.ier, settings.iea)
+    
+    xv, xi = x[:NNODES, 0], x[NNODES:]
+    dxv, dxi = dx[:NNODES, 0], dx[NNODES:]
+    ev, ei = e[:NNODES, 0], e[NNODES:]
+    #voltages
+    vcheck = np.allclose(xv, xv + dxv, rtol=vtol[0], atol=vtol[1]) and np.allclose(ev, np.zeros(ev.shape), atol=settings.iea)
+    #currents
+    icheck = np.allclose(xi, xi + dxi, rtol=itol[0], atol=itol[1]) and np.allclose(ei, np.zeros(ei.shape), atol=settings.vea)
+    
+    return (vcheck and icheck)
 
 
 class SingularityError(Exception):
