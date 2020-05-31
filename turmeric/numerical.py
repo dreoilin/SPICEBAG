@@ -5,7 +5,7 @@ A lightweight module containing any numerical algorithms without a home
 """
 import logging
 
-def newtonRaphson(f, x0, df, args=(), tol=1e-10, MAXITERS=500):
+def newtonRaphson(f, x0, df=None, args=(), tol=1e-10, MAXITERS=500):
     
     """
     Single variable Newton Raphson function

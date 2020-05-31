@@ -31,7 +31,7 @@ class D(Component):
         self.part_id = str(self.tokens[0])
         self.n1 = circ.add_node(str(self.tokens[1]))
         self.n2 = circ.add_node(str(self.tokens[2]))
-
+        self.last_vd = 0.425
         self.model = self.tokens[3].value
 
         self.is_nonlinear = True
