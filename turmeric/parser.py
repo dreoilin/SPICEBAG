@@ -7,11 +7,6 @@ from turmeric import components
 from turmeric import analyses
 
 
-class NetlistParseError(Exception):
-    """Netlist parsing exception."""
-    pass
-
-
 def digest_raw_netlist(filename):
     logging.info(f"Processing netlist `{filename}'")
     directives = []
