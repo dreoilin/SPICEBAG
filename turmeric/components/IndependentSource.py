@@ -1,6 +1,6 @@
 from .Component import Component
 import numpy as np
-from ..TVSourceFunctions import tvsourcefunctions, SIN
+from ..TVSourceFunctions import tvsourcefunctions
 
 class IndependentSource(Component):
     def __init__(self, line, circ):

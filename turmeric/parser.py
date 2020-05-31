@@ -96,7 +96,6 @@ def main_parser(circ, netlist_lines, models):
     return elements
 
 def parse_temp_directive(line):
-    
     from turmeric.components.tokens import Value
     line_elements = line.split()
     for token in line_elements[1:]:
@@ -108,17 +107,11 @@ def parse_temp_directive(line):
 
 
 def parse_include_directive(line, wd):
-    """.include <filename> [*comments]
+    """.include <filename>
     """
     tokens = line.split()
-    if not len(tokens) > 1 or \
-            (len(tokens) > 2 and not tokens[2][0] == '*'):
-        raise NetlistParseError("")
-
+    if not len(tokens) > 1 or (len(tokens) > 2 and not tokens[2][0] == '*'):
     path = tokens[1]
     if not os.path.isabs(path):
-        # the user did not specify the full path.
-        # the path is then assumed to be relative to the netlist location
         path = os.path.join(wd, path)
-
     return path

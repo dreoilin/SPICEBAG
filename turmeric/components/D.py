@@ -27,9 +27,7 @@ class D(Component):
             'AREA' : { 'type' : float, 'default' : DEFAULT_AREA },
             'T'    : { 'type' : float, 'default' : DEFAULT_T    }
             },optional=True)]
-        dir(self)
         super().__init__(line)
-        dir(self)
         self.part_id = str(self.tokens[0])
         self.n1 = circ.add_node(str(self.tokens[1]))
         self.n2 = circ.add_node(str(self.tokens[2]))
