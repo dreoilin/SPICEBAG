@@ -88,8 +88,8 @@ class Shockley(Model):
             dev.last_vd = vext
         else:
             vd = dev.last_vd if dev.last_vd is not None else 10*self.VT
-            vd = newtonRaphson(self._obj_irs, vd, fprime=self._obj_irs_prime,
-                    args=(vext, dev), tol=settings.vea, maxiter=500)
+            vd = newtonRaphson(self._obj_irs, vd, df=self._obj_irs_prime,
+                    args=(vext, dev), tol=settings.vea, MAXITERS=500)
             i = self._get_i(vext-vd)
             dev.last_vd = vd
         return i
@@ -113,7 +113,7 @@ class Shockley(Model):
         RSSAVE = self.RS
         self.RS = 0
         # second term
-        ret += self.get_gm(self, 0, (vext-x,), 0, dev)
+        ret += self.get_gm(0, (vext-x,), 0, dev)
         # renable RS
         self.RS = RSSAVE
         return ret
