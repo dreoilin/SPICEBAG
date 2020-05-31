@@ -61,6 +61,7 @@ class Shockley(Model):
             'RS'   : { 'type' : lambda v: float(Value(v)) , 'default' : str(DEFAULT_RS  )},
             'TEMP' : { 'type' : lambda v: float(Value(v)) , 'default' : str(DEFAULT_TEMP)},
             },optional=True)]
+        import pdb;pdb.set_trace()
         super().__init__(line)
         self.model_id = str(self.tokens[2])
         self.T    = DEFAULT_T

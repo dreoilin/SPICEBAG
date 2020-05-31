@@ -164,7 +164,7 @@ class ParamDict(NetlistToken):
         if hasattr(self, '_ParamDict__allowed_params') and hasattr(self, '_ParamDict__parent'):
             for param, desc in self.__allowed_params.items():
                 if param.lower() in d:
-                    setattr(self._ParamDict__parent,param,desc['type'](d[param]))
+                    setattr(self._ParamDict__parent,param,desc['type'](d[param.lower()]))
                 elif desc['default'] is not None:
                     setattr(self._ParamDict__parent,param,desc['type'](desc['default']))
                 else:
