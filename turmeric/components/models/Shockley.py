@@ -35,17 +35,17 @@ class silicon(Material):
     """
     
     A small class holding the material properties of silicon
+    to model device temperature properties
     
     """
     def __init__(self):
-        self.esi = 104.5 * 10 ** -12  # F/m
-        self.eox = 34.5 * 10 ** -12  # F/m
+        self.esi = 104.5 * 10 ** -12
+        self.eox = 34.5 * 10 ** -12  
         self.Eg_0=1.16
         self.alpha=0.000702
         self.beta=1108
         self.n_i_0=1.45 * 10 ** 16
 
-#: Silicon class instantiated.
 si = silicon()
 
 class Shockley(Model):
@@ -76,6 +76,12 @@ class Shockley(Model):
 
     @memoized
     def get_i(self, vext, dev):
+        """
+        Calculates the device current using a newton raphson method
+        for a given applied voltage vext
+        returns:
+            i : current
+        """
         if dev.T != self.T:
             self.set_temperature(dev.T)
         if not self.RS:
@@ -90,10 +96,17 @@ class Shockley(Model):
         return i
 
     def _obj_irs(self, x, vext, dev):
+        """
+        Internal function for newton raphson method
+        """
         # obj fn for newton
         return x/self.RS-self._get_i(vext-x)
 
     def _obj_irs_prime(self, x, vext, dev):
+        """
+        Internal function for newton raphson method
+
+        """
         # obj fn derivative for newton
         # first term
         ret = 1./self.RS
@@ -111,6 +124,14 @@ class Shockley(Model):
         return np.exp(x) if x < 70 else np.exp(70) + 10 * x
 
     def _get_i(self, v):
+        """
+        Getter function for diode current
+        We model:
+            forward effect
+            recombination effect
+            reverse effect
+
+        """
         # forward
         i_fwd= self.IS * (self._safe_exp(v/(self.N * self.VT)) - 1)
         # recombination
@@ -122,6 +143,15 @@ class Shockley(Model):
 
     @memoized
     def get_gm(self, op_index, ports_v, port_index, dev):
+        """
+        Provides the device transconductance. Computed in two separate
+        ways depending on whether contact resistance is modelled.
+
+        Returns
+        -------
+        gm : device transconductance
+
+        """
         if dev.T != self.T:
             self.set_temperature(dev.T)
         v=ports_v[0]
@@ -137,6 +167,15 @@ class Shockley(Model):
         return gm
 
     def set_temperature(self, T):
+        """
+        Sets the diode temperature adn alters the physical properties
+        accordingly
+
+        Parameters
+        ----------
+        T : temp
+
+        """
         # alter properties based on T
         T = float(T)
         self.EG = self.material.Eg(T) if self.material!=None else self.EG
